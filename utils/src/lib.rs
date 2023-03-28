@@ -12,5 +12,7 @@ pub mod merkle;
 pub mod otp;
 #[cfg(feature = "tagged-signing")]
 pub mod tagged_signing;
+#[cfg(feature = "task")]
+pub mod task;
 #[cfg(feature = "time")]
 pub mod time;

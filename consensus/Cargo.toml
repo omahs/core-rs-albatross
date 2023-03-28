@@ -48,6 +48,7 @@ nimiq-transaction = { path = "../primitives/transaction" }
 nimiq-utils = { path = "../utils", features = [
     "math",
     "merkle",
+    "task",
     "time",
 ] }
 nimiq-validator-network = { path = "../validator-network" }
