@@ -195,7 +195,7 @@ impl MicroHeader {
     pub const MAX_SIZE: usize =
         /*version*/
         2 + /*block_number*/ 4 + /*timestamp*/ 8 + /*parent_hash*/ 32
-            + /*seed*/ VrfSeed::SIZE + /*extra_data*/ 32 + /*state_root*/ 32
+            + /*seed*/ VrfSeed::SIZE + /*extra_data*/ 1 + 32 + /*state_root*/ 32
             + /*body_root*/ 32 + /*history_root*/ 32;
 }
 
