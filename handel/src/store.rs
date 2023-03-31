@@ -6,7 +6,7 @@ use nimiq_collections::bitset::BitSet;
 use crate::partitioner::Partitioner;
 use crate::{contribution::AggregatableContribution, identity::Identity};
 
-pub trait ContributionStore: Send + Sync {
+pub trait ContributionStore: Send + Sync + std::fmt::Debug {
     type Contribution: AggregatableContribution;
 
     /// Put `signature` into the store for level `level`.
@@ -135,7 +135,7 @@ impl<P: Partitioner, C: AggregatableContribution> ReplaceStore<P, C> {
     }
 }
 
-impl<P: Partitioner, C: AggregatableContribution> ContributionStore for ReplaceStore<P, C> {
+impl<P: Partitioner + std::fmt::Debug, C: AggregatableContribution> ContributionStore for ReplaceStore<P, C> {
     type Contribution = C;
 
     fn put(&mut self, contribution: Self::Contribution, level: usize, identity: Identity) {
