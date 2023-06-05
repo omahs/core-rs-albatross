@@ -109,7 +109,7 @@ impl LightBlockchain {
                 log::warn!(%error, %block, reason = "failed to determine block proposer", "Rejecting block");
                 PushError::Orphan
             })?
-            .0;
+            .validator;
 
         // Verify that the block is valid for the given proposer.
         block.verify_proposer(&slot_owner.signing_key, predecessor.seed())?;

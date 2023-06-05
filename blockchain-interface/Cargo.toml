@@ -27,3 +27,4 @@ nimiq-database-value = { path = "../database/database-value" }
 nimiq-hash = { path = "../hash" }
 nimiq-primitives = { path = "../primitives", features = ["coin", "key-nibbles", "policy"] }
 nimiq-transaction = { path = "../primitives/transaction" }
+nimiq-vrf = { path = "../vrf" }

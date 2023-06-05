@@ -75,6 +75,17 @@ impl AbstractBlockchain for LightBlockchain {
     ) -> Result<(Validator, u16), BlockchainError> {
         let vrf_entropy = self.get_block_at(block_number - 1, false)?.seed().entropy();
 
+        let slot = self.get_proposer_at(block_number, offset, vrf_entropy)?;
+
+        Ok((slot.validator, slot.number))
+    }
+
+    fn get_proposer_at(
+        &self,
+        block_number: u32,
+        offset: u32,
+        vrf_entropy: nimiq_vrf::VrfEntropy,
+    ) -> Result<nimiq_primitives::slots::Slot, BlockchainError> {
         self.get_proposer_at(block_number, offset, vrf_entropy)
     }
 

@@ -3577,6 +3577,7 @@ dependencies = [
  "nimiq-hash",
  "nimiq-primitives",
  "nimiq-transaction",
+ "nimiq-vrf",
  "parking_lot 0.12.1",
  "thiserror",
  "tokio-stream",
@@ -3595,6 +3596,7 @@ dependencies = [
  "nimiq-light-blockchain",
  "nimiq-primitives",
  "nimiq-transaction",
+ "nimiq-vrf",
  "parking_lot 0.12.1",
  "tokio-stream",
 ]

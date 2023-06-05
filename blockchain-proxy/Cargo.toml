@@ -26,6 +26,7 @@ nimiq-light-blockchain = { path = "../light-blockchain" }
 nimiq-hash = { path = "../hash" }
 nimiq-primitives = { path = "../primitives" }
 nimiq-transaction = { path = "../primitives/transaction" }
+nimiq-vrf = { path = "../vrf" }
 
 [features]
 full = ["nimiq-blockchain"]

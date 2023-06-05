@@ -81,6 +81,15 @@ impl AbstractBlockchain for Blockchain {
         self.get_slot_owner_at(block_number, offset, None)
     }
 
+    fn get_proposer_at(
+        &self,
+        block_number: u32,
+        offset: u32,
+        vrf_entropy: nimiq_vrf::VrfEntropy,
+    ) -> Result<nimiq_primitives::slots::Slot, BlockchainError> {
+        self.get_proposer_at(block_number, offset, vrf_entropy, None)
+    }
+
     fn get_blocks(
         &self,
         start_block_hash: &Blake2bHash,

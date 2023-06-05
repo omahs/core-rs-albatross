@@ -11,7 +11,7 @@ use nimiq_genesis::NetworkInfo;
 use nimiq_primitives::{
     networks::NetworkId,
     policy::Policy,
-    slots::{Validator, Validators},
+    slots::{Slot, Validators},
 };
 use nimiq_utils::time::OffsetTime;
 use nimiq_vrf::{Rng, VrfEntropy, VrfUseCase};
@@ -107,7 +107,7 @@ impl LightBlockchain {
         block_number: u32,
         offset: u32,
         vrf_entropy: VrfEntropy,
-    ) -> Result<(Validator, u16), BlockchainError> {
+    ) -> Result<Slot, BlockchainError> {
         // Fetch the latest macro block that precedes the block at the given block_number.
         // We use the disabled_slots set from that macro block for the slot selection.
         let macro_block = self.get_block_at(Policy::macro_block_before(block_number), true)?;
@@ -120,10 +120,17 @@ impl LightBlockchain {
         let epoch_number = Policy::epoch_at(block_number);
         let validators = self.get_validators_for_epoch(epoch_number)?;
 
+        // Get the slot band to create the slot later on.
+        let band = validators.get_band_from_slot(slot_number);
+
         // Get the validator that owns the proposer slot.
         let validator = validators.get_validator_by_slot_number(slot_number);
 
-        Ok((validator.clone(), slot_number))
+        Ok(Slot {
+            number: slot_number,
+            band,
+            validator: validator.clone(),
+        })
     }
 
     fn compute_slot_number(offset: u32, vrf_entropy: VrfEntropy, disabled_slots: BitSet) -> u16 {

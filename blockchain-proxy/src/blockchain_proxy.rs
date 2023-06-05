@@ -15,6 +15,7 @@ use nimiq_primitives::{
     networks::NetworkId,
     slots::{Validator, Validators},
 };
+use nimiq_vrf::VrfEntropy;
 
 macro_rules! gen_blockchain_match {
     ($self: ident, $t: ident, $f: ident $(, $arg:expr )*) => {
@@ -185,6 +186,22 @@ impl<'a> AbstractBlockchain for BlockchainReadProxy<'a> {
             get_slot_owner_at,
             block_number,
             offset
+        )
+    }
+
+    fn get_proposer_at(
+        &self,
+        block_number: u32,
+        offset: u32,
+        vrf_entropy: VrfEntropy,
+    ) -> Result<nimiq_primitives::slots::Slot, BlockchainError> {
+        gen_blockchain_match!(
+            self,
+            BlockchainReadProxy,
+            get_proposer_at,
+            block_number,
+            offset,
+            vrf_entropy
         )
     }
 

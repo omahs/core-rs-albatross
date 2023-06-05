@@ -4,7 +4,8 @@ use nimiq_block::{Block, BlockType, MacroBlock};
 use nimiq_hash::Blake2bHash;
 use nimiq_primitives::networks::NetworkId;
 use nimiq_primitives::policy::Policy;
-use nimiq_primitives::slots::{Validator, Validators};
+use nimiq_primitives::slots::{Slot, Validator, Validators};
+use nimiq_vrf::VrfEntropy;
 
 use crate::error::{BlockchainError, BlockchainEvent, Direction};
 use crate::{ChainInfo, ForkEvent};
@@ -103,6 +104,13 @@ pub trait AbstractBlockchain {
         block_number: u32,
         offset: u32,
     ) -> Result<(Validator, u16), BlockchainError>;
+
+    fn get_proposer_at(
+        &self,
+        block_number: u32,
+        offset: u32,
+        vrf_entropy: VrfEntropy,
+    ) -> Result<Slot, BlockchainError>;
 
     /// Fetches a given number of macro blocks, starting at a specific block (by its hash).
     /// It can fetch only election macro blocks if desired.
