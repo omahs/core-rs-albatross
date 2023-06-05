@@ -28,6 +28,13 @@ use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
 
 use crate::policy::Policy;
 
+/// Representation of a single slot.
+pub struct Slot {
+    pub number: u16,
+    pub band: u16,
+    pub validator: Validator,
+}
+
 /// A validator that owns some slots.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
 pub struct Validator {

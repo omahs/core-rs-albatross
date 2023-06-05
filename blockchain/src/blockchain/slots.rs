@@ -2,16 +2,10 @@ use nimiq_blockchain_interface::BlockchainError;
 use nimiq_collections::BitSet;
 use nimiq_database::Transaction;
 use nimiq_primitives::policy::Policy;
-use nimiq_primitives::slots::{Validator, Validators};
+use nimiq_primitives::slots::{Slot, Validators};
 use nimiq_vrf::{Rng, VrfEntropy, VrfSeed, VrfUseCase};
 
 use crate::Blockchain;
-
-pub struct Slot {
-    pub number: u16,
-    pub band: u16,
-    pub validator: Validator,
-}
 
 /// Implements methods to handle slots and validators.
 impl Blockchain {
