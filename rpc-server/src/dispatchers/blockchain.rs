@@ -142,6 +142,10 @@ impl BlockchainInterface for BlockchainDispatcher {
     /// Returns the information for the slot owner at the given block height and offset. The
     /// offset is optional, it will default to getting the offset for the existing block
     /// at the given height.
+    ///
+    /// The predecessor on main chain is used to determine slots, so it
+    /// must exist.
+    ///
     /// We only have this information available for the last 2 batches at most.
     async fn get_slot_at(
         &mut self,
@@ -149,6 +153,13 @@ impl BlockchainInterface for BlockchainDispatcher {
         offset_opt: Option<u32>,
     ) -> RPCResult<Slot, BlockchainState, Self::Error> {
         let blockchain = self.blockchain.read();
+
+        // A slot can only be calculated when a previous block exists.
+        let predecessor_entropy = blockchain
+            .get_block_at(block_number - 1, false)
+            .map_err(|_| Error::BlockNotFound(block_number - 1))?
+            .seed()
+            .entropy();
 
         let offset = if let Some(offset) = offset_opt {
             offset
@@ -164,11 +175,17 @@ impl BlockchainInterface for BlockchainDispatcher {
             }
         };
 
-        Ok(RPCData::with_blockchain(
-            Slot::from(&blockchain, block_number, offset)
-                .map_err(|_| Error::BlockNotFound(block_number))?,
-            &blockchain,
-        ))
+        let slot = blockchain
+            .get_proposer_at(block_number, offset, predecessor_entropy)
+            .map_err(|_| Error::BlockNotFound(block_number))?;
+
+        let slot = Slot {
+            slot_number: slot.number,
+            validator: slot.validator.address,
+            public_key: slot.validator.voting_key.compressed().clone(),
+        };
+
+        Ok(RPCData::with_blockchain(slot, &blockchain))
     }
 
     /// Tries to fetch a transaction (including reward transactions) given its hash.

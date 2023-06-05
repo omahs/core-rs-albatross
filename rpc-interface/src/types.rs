@@ -141,6 +141,8 @@ pub struct Block {
 pub enum BlockAdditionalFields {
     #[serde(rename_all = "camelCase")]
     Macro {
+        proposer: Slot,
+
         is_election_block: bool,
 
         parent_election_hash: Blake2bHash,
@@ -181,6 +183,8 @@ impl Block {
         let size = block.serialized_size() as u32;
         let batch = Policy::batch_at(block_number);
         let epoch = Policy::epoch_at(block_number);
+
+        let slot = Slot::from(blockchain, &block)?;
 
         match block {
             nimiq_block::Block::Macro(macro_block) => {
@@ -237,6 +241,7 @@ impl Block {
                     history_hash: macro_block.header.history_root,
                     transactions,
                     additional_fields: BlockAdditionalFields::Macro {
+                        proposer: slot,
                         is_election_block: Policy::is_election_block_at(block_number),
                         parent_election_hash: macro_block.header.parent_election_hash,
                         interlink: macro_block.header.interlink,
@@ -299,7 +304,7 @@ impl Block {
                     history_hash: micro_block.header.history_root,
                     transactions,
                     additional_fields: BlockAdditionalFields::Micro {
-                        producer: Slot::from(blockchain, block_number, block_number)?,
+                        producer: slot,
                         fork_proofs,
                         justification: micro_block.justification.map(Into::into),
                     },
@@ -352,15 +357,27 @@ pub struct Slot {
 impl Slot {
     pub fn from(
         blockchain: &BlockchainReadProxy,
-        block_number: u32,
-        offset: u32,
+        block: &nimiq_block::Block,
     ) -> Result<Self, BlockchainError> {
-        let (validator, slot_number) = blockchain.get_slot_owner_at(block_number, offset)?;
+        let predecessor_entropy = blockchain
+            .get_block(block.parent_hash(), false)?
+            .seed()
+            .entropy();
+
+        let offset = if let nimiq_block::Block::Macro(macro_block) = &block {
+            // The offset for macro blocks is the round of the proposal, given in the macro header.
+            macro_block.round()
+        } else {
+            // Skip and micro block offset is the block number
+            block.block_number()
+        };
+
+        let slot = blockchain.get_proposer_at(block.block_number(), offset, predecessor_entropy)?;
 
         Ok(Slot {
-            slot_number,
-            validator: validator.address,
-            public_key: validator.voting_key.compressed().clone(),
+            slot_number: slot.number,
+            validator: slot.validator.address,
+            public_key: slot.validator.voting_key.compressed().clone(),
         })
     }
 }
