@@ -157,11 +157,7 @@ impl BlockchainInterface for BlockchainDispatcher {
                 .get_block_at(block_number, false)
                 .map_err(|_| Error::BlockNotFound(block_number))?;
             if let nimiq_block::Block::Macro(macro_block) = block {
-                if let Some(proof) = macro_block.justification {
-                    proof.round
-                } else {
-                    return Err(Error::UnexpectedMacroBlock(block_number));
-                }
+                macro_block.header.round
             } else {
                 // Skip and micro block offset is block number
                 block_number
