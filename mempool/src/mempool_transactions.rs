@@ -3,8 +3,8 @@ use std::{
     collections::HashMap,
 };
 
-use beserial::Serialize;
 use keyed_priority_queue::KeyedPriorityQueue;
+use serde::Serialize;
 
 use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_transaction::Transaction;

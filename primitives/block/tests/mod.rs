@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_block::{MacroBlock, MacroBody, MacroHeader, MultiSignature};
 use nimiq_bls::{AggregateSignature, CompressedPublicKey, KeyPair};
 use nimiq_collections::bitset::BitSet;
@@ -10,6 +9,7 @@ use nimiq_keys::{Address, PublicKey};
 use nimiq_primitives::slots::ValidatorsBuilder;
 use nimiq_test_log::test;
 use nimiq_vrf::VrfSeed;
+use serde::{Deserialize, Serialize};
 
 mod block_proof;
 mod macro_block;

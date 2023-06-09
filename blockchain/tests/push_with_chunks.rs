@@ -1,4 +1,5 @@
-use beserial::Deserialize;
+use serde::Deserialize;
+
 use nimiq_blockchain_interface::{ChunksPushError, ChunksPushResult, PushResult};
 use nimiq_genesis::NetworkId;
 use nimiq_keys::{Address, KeyPair, PrivateKey, SecureGenerate};

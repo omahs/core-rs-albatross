@@ -12,7 +12,6 @@ time = { version = "0.3", features = ["parsing"] }
 toml = "0.7"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-beserial = { path = "../beserial" }
 nimiq-account = { path = "../primitives/account" }
 nimiq-block = { path = "../primitives/block" }
 nimiq-bls = { path = "../bls" }

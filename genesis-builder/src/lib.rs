@@ -10,7 +10,6 @@ use thiserror::Error;
 use time::OffsetDateTime;
 use toml::de::Error as TomlError;
 
-use beserial::{Serialize, SerializeWithLength, SerializingError};
 use nimiq_account::{
     Account, Accounts, BasicAccount, StakingContract, StakingContractStoreWrite, TransactionLog,
 };
@@ -24,6 +23,7 @@ use nimiq_primitives::{
     account::AccountError, coin::Coin, key_nibbles::KeyNibbles, policy::Policy,
 };
 use nimiq_vrf::VrfSeed;
+use serde::{Serialize, SerializeWithLength, SerializingError};
 
 mod config;
 

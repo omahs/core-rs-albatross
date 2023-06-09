@@ -8,7 +8,7 @@ use futures::Future;
 use futures::StreamExt;
 use thiserror::Error;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // The max number of request to be processed per peerID and per request type.
 
@@ -35,7 +35,7 @@ impl RequestType {
     const fn new(type_id: u16, requires_response: bool) -> RequestType {
         RequestType((type_id << 1) | requires_response as u16)
     }
-    pub fn from_request<R: RequestCommon>() -> RequestType {
+    pub fn from_request<'de, R: RequestCommon<'de>>() -> RequestType {
         RequestType::new(R::TYPE_ID, R::Kind::EXPECT_RESPONSE)
     }
     pub const fn request(type_id: u16) -> RequestType {
@@ -136,12 +136,12 @@ impl RequestKind for MessageMarker {
     const EXPECT_RESPONSE: bool = false;
 }
 
-pub trait RequestCommon:
-    Serialize + Deserialize + Send + Sync + Unpin + std::fmt::Debug + 'static
+pub trait RequestCommon<'de>:
+    Serialize + Deserialize<'de> + Send + Sync + Unpin + std::fmt::Debug + 'static
 {
     type Kind: RequestKind;
     const TYPE_ID: u16;
-    type Response: Deserialize + Serialize + Send;
+    type Response: Deserialize<'de> + Serialize + Send;
     const MAX_REQUESTS: u32;
     const TIME_WINDOW: Duration = DEFAULT_MAX_REQUEST_RESPONSE_TIME_WINDOW;
 
@@ -149,10 +149,10 @@ pub trait RequestCommon:
     /// A serialized request is composed of:
     /// - A 2 bytes (u16) for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn serialize_request<W: WriteBytesExt>(
+    fn serialize_request<S: Serializer>(
         &self,
-        writer: &mut W,
-    ) -> Result<usize, SerializingError> {
+        writer: &mut S,
+    ) -> Result<usize, dyn serde::ser::Error> {
         let mut size = 0;
         size += RequestType::from_request::<Self>().0.serialize(writer)?;
         size += self.serialize(writer)?;
@@ -174,7 +174,9 @@ pub trait RequestCommon:
     /// A serialized request is composed of:
     /// - A 2 bytes (u16) for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn deserialize_request<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
+    fn deserialize_request<D: Deserializer<'de>>(
+        reader: &mut D,
+    ) -> Result<Self, dyn serde::de::Error> {
         // Check for correct type.
         let ty: u16 = Deserialize::deserialize(reader)?;
         if ty != RequestType::from_request::<Self>().0 {
@@ -187,13 +189,13 @@ pub trait RequestCommon:
     }
 }
 
-pub trait Request: RequestCommon<Kind = RequestMarker> {}
-pub trait Message: RequestCommon<Kind = MessageMarker, Response = ()> {}
+pub trait Request<'de>: RequestCommon<'de, Kind = RequestMarker> {}
+pub trait Message<'de>: RequestCommon<'de, Kind = MessageMarker, Response = ()> {}
 
-impl<T: RequestCommon<Kind = RequestMarker>> Request for T {}
-impl<T: RequestCommon<Kind = MessageMarker, Response = ()>> Message for T {}
+impl<'de, T: RequestCommon<'de, Kind = RequestMarker>> Request<'de> for T {}
+impl<'de, T: RequestCommon<'de, Kind = MessageMarker, Response = ()>> Message<'de> for T {}
 
-pub fn peek_type(buffer: &[u8]) -> Result<RequestType, SerializingError> {
+pub fn peek_type(buffer: &[u8]) -> Result<RequestType, dyn serde::de::Error> {
     let ty = u16::deserialize_from_vec(buffer)?;
     Ok(RequestType(ty))
 }
@@ -211,8 +213,9 @@ pub trait MessageHandle<N: Network, T> {
 const MAX_CONCURRENT_HANDLERS: usize = 64;
 
 pub fn request_handler<
+    'de,
     T: Send + Sync + Clone + 'static,
-    Req: Handle<N, Req::Response, T> + Request,
+    Req: Handle<N, Req::Response, T> + Request<'de>,
     N: Network,
 >(
     network: &Arc<N>,
@@ -258,8 +261,9 @@ pub fn request_handler<
 
 /// Handler that takes care of sending messages to a network, similar to a request except that we don't expect an answer.
 pub fn message_handler<
+    'de,
     T: Send + Sync + Clone + 'static,
-    Msg: MessageHandle<N, T> + Message,
+    Msg: MessageHandle<N, T> + Message<'de>,
     N: Network,
 >(
     _network: &Arc<N>,

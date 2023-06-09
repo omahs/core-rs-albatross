@@ -3,7 +3,6 @@ use std::fmt;
 use nimiq_transaction::reward::RewardTransaction;
 use thiserror::Error;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_collections::bitset::BitSet;
 use nimiq_hash::{Blake2bHash, Blake2sHash, Hash, SerializeContent};
 use nimiq_hash_derive::SerializeContent;
@@ -12,6 +11,7 @@ use nimiq_primitives::slots::Validators;
 use nimiq_vrf::VrfSeed;
 use nimiq_zkp_primitives::MacroBlock as ZKPMacroBlock;
 use nimiq_zkp_primitives::{pk_tree_construct, PK_TREE_BREADTH};
+use serde::{Deserialize, Serialize};
 
 use crate::signed::{Message, PREFIX_TENDERMINT_PROPOSAL};
 use crate::tendermint::TendermintProof;

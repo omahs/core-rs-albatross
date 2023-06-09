@@ -21,11 +21,11 @@ log = { package = "tracing", version = "0.1", features = ["log"] }
 parking_lot = "0.12"
 rand = "0.8"
 rayon = "1.7"
+serde = { version = "1.0", features = ["derive"] }
 tokio = { version = "1.28", features = ["rt", "time", "tracing"] }
 tokio-metrics = "0.1"
 tokio-stream = { version = "0.1", features = ["sync"] }
 
-beserial = { path = "../beserial", features = ["derive"] }
 nimiq-account = { path = "../primitives/account" }
 nimiq-block = { path = "../primitives/block" }
 nimiq-block-production = { path = "../block-production" }

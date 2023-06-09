@@ -12,7 +12,6 @@ use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 use ark_std::UniformRand;
 use rand::{thread_rng, CryptoRng, Rng};
 
-use beserial::{Deserialize, Serialize};
 use nimiq_primitives::policy::Policy;
 use nimiq_zkp_circuits::{
     bits::BitVec,
@@ -29,6 +28,7 @@ use nimiq_zkp_primitives::{
     pk_tree_construct, serialize_g1_mnt6, serialize_g2_mnt6, state_commitment, vk_commitment,
     MacroBlock, NanoZKPError, PK_TREE_DEPTH,
 };
+use serde::{Deserialize, Serialize};
 
 /// Checks whether cached proofs are compatible with the current proof.
 /// If not, it clears the folder and creates a new metadata file.

@@ -1,11 +1,11 @@
 use log::error;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError};
 use nimiq_bls::{CompressedPublicKey as BlsPublicKey, CompressedSignature as BlsSignature};
 use nimiq_hash::Blake2bHash;
 use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
 use nimiq_primitives::coin::Coin;
 use nimiq_primitives::policy::Policy;
+use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError};
 
 use crate::SignatureProof;
 use crate::{Transaction, TransactionError};

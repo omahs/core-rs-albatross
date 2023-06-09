@@ -3,8 +3,8 @@ use std::io;
 use ark_mnt6_753::Fr;
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 use nimiq_hash::{Hash, SerializeContent};
+use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
 use crate::{
     AggregatePublicKey, AggregateSignature, CompressedPublicKey, CompressedSignature, KeyPair,
@@ -205,13 +205,11 @@ impl Deserialize for KeyPair {
     }
 }
 
-fn ark_to_bserial_error(error: ark_serialize::SerializationError) -> beserial::SerializingError {
+fn ark_to_bserial_error(error: ark_serialize::SerializationError) -> serde::SerializingError {
     match error {
-        ark_serialize::SerializationError::NotEnoughSpace => beserial::SerializingError::Overflow,
-        ark_serialize::SerializationError::InvalidData => beserial::SerializingError::InvalidValue,
-        ark_serialize::SerializationError::UnexpectedFlags => {
-            beserial::SerializingError::InvalidValue
-        }
-        ark_serialize::SerializationError::IoError(e) => beserial::SerializingError::IoError(e),
+        ark_serialize::SerializationError::NotEnoughSpace => serde::SerializingError::Overflow,
+        ark_serialize::SerializationError::InvalidData => serde::SerializingError::InvalidValue,
+        ark_serialize::SerializationError::UnexpectedFlags => serde::SerializingError::InvalidValue,
+        ark_serialize::SerializationError::IoError(e) => serde::SerializingError::IoError(e),
     }
 }

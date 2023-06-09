@@ -1,7 +1,6 @@
 use std::cmp;
 use std::collections::{HashSet, VecDeque};
 
-use beserial::Serialize;
 use nimiq_database::cursor::{ReadCursor, WriteCursor};
 use nimiq_database::{
     Database, DatabaseFlags, Environment, ReadTransaction, Transaction, WriteTransaction,
@@ -21,6 +20,7 @@ use nimiq_transaction::{
     history_proof::HistoryTreeProof,
     inherent::Inherent,
 };
+use serde::Serialize;
 
 use crate::history::{mmr_store::MMRStore, ordered_hash::OrderedHash, HistoryTreeChunk};
 

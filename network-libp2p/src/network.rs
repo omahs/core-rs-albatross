@@ -48,7 +48,6 @@ use tokio_stream::wrappers::{BroadcastStream, ReceiverStream};
 #[cfg(not(feature = "tokio-time"))]
 use wasm_timer::Interval;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::CompressedPublicKey;
 use nimiq_network_interface::{
     network::{
@@ -64,6 +63,7 @@ use nimiq_network_interface::{
 use nimiq_primitives::task_executor::TaskExecutor;
 use nimiq_utils::time::OffsetTime;
 use nimiq_validator_network::validator_record::SignedValidatorRecord;
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "metrics")]
 use crate::network_metrics::NetworkMetrics;

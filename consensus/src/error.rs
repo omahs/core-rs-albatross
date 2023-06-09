@@ -1,7 +1,7 @@
 use thiserror::Error;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_blockchain_interface::BlockchainError;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Error)]
 pub enum Error {

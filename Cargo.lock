@@ -632,6 +632,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "atomic-polyfill"
+version = "0.1.11"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e3ff7eb3f316534d83a8a2c3d1674ace8a5a71198eba31e2e2b597833f699b28"
+dependencies = [
+ "critical-section",
+]
+
+[[package]]
 name = "atomic-waker"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -739,29 +748,6 @@ name = "bencher"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "7dfdb4953a096c551ce9ace855a604d702e6e62d77fac690575ae347571717f5"
-
-[[package]]
-name = "beserial"
-version = "0.1.0"
-dependencies = [
- "arrayvec 0.7.2",
- "beserial_derive",
- "bitvec",
- "byteorder",
- "libp2p",
- "num-traits",
- "thiserror",
-]
-
-[[package]]
-name = "beserial_derive"
-version = "0.1.0"
-dependencies = [
- "beserial",
- "proc-macro2",
- "quote",
- "syn 2.0.15",
-]
 
 [[package]]
 name = "bincode"
@@ -1069,6 +1055,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "cobs"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "67ba02a97a2bd10f4b59b25c7973101c79642302776489e030cd13cdab09ed15"
+
+[[package]]
 name = "codespan-reporting"
 version = "0.11.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1221,6 +1213,12 @@ checksum = "b540bd8bc810d3885c6ea91e2018302f68baba2129ab3e88f32389ee9370880d"
 dependencies = [
  "cfg-if",
 ]
+
+[[package]]
+name = "critical-section"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6548a0ad5d2549e111e1f6a11a6c2e2d00ce6a3dafe22948d67c2b443f775e52"
 
 [[package]]
 name = "crossbeam-channel"
@@ -2140,6 +2138,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "hash32"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b0c35f58762feb77d74ebe43bdbc3210f09be9fe6742234d573bacc26ed92b67"
+dependencies = [
+ "byteorder",
+]
+
+[[package]]
 name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2193,6 +2200,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e7f66481bfee273957b1f20485a4ff3362987f85b2c236580d81b4eb7a326429"
 dependencies = [
  "http",
+]
+
+[[package]]
+name = "heapless"
+version = "0.7.16"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "db04bc24a18b9ea980628ecf00e6c0264f3c1426dac36c00cb49b6fbad8b0743"
+dependencies = [
+ "atomic-polyfill",
+ "hash32",
+ "rustc_version",
+ "serde",
+ "spin 0.9.8",
+ "stable_deref_trait",
 ]
 
 [[package]]
@@ -3447,7 +3468,6 @@ dependencies = [
 name = "nimiq-account"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "hex",
  "lazy_static",
  "nimiq-bls",
@@ -3479,7 +3499,6 @@ name = "nimiq-block"
 version = "0.1.0"
 dependencies = [
  "bencher",
- "beserial",
  "bitflags",
  "hex",
  "nimiq-bls",
@@ -3508,7 +3527,6 @@ dependencies = [
 name = "nimiq-block-production"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "hex",
  "nimiq-account",
  "nimiq-block",
@@ -3532,6 +3550,7 @@ dependencies = [
  "nimiq-vrf",
  "parking_lot 0.12.1",
  "rand 0.8.5",
+ "serde",
  "tempfile",
  "tracing",
 ]
@@ -3540,7 +3559,6 @@ dependencies = [
 name = "nimiq-blockchain"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "futures-util",
  "hex",
  "nimiq-account",
@@ -3567,6 +3585,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "prometheus-client 0.19.0",
  "rand 0.8.5",
+ "serde",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -3577,7 +3596,6 @@ dependencies = [
 name = "nimiq-blockchain-interface"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "futures-util",
  "nimiq-block",
  "nimiq-database-value",
@@ -3585,6 +3603,7 @@ dependencies = [
  "nimiq-primitives",
  "nimiq-transaction",
  "parking_lot 0.12.1",
+ "serde",
  "thiserror",
  "tokio-stream",
  "tracing",
@@ -3617,7 +3636,6 @@ dependencies = [
  "ark-mnt6-753",
  "ark-serialize",
  "ark-std",
- "beserial",
  "blake2",
  "blake2-rfc",
  "byteorder",
@@ -3648,10 +3666,10 @@ dependencies = [
 name = "nimiq-collections"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "hex",
  "nimiq-test-log",
  "num-traits",
+ "postcard",
  "rand 0.8.5",
  "serde",
 ]
@@ -3661,7 +3679,6 @@ name = "nimiq-consensus"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "beserial",
  "futures-executor",
  "futures-util",
  "gloo-timers",
@@ -3695,6 +3712,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "pin-project",
  "rand 0.8.5",
+ "serde",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -3724,7 +3742,6 @@ dependencies = [
 name = "nimiq-genesis"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "bitflags",
  "hex",
  "lazy_static",
@@ -3739,6 +3756,7 @@ dependencies = [
  "nimiq-primitives",
  "nimiq-transaction",
  "nimiq-utils",
+ "serde",
  "tracing",
  "tracing-subscriber 0.3.17",
  "url",
@@ -3748,7 +3766,6 @@ dependencies = [
 name = "nimiq-genesis-builder"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "hex",
  "nimiq-account",
  "nimiq-block",
@@ -3771,7 +3788,6 @@ name = "nimiq-handel"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "beserial",
  "futures-util",
  "lazy_static",
  "nimiq-bls",
@@ -3785,6 +3801,7 @@ dependencies = [
  "nimiq-utils",
  "parking_lot 0.12.1",
  "rand 0.8.5",
+ "serde",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -3795,7 +3812,6 @@ dependencies = [
 name = "nimiq-hash"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "blake2-rfc",
  "byteorder",
  "hex",
@@ -3803,8 +3819,10 @@ dependencies = [
  "nimiq-macros",
  "nimiq-mmr",
  "nimiq-test-log",
+ "postcard",
  "rust-argon2",
  "serde",
+ "serde-big-array",
  "sha2 0.9.9",
 ]
 
@@ -3887,20 +3905,19 @@ dependencies = [
 name = "nimiq-key-derivation"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "byteorder",
  "hex",
  "nimiq-hash",
  "nimiq-keys",
  "nimiq-test-log",
  "regex",
+ "serde",
 ]
 
 [[package]]
 name = "nimiq-keys"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "curve25519-dalek 3.2.0",
  "data-encoding",
  "ed25519-zebra",
@@ -3922,7 +3939,6 @@ dependencies = [
 name = "nimiq-lib"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "clap",
  "console-subscriber",
  "derive_builder 0.12.0",
@@ -4025,7 +4041,6 @@ dependencies = [
 name = "nimiq-mempool"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "futures-util",
  "hex",
  "keyed_priority_queue",
@@ -4053,6 +4068,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "prometheus-client 0.19.0",
  "rand 0.8.5",
+ "serde",
  "thiserror",
  "tokio",
  "tokio-metrics",
@@ -4091,7 +4107,6 @@ dependencies = [
 name = "nimiq-mnemonic"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "bitvec",
  "hex",
  "nimiq-hash",
@@ -4099,6 +4114,7 @@ dependencies = [
  "nimiq-macros",
  "nimiq-test-log",
  "nimiq-utils",
+ "serde",
  "unicode-normalization",
 ]
 
@@ -4107,7 +4123,6 @@ name = "nimiq-network-interface"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "beserial",
  "bitflags",
  "derive_more",
  "futures-util",
@@ -4126,7 +4141,6 @@ version = "0.1.0"
 dependencies = [
  "async-trait",
  "base64 0.21.0",
- "beserial",
  "bitflags",
  "bytes",
  "derive_more",
@@ -4162,12 +4176,12 @@ name = "nimiq-network-mock"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "beserial",
  "derive_more",
  "futures-util",
  "nimiq-network-interface",
  "nimiq-test-log",
  "parking_lot 0.12.1",
+ "serde",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -4192,7 +4206,6 @@ dependencies = [
 name = "nimiq-primitives"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "bitvec",
  "hex",
  "lazy_static",
@@ -4244,7 +4257,6 @@ dependencies = [
  "ark-groth16",
  "ark-mnt6-753",
  "async-trait",
- "beserial",
  "clap",
  "futures-util",
  "hex",
@@ -4276,7 +4288,6 @@ name = "nimiq-rpc-server"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "beserial",
  "futures-util",
  "hex",
  "nimiq-account",
@@ -4343,7 +4354,6 @@ dependencies = [
 name = "nimiq-subscription"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "bitflags",
  "hex",
  "nimiq-bls",
@@ -4353,6 +4363,7 @@ dependencies = [
  "nimiq-primitives",
  "nimiq-transaction",
  "nimiq-utils",
+ "serde",
  "tracing",
 ]
 
@@ -4360,7 +4371,6 @@ dependencies = [
 name = "nimiq-tendermint"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "futures-util",
  "nimiq-block",
  "nimiq-collections",
@@ -4368,6 +4378,7 @@ dependencies = [
  "nimiq-macros",
  "nimiq-primitives",
  "nimiq-test-log",
+ "serde",
  "thiserror",
  "tokio",
  "tokio-stream",
@@ -4407,7 +4418,6 @@ dependencies = [
  "ark-mnt6-753",
  "ark-serialize",
  "async-trait",
- "beserial",
  "futures-util",
  "hex",
  "nimiq-account",
@@ -4444,6 +4454,7 @@ dependencies = [
  "paste",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
+ "serde",
  "tokio",
  "tokio-stream",
  "tracing",
@@ -4454,7 +4465,6 @@ name = "nimiq-tools"
 version = "0.1.0"
 dependencies = [
  "anyhow",
- "beserial",
  "clap",
  "hex",
  "nimiq-bls",
@@ -4464,6 +4474,7 @@ dependencies = [
  "nimiq-transaction",
  "nimiq-utils",
  "rand 0.8.5",
+ "serde",
  "thiserror",
  "tracing",
 ]
@@ -4472,7 +4483,6 @@ dependencies = [
 name = "nimiq-transaction"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "bitflags",
  "hex",
  "nimiq-bls",
@@ -4500,7 +4510,6 @@ dependencies = [
 name = "nimiq-transaction-builder"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "hex",
  "nimiq-bls",
  "nimiq-hash",
@@ -4518,12 +4527,12 @@ dependencies = [
 name = "nimiq-trie"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "hex",
  "nimiq-database",
  "nimiq-hash",
  "nimiq-primitives",
  "nimiq-test-log",
+ "serde",
  "thiserror",
  "tracing",
 ]
@@ -4532,7 +4541,6 @@ dependencies = [
 name = "nimiq-utils"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "clear_on_drop",
  "futures-util",
  "hex",
@@ -4556,7 +4564,6 @@ name = "nimiq-validator"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "beserial",
  "futures-util",
  "hex",
  "lazy_static",
@@ -4592,6 +4599,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "rand 0.8.5",
  "rayon",
+ "serde",
  "tokio",
  "tokio-metrics",
  "tokio-stream",
@@ -4605,12 +4613,12 @@ name = "nimiq-validator-network"
 version = "0.1.0"
 dependencies = [
  "async-trait",
- "beserial",
  "futures-util",
  "nimiq-bls",
  "nimiq-network-interface",
  "nimiq-utils",
  "parking_lot 0.12.1",
+ "serde",
  "thiserror",
  "tokio",
  "tracing",
@@ -4620,7 +4628,6 @@ dependencies = [
 name = "nimiq-vrf"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "byteorder",
  "curve25519-dalek 3.2.0",
  "hex",
@@ -4641,7 +4648,6 @@ dependencies = [
 name = "nimiq-wallet"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "hex",
  "lazy_static",
  "nimiq-database",
@@ -4652,13 +4658,13 @@ dependencies = [
  "nimiq-test-log",
  "nimiq-transaction",
  "nimiq-utils",
+ "serde",
 ]
 
 [[package]]
 name = "nimiq-web-client"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "futures",
  "futures-util",
  "hex",
@@ -4707,7 +4713,6 @@ dependencies = [
  "ark-relations",
  "ark-serialize",
  "ark-std",
- "beserial",
  "nimiq-bls",
  "nimiq-log",
  "nimiq-primitives",
@@ -4719,6 +4724,7 @@ dependencies = [
  "parking_lot 0.12.1",
  "rand 0.8.5",
  "rand_chacha 0.3.1",
+ "serde",
  "thiserror",
  "tracing",
  "tracing-subscriber 0.3.17",
@@ -4740,7 +4746,6 @@ dependencies = [
  "ark-serialize",
  "ark-std",
  "ark-test-curves",
- "beserial",
  "clap",
  "hex",
  "nimiq-block",
@@ -4754,6 +4759,7 @@ dependencies = [
  "rand 0.8.5",
  "rand_chacha 0.3.1",
  "rayon",
+ "serde",
  "tracing",
 ]
 
@@ -4766,7 +4772,6 @@ dependencies = [
  "ark-mnt6-753",
  "ark-serialize",
  "async-trait",
- "beserial",
  "futures-util",
  "hex",
  "lazy_static",
@@ -4798,6 +4803,7 @@ dependencies = [
  "nimiq-zkp-primitives",
  "parking_lot 0.12.1",
  "rand 0.8.5",
+ "serde",
  "tempfile",
  "thiserror",
  "tokio",
@@ -4820,7 +4826,6 @@ dependencies = [
  "ark-relations",
  "ark-serialize",
  "ark-std",
- "beserial",
  "hex",
  "lazy_static",
  "nimiq-block",
@@ -4836,6 +4841,7 @@ dependencies = [
  "num-traits",
  "rand 0.8.5",
  "rayon",
+ "serde",
  "thiserror",
  "tracing",
 ]
@@ -4844,7 +4850,6 @@ dependencies = [
 name = "nimiq-zkp-test-gen"
 version = "0.1.0"
 dependencies = [
- "beserial",
  "hex",
  "nimiq-block",
  "nimiq-block-production",
@@ -4862,6 +4867,7 @@ dependencies = [
  "nimiq-zkp-component",
  "nimiq-zkp-primitives",
  "parking_lot 0.12.1",
+ "serde",
  "tokio",
  "tracing",
  "tracing-subscriber 0.3.17",
@@ -5285,6 +5291,17 @@ dependencies = [
  "cpufeatures",
  "opaque-debug",
  "universal-hash 0.5.0",
+]
+
+[[package]]
+name = "postcard"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cfa512cd0d087cc9f99ad30a1bf64795b67871edbead083ffc3a4dfafa59aa00"
+dependencies = [
+ "cobs",
+ "heapless",
+ "serde",
 ]
 
 [[package]]
@@ -5745,7 +5762,7 @@ dependencies = [
  "cc",
  "libc",
  "once_cell",
- "spin",
+ "spin 0.5.2",
  "untrusted",
  "web-sys",
  "winapi",
@@ -6329,6 +6346,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6e63cff320ae2c57904679ba7cb63280a3dc4613885beafb148ee7bf9aa9042d"
 
 [[package]]
+name = "spin"
+version = "0.9.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+dependencies = [
+ "lock_api",
+]
+
+[[package]]
 name = "spki"
 version = "0.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6337,6 +6363,12 @@ dependencies = [
  "base64ct",
  "der",
 ]
+
+[[package]]
+name = "stable_deref_trait"
+version = "1.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "a8f112729512f8e442d81f95a8a7ddf2b7c6b8a1a6f509a95864142b30cab2d3"
 
 [[package]]
 name = "static_assertions"

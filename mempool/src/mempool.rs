@@ -7,7 +7,6 @@ use std::sync::atomic::AtomicU32;
 use std::sync::Arc;
 use tokio_metrics::TaskMonitor;
 
-use beserial::Serialize;
 use nimiq_account::ReservedBalance;
 use nimiq_block::Block;
 use nimiq_blockchain::{Blockchain, TransactionVerificationCache};
@@ -16,6 +15,7 @@ use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_keys::Address;
 use nimiq_network_interface::network::{Network, Topic};
 use nimiq_transaction::{ControlTransactionTopic, Transaction, TransactionTopic};
+use serde::Serialize;
 
 use crate::config::MempoolConfig;
 use crate::executor::MempoolExecutor;

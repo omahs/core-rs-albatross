@@ -3,7 +3,6 @@ use std::{fmt, io};
 
 use bitflags::bitflags;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 use nimiq_bls::cache::PublicKeyCache;
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Blake2bHash, Blake2sHash, Hash, SerializeContent};
@@ -15,6 +14,7 @@ use nimiq_primitives::policy::Policy;
 use nimiq_primitives::slots::Validators;
 use nimiq_transaction::ExecutedTransaction;
 use nimiq_vrf::VrfSeed;
+use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
 use crate::macro_block::{MacroBlock, MacroHeader};
 use crate::micro_block::{MicroBlock, MicroHeader};

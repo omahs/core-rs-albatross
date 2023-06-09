@@ -6,7 +6,6 @@ use futures::{
 };
 use parking_lot::RwLock;
 
-use beserial::{Serialize, WriteBytesExt};
 use nimiq_account::BlockLogger;
 use nimiq_block::{
     Block, MacroBlock, TendermintIdentifier, TendermintProof, TendermintStep, TendermintVote,
@@ -26,6 +25,7 @@ use nimiq_tendermint::{
 use nimiq_validator_network::{
     single_response_requester::SingleResponseRequester, ValidatorNetwork,
 };
+use serde::{Serialize, WriteBytesExt};
 
 use crate::{
     aggregation::{

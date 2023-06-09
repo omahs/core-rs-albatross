@@ -10,10 +10,6 @@ use bitflags::bitflags;
 use num_traits::SaturatingAdd;
 use thiserror::Error;
 
-use beserial::{
-    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
-    SerializingError, WriteBytesExt,
-};
 use nimiq_hash::{Blake2bHash, Hash, SerializeContent};
 use nimiq_keys::Address;
 use nimiq_keys::{PublicKey, Signature};
@@ -23,6 +19,10 @@ use nimiq_primitives::{
     transaction::TransactionError,
 };
 use nimiq_utils::merkle::{Blake2bMerklePath, Blake2bMerkleProof};
+use serde::{
+    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
+    SerializingError, WriteBytesExt,
+};
 
 use crate::account::AccountTransactionVerification;
 

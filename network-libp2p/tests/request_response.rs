@@ -12,7 +12,6 @@ use tokio::time::Duration;
 #[cfg(feature = "tokio-time")]
 use tokio::time::Instant;
 
-use beserial::{Deserialize, Serialize};
 #[cfg(feature = "tokio-time")]
 use nimiq_network_interface::network::CloseReason;
 use nimiq_network_interface::{
@@ -29,6 +28,7 @@ use nimiq_network_libp2p::{
 };
 use nimiq_test_log::test;
 use nimiq_utils::time::OffsetTime;
+use serde::{Deserialize, Serialize};
 
 /// The max number of TestRequests per peer (used for regular tests only).
 const MAX_REQUEST_RESPONSE_TEST_REQUEST: u32 = 1000;
@@ -49,10 +49,10 @@ impl RequestCommon for TestRequest {
 
     const MAX_REQUESTS: u32 = MAX_REQUEST_RESPONSE_TEST_REQUEST;
 
-    fn serialize_request<W: beserial::WriteBytesExt>(
+    fn serialize_request<W: serde::WriteBytesExt>(
         &self,
         writer: &mut W,
-    ) -> Result<usize, beserial::SerializingError> {
+    ) -> Result<usize, serde::SerializingError> {
         let mut size = 0;
         size += nimiq_network_interface::request::RequestType::from_request::<Self>()
             .0
@@ -70,9 +70,9 @@ impl RequestCommon for TestRequest {
         size
     }
 
-    fn deserialize_request<R: beserial::ReadBytesExt>(
+    fn deserialize_request<R: serde::ReadBytesExt>(
         reader: &mut R,
-    ) -> Result<Self, beserial::SerializingError> {
+    ) -> Result<Self, serde::SerializingError> {
         // Check for correct type.
         let ty: u16 = Deserialize::deserialize(reader)?;
         if ty != nimiq_network_interface::request::RequestType::from_request::<Self>().0 {

@@ -13,8 +13,8 @@ pub use self::writer::MessageWriter;
 
 #[cfg(test)]
 mod tests {
-    use beserial::{Deserialize, Serialize};
     use futures::{io::Cursor, SinkExt, StreamExt};
+    use serde::{Deserialize, Serialize};
 
     use super::{MessageReader, MessageWriter};
     use nimiq_test_log::test;

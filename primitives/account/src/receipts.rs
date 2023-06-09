@@ -1,9 +1,9 @@
 use std::fmt::Debug;
 use std::io;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_primitives::account::FailReason;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AccountReceipt(#[beserial(len_type(u16))] pub Vec<u8>);

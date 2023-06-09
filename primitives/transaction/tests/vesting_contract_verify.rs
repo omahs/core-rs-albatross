@@ -1,4 +1,3 @@
-use beserial::{Deserialize, Serialize, SerializingError};
 use nimiq_keys::{Address, KeyPair, PrivateKey};
 use nimiq_primitives::{
     account::AccountType, coin::Coin, networks::NetworkId, transaction::TransactionError,
@@ -7,6 +6,7 @@ use nimiq_transaction::{
     account::{vesting_contract::CreationTransactionData, AccountTransactionVerification},
     SignatureProof, Transaction, TransactionFlags,
 };
+use serde::{Deserialize, Serialize, SerializingError};
 
 const OWNER_KEY: &str = "9d5bd02379e7e45cf515c788048f5cf3c454ffabd3e83bd1d7667716c325c3c0";
 

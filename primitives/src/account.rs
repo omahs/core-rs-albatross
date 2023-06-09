@@ -3,8 +3,8 @@ use std::convert::TryFrom;
 use strum_macros::Display;
 use thiserror::Error;
 
-use beserial::{Deserialize, Serialize, SerializingError};
 use nimiq_keys::Address;
+use serde::{Deserialize, Serialize, SerializingError};
 
 use crate::coin::CoinUnderflowError;
 use crate::{

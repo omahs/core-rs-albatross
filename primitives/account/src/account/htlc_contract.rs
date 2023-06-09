@@ -1,4 +1,3 @@
-use beserial::{Deserialize, Serialize};
 use nimiq_keys::Address;
 use nimiq_primitives::account::AccountError;
 #[cfg(feature = "interaction-traits")]
@@ -11,6 +10,7 @@ use nimiq_transaction::account::htlc_contract::{
 };
 #[cfg(feature = "interaction-traits")]
 use nimiq_transaction::{inherent::Inherent, Transaction};
+use serde::{Deserialize, Serialize};
 
 use crate::{convert_receipt, AccountReceipt};
 #[cfg(feature = "interaction-traits")]

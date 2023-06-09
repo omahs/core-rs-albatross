@@ -2,8 +2,8 @@ use std::str::FromStr;
 
 use wasm_bindgen::prelude::*;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_keys::SecureGenerate;
+use serde::{Deserialize, Serialize};
 
 use crate::address::Address;
 use crate::private_key::PrivateKey;

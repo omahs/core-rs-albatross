@@ -1,8 +1,8 @@
 use std::io::Write;
 use std::ops::Range;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_hash::{Blake2bHash, HashOutput, Hasher, SerializeContent};
+use serde::{Deserialize, Serialize};
 
 use crate::math::CeilingDiv;
 
@@ -14,10 +14,13 @@ use crate::math::CeilingDiv;
 pub struct PartialMerkleProofBuilder {}
 
 impl PartialMerkleProofBuilder {
-    pub fn get_proofs<H: HashOutput>(
+    pub fn get_proofs<H>(
         hashes: &[H],
         chunk_size: usize,
-    ) -> Result<Vec<PartialMerkleProof<H>>, PartialMerkleProofError> {
+    ) -> Result<Vec<PartialMerkleProof<H>>, PartialMerkleProofError>
+    where
+        for<'de> H: HashOutput<'de>,
+    {
         if chunk_size == 0 {
             return Err(PartialMerkleProofError::InvalidChunkSize);
         }
@@ -27,10 +30,14 @@ impl PartialMerkleProofBuilder {
         Ok(proofs)
     }
 
-    pub fn from_values<H: HashOutput, T: SerializeContent>(
+    pub fn from_values<H, T>(
         values: &[T],
         chunk_size: usize,
-    ) -> Result<Vec<PartialMerkleProof<H>>, PartialMerkleProofError> {
+    ) -> Result<Vec<PartialMerkleProof<H>>, PartialMerkleProofError>
+    where
+        for<'de> H: HashOutput<'de>,
+        T: SerializeContent,
+    {
         let hashes: Vec<H> = values
             .iter()
             .map(|v| H::Builder::default().chain(v).finish())
@@ -38,12 +45,15 @@ impl PartialMerkleProofBuilder {
         PartialMerkleProofBuilder::get_proofs::<H>(&hashes, chunk_size)
     }
 
-    fn compute<H: HashOutput>(
+    fn compute<H>(
         hashes: &[H],
         chunk_size: usize,
         current_range: Range<usize>,
         proofs: &mut Vec<PartialMerkleProof<H>>,
-    ) -> H {
+    ) -> H
+    where
+        for<'de> H: HashOutput<'de>,
+    {
         let mut hasher = H::Builder::default();
 
         match current_range.end - current_range.start {
@@ -95,14 +105,20 @@ impl PartialMerkleProofBuilder {
 /// These proofs can only be verified incrementally, i.e., one has to start with the first chunk of data.
 /// The proof for the second chunk then takes as an input the result of the first chunk's proof and so on.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct PartialMerkleProof<H: HashOutput> {
+#[serde(bound(deserialize = "for<'a> H: 'a + HashOutput<'a>"))]
+pub struct PartialMerkleProof<H>
+where
+    for<'a> H: HashOutput<'a>,
+{
     total_len: u32,
-    #[beserial(len_type(u16))]
     nodes: Vec<H>,
 }
 
 #[derive(Debug)]
-pub struct PartialMerkleProofResult<H: HashOutput> {
+pub struct PartialMerkleProofResult<H>
+where
+    for<'de> H: HashOutput<'de>,
+{
     /// The calculated root of the merkle proof.
     root: H,
     /// A set of hashes in the merkle tree that are used in the next proof's verification.
@@ -111,7 +127,10 @@ pub struct PartialMerkleProofResult<H: HashOutput> {
     next_index: usize,
 }
 
-impl<H: HashOutput> PartialMerkleProofResult<H> {
+impl<H> PartialMerkleProofResult<H>
+where
+    for<'de> H: HashOutput<'de>,
+{
     #[inline]
     pub fn root(&self) -> &H {
         &self.root
@@ -128,9 +147,9 @@ impl<H: HashOutput> PartialMerkleProofResult<H> {
     }
 }
 
-impl<H> PartialMerkleProof<H>
+impl<'de, H> PartialMerkleProof<H>
 where
-    H: HashOutput,
+    for<'a> H: HashOutput<'a>,
 {
     pub fn empty(total_len: usize) -> Self {
         PartialMerkleProof {

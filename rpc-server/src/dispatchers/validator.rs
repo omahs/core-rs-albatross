@@ -1,7 +1,7 @@
 use std::sync::atomic::Ordering;
 
 use async_trait::async_trait;
-use beserial::Serialize;
+use serde::Serialize;
 
 use nimiq_keys::Address;
 use nimiq_rpc_interface::types::RPCResult;

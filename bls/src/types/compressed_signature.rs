@@ -11,7 +11,7 @@ use ark_mnt6_753::{G1Affine, G1Projective};
 
 use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
 #[cfg(feature = "beserial")]
-use beserial::Deserialize;
+use serde::Deserialize;
 
 #[cfg(feature = "beserial")]
 use crate::ParseError;

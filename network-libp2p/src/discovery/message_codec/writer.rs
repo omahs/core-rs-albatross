@@ -6,7 +6,7 @@ use bytes::{Buf, BufMut, BytesMut};
 use futures::{ready, AsyncWrite, Sink};
 use pin_project::pin_project;
 
-use beserial::{Serialize, SerializingError};
+use serde::{Serialize, SerializingError};
 
 use super::header::Header;
 
@@ -149,7 +149,7 @@ where
 mod tests {
     use futures::SinkExt;
 
-    use beserial::{Deserialize, Serialize};
+    use serde::{Deserialize, Serialize};
 
     use super::{Header, MessageWriter};
     use nimiq_test_log::test;

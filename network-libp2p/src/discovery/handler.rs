@@ -20,10 +20,10 @@ use rand::{seq::IteratorRandom, thread_rng};
 use thiserror::Error;
 use wasm_timer::Interval;
 
-use beserial::SerializingError;
 use nimiq_hash::Blake2bHash;
 use nimiq_network_interface::peer_info::Services;
 use nimiq_utils::tagged_signing::TaggedKeypair;
+use serde::SerializingError;
 
 use super::{
     behaviour::DiscoveryConfig,

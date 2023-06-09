@@ -1,6 +1,5 @@
 use std::convert::TryInto;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_account::{
     Account, Accounts, BasicAccount, BlockLogger, BlockState, Log, TransactionLog,
     TransactionOperationReceipt, TransactionReceipt,
@@ -13,6 +12,7 @@ use nimiq_test_utils::{
     accounts_revert::TestCommitRevert, test_rng::test_rng, transactions::TransactionsGenerator,
 };
 use nimiq_transaction::{SignatureProof, Transaction};
+use serde::{Deserialize, Serialize};
 
 const SECRET_KEY_1: &str = "d0fbb3690f5308f457e245a3cc65ae8d6945155eadcac60d489ffc5583a60b9b";
 

@@ -1,15 +1,14 @@
-use std::convert::{TryFrom, TryInto};
-use std::fmt::{Debug, Error, Formatter};
-use std::io;
-use std::str::FromStr;
+use std::{
+    convert::{TryFrom, TryInto},
+    fmt::{Debug, Error, Formatter},
+    str::FromStr,
+};
 
 use curve25519_dalek::scalar::Scalar;
 use hex::FromHex;
 use rand_core::{CryptoRng, RngCore};
 use sha2::{Digest as _, Sha512};
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
-use nimiq_hash::{Hash, SerializeContent};
 use nimiq_utils::key_rng::SecureGenerate;
 
 use crate::errors::{KeysError, ParseError};
@@ -73,33 +72,6 @@ impl Clone for PrivateKey {
     }
 }
 
-impl Deserialize for PrivateKey {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let mut buf = [0u8; PrivateKey::SIZE];
-        reader.read_exact(&mut buf)?;
-        Ok(PrivateKey::from(&buf))
-    }
-}
-
-impl Serialize for PrivateKey {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        writer.write_all(self.as_bytes())?;
-        Ok(self.serialized_size())
-    }
-
-    fn serialized_size(&self) -> usize {
-        PrivateKey::SIZE
-    }
-}
-
-impl SerializeContent for PrivateKey {
-    fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
-        Ok(self.serialize(writer)?)
-    }
-}
-
-impl Hash for PrivateKey {}
-
 impl std::hash::Hash for PrivateKey {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         std::hash::Hash::hash(self.as_bytes(), state);
@@ -145,12 +117,14 @@ impl Default for PrivateKey {
 
 #[cfg(feature = "serde-derive")]
 mod serde_derive {
-    use std::borrow::Cow;
+    use std::{borrow::Cow, io};
 
     use serde::{
         de::{Deserialize, Deserializer, Error},
         ser::{Serialize, Serializer},
     };
+
+    use nimiq_hash::{Hash, SerializeContent};
 
     use super::PrivateKey;
 
@@ -172,4 +146,12 @@ mod serde_derive {
             data.parse().map_err(Error::custom)
         }
     }
+
+    impl SerializeContent for PrivateKey {
+        fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
+            Ok(self.serialize(writer)?)
+        }
+    }
+
+    impl Hash for PrivateKey {}
 }

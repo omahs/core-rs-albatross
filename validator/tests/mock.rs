@@ -3,7 +3,6 @@ use std::{sync::Arc, time::Duration};
 use futures::{future, StreamExt};
 use tokio::time;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_block::{MultiSignature, SignedSkipBlockInfo, SkipBlockInfo};
 use nimiq_blockchain_interface::{AbstractBlockchain, BlockchainEvent};
 use nimiq_bls::{AggregateSignature, KeyPair as BlsKeyPair};
@@ -26,6 +25,7 @@ use nimiq_test_utils::{
     },
 };
 use nimiq_validator::aggregation::skip_block::SignedSkipBlockMessage;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 struct SkipBlockMessage(LevelUpdate<SignedSkipBlockMessage>);

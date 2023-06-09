@@ -1,6 +1,6 @@
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::{PublicKey, SecretKey, Signature};
 use nimiq_utils::tagged_signing::TaggedSignable;
+use serde::{Deserialize, Serialize};
 
 // TODO: Use a tagged signature for validator records
 impl<TPeerId> TaggedSignable for ValidatorRecord<TPeerId>

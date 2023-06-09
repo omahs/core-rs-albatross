@@ -4,7 +4,6 @@ use std::fmt::Debug;
 use std::{fmt, io};
 
 use crate::{BlockError, SkipBlockInfo};
-use beserial::{Deserialize, Serialize};
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Blake2bHash, Hash, SerializeContent};
 use nimiq_hash_derive::SerializeContent;
@@ -14,6 +13,7 @@ use nimiq_primitives::slots::Validators;
 use nimiq_transaction::ExecutedTransaction;
 use nimiq_transaction::Transaction;
 use nimiq_vrf::VrfSeed;
+use serde::{Deserialize, Serialize};
 
 use crate::fork_proof::ForkProof;
 use crate::skip_block::SkipBlockProof;

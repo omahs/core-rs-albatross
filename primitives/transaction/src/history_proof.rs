@@ -1,9 +1,9 @@
-use beserial::{
+use nimiq_hash::Blake2bHash;
+use nimiq_mmr::mmr::proof::Proof;
+use serde::{
     Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
     SerializingError, WriteBytesExt,
 };
-use nimiq_hash::Blake2bHash;
-use nimiq_mmr::mmr::proof::Proof;
 
 use crate::extended_transaction::ExtendedTransaction;
 

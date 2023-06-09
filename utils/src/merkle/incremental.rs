@@ -1,8 +1,8 @@
 use std::mem;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_collections::BitSet;
 use nimiq_hash::{Blake2bHash, HashOutput, Hasher, SerializeContent};
+use serde::{Deserialize, Serialize};
 
 use crate::math::CeilingDiv;
 
@@ -16,12 +16,18 @@ use crate::math::CeilingDiv;
 /// Each proof can be verified by taking the previous proof's result into account (to minimise the amount of work required).
 /// This way, the large list of data can be transmitted in smaller chunks and one can incrementally verify
 /// the correctness of these chunks.
-pub struct IncrementalMerkleProofBuilder<H: HashOutput> {
+pub struct IncrementalMerkleProofBuilder<H>
+where
+    for<'de> H: 'de + HashOutput<'de>,
+{
     tree: Vec<Vec<H>>,
     chunk_size: usize,
 }
 
-impl<H: HashOutput> IncrementalMerkleProofBuilder<H> {
+impl<H> IncrementalMerkleProofBuilder<H>
+where
+    for<'de> H: 'de + HashOutput<'de>,
+{
     pub fn new(chunk_size: usize) -> Result<Self, IncrementalMerkleProofError> {
         if chunk_size == 0 {
             return Err(IncrementalMerkleProofError::InvalidChunkSize);
@@ -166,14 +172,20 @@ impl<H: HashOutput> IncrementalMerkleProofBuilder<H> {
 /// These proofs can only be verified incrementally, i.e., one has to start with the first chunk of data.
 /// The proof for the second chunk then takes as an input the result of the first chunk's proof and so on.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-pub struct IncrementalMerkleProof<H: HashOutput> {
+#[serde(bound(deserialize = "for<'a> H: 'a + HashOutput<'a>"))]
+pub struct IncrementalMerkleProof<H>
+where
+    for<'a> H: 'a + HashOutput<'a>,
+{
     total_len: u32,
-    #[beserial(len_type(u16))]
     nodes: Vec<H>,
 }
 
 #[derive(Debug)]
-pub struct IncrementalMerkleProofResult<H: HashOutput> {
+pub struct IncrementalMerkleProofResult<H>
+where
+    for<'de> H: 'de + HashOutput<'de>,
+{
     /// The calculated root of the merkle proof.
     root: H,
     /// A set of hashes in the merkle tree that are used in the next proof's verification.
@@ -182,7 +194,10 @@ pub struct IncrementalMerkleProofResult<H: HashOutput> {
     next_index: usize,
 }
 
-impl<H: HashOutput> IncrementalMerkleProofResult<H> {
+impl<H> IncrementalMerkleProofResult<H>
+where
+    for<'de> H: 'de + HashOutput<'de>,
+{
     #[inline]
     pub fn root(&self) -> &H {
         &self.root
@@ -199,9 +214,9 @@ impl<H: HashOutput> IncrementalMerkleProofResult<H> {
     }
 }
 
-impl<H> IncrementalMerkleProof<H>
+impl<'de, H> IncrementalMerkleProof<H>
 where
-    H: HashOutput,
+    for<'a> H: 'a + HashOutput<'a>,
 {
     pub fn empty(total_len: usize) -> Self {
         IncrementalMerkleProof {

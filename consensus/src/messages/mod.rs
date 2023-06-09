@@ -1,6 +1,5 @@
 use std::fmt::{Debug, Formatter};
 
-use beserial::{Deserialize, Serialize};
 use nimiq_block::{Block, BlockInclusionProof, MacroBlock};
 #[cfg(feature = "full")]
 use nimiq_blockchain::HistoryTreeChunk;
@@ -12,6 +11,7 @@ use nimiq_network_interface::{
 };
 use nimiq_primitives::{key_nibbles::KeyNibbles, trie::trie_proof::TrieProof};
 use nimiq_transaction::history_proof::HistoryTreeProof;
+use serde::{Deserialize, Serialize};
 
 use crate::error::SubscribeToAddressesError;
 

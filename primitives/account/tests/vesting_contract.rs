@@ -4,7 +4,6 @@ use nimiq_test_utils::{
     accounts_revert::TestCommitRevert, test_rng::test_rng, transactions::TransactionsGenerator,
 };
 
-use beserial::{Deserialize, Serialize};
 use nimiq_account::{
     Account, Accounts, BasicAccount, BlockState, Log, TransactionLog, VestingContract,
 };
@@ -18,6 +17,7 @@ use nimiq_primitives::{
 use nimiq_test_log::test;
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_utils::key_rng::SecureGenerate;
+use serde::{Deserialize, Serialize};
 
 const CONTRACT: &str = "00002fbf9bd9c800fd34ab7265a0e48c454ccbf4c9c61dfdf68f9a220000000000000001000000000003f480000002632e314a0000002fbf9bd9c800";
 

@@ -1,6 +1,6 @@
-use beserial::Serialize;
 use nimiq_bls::{PublicKey, SecretKey};
 use nimiq_utils::key_rng::SecureGenerate;
+use serde::Serialize;
 
 fn main() {
     let secret_key = SecretKey::generate_default_csprng();

@@ -1,7 +1,6 @@
 use log::debug;
 use rand::{CryptoRng, Rng};
 
-use beserial::Serialize;
 use nimiq_account::{
     Account, AccountInherentInteraction, Accounts, BasicAccount, BlockState,
     HashedTimeLockedContract, InherentLogger, StakingContractStoreWrite, TransactionLog,
@@ -26,6 +25,7 @@ use nimiq_transaction::{
     SignatureProof, Transaction,
 };
 use nimiq_transaction_builder::TransactionProofBuilder;
+use serde::Serialize;
 
 pub enum ValidatorState {
     Active,

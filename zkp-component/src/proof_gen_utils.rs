@@ -10,10 +10,10 @@ use tokio::{
     sync::oneshot::Receiver,
 };
 
-use beserial::{Deserialize, Serialize};
 use nimiq_block::MacroBlock;
 use nimiq_zkp::prove::prove;
 use nimiq_zkp_primitives::MacroBlock as ZKPMacroBlock;
+use serde::{Deserialize, Serialize};
 
 use super::types::ZKPState;
 use crate::types::*;

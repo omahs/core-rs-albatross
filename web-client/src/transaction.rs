@@ -7,11 +7,11 @@ use wasm_bindgen::prelude::*;
 #[cfg(feature = "primitives")]
 use wasm_bindgen_derive::TryFromJsValue;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_hash::{Blake2bHash, Hash};
 #[cfg(feature = "client")]
 use nimiq_primitives::policy::Policy;
 use nimiq_primitives::{account::AccountType, coin::Coin, networks::NetworkId};
+use serde::{Deserialize, Serialize};
 
 #[cfg(feature = "client")]
 use nimiq_transaction::extended_transaction::ExtendedTransaction;

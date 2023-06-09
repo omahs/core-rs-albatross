@@ -11,7 +11,6 @@ use libp2p::{
 use rand::{thread_rng, Rng};
 use tokio::time::timeout;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_network_interface::{
     network::{CloseReason, MsgAcceptance, Network as NetworkInterface, NetworkEvent, Topic},
     peer_info::Services,
@@ -22,6 +21,7 @@ use nimiq_network_libp2p::{
 };
 use nimiq_test_log::test;
 use nimiq_utils::time::OffsetTime;
+use serde::{Deserialize, Serialize};
 
 fn network_config(address: Multiaddr) -> Config {
     let keypair = Keypair::generate_ed25519();

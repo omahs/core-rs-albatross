@@ -2,9 +2,9 @@ use std::convert::TryInto;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
+use serde::Deserialize;
 use tempfile::tempdir;
 
-use beserial::Deserialize;
 use nimiq_block::{Block, ForkProof, MicroJustification};
 use nimiq_block_production::test_custom_block::{next_skip_block, BlockConfig};
 use nimiq_block_production::BlockProducer;

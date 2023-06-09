@@ -4,8 +4,8 @@ mod observable_hash_map;
 
 use derive_more::{Display, From, Into};
 
-use beserial::{Deserialize, Serialize};
 use nimiq_network_interface::{multiaddr, Multiaddr};
+use serde::{Deserialize, Serialize};
 
 pub use hub::MockHub;
 pub use network::{MockId, MockNetwork};
@@ -74,9 +74,9 @@ pub async fn create_mock_validator_network(n: usize, dial: bool) -> Vec<MockNetw
 pub mod tests {
     use futures::{Stream, StreamExt};
 
-    use beserial::{Deserialize, Serialize};
     use nimiq_network_interface::network::{Network, NetworkEvent, SubscribeEvents, Topic};
     use nimiq_test_log::test;
+    use serde::{Deserialize, Serialize};
 
     use super::network::MockNetworkError;
     use super::{MockHub, MockPeerId};

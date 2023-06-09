@@ -1,10 +1,10 @@
 use std::io;
 
-use beserial::Serialize;
 use nimiq_hash::SerializeContent;
 use nimiq_keys::KeyPair;
 use nimiq_primitives::account::AccountType;
 use nimiq_transaction::{SignatureProof, Transaction};
+use serde::Serialize;
 
 use crate::proof::htlc_contract::HtlcProofBuilder;
 use crate::proof::staking_contract::{StakingDataBuilder, StakingProofBuilder};

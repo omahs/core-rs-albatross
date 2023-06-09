@@ -142,7 +142,7 @@ impl From<LazyPublicKey> for CompressedPublicKey {
 
 #[cfg(feature = "beserial")]
 mod serialization {
-    use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
+    use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
     use super::*;
 

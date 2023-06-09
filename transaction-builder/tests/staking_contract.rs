@@ -1,6 +1,5 @@
 use std::convert::TryInto;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::KeyPair as BlsKeyPair;
 use nimiq_hash::Blake2bHash;
 use nimiq_keys::{Address, KeyPair, PrivateKey};
@@ -14,6 +13,7 @@ use nimiq_transaction::account::staking_contract::{
 };
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_transaction_builder::{TransactionBuilder, TransactionBuilderError};
+use serde::{Deserialize, Serialize};
 
 const ADDRESS: &str = "9cd82948650d902d95d52ea2ec91eae6deb0c9fe";
 const PRIVATE_KEY: &str = "b410a7a583cbc13ef4f1cbddace30928bcb4f9c13722414bc4a2faaba3f4e187";

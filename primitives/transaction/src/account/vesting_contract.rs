@@ -1,9 +1,9 @@
 use log::error;
 
-use beserial::{Deserialize, Serialize, SerializingError, WriteBytesExt};
 use nimiq_keys::Address;
 use nimiq_primitives::account::AccountType;
 use nimiq_primitives::coin::Coin;
+use serde::{Deserialize, Serialize, SerializingError, WriteBytesExt};
 
 use crate::account::AccountTransactionVerification;
 use crate::SignatureProof;

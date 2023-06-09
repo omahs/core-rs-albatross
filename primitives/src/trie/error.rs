@@ -1,4 +1,4 @@
-use beserial::SerializingError;
+use serde::SerializingError;
 use thiserror::Error;
 
 /// An enum containing possible errors that can happen in the Merkle Radix Trie.

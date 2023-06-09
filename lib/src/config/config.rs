@@ -10,7 +10,6 @@ use std::{
 use derive_builder::Builder;
 use strum_macros::Display;
 
-use beserial::Deserialize;
 #[cfg(feature = "validator")]
 use nimiq_bls::{KeyPair as BlsKeyPair, SecretKey as BlsSecretKey};
 #[cfg(feature = "database-storage")]
@@ -26,6 +25,7 @@ use nimiq_utils::file_store::FileStore;
 #[cfg(feature = "validator")]
 use nimiq_utils::key_rng::SecureGenerate;
 use nimiq_zkp_circuits::DEFAULT_KEYS_PATH;
+use serde::Deserialize;
 
 #[cfg(feature = "database-storage")]
 use crate::config::config_file::DatabaseSettings;

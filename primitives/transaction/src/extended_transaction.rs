@@ -2,13 +2,13 @@ use std::error;
 use std::fmt;
 use std::io;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_mmr::hash::Hash as MMRHash;
 use nimiq_primitives::coin::Coin;
 use nimiq_primitives::networks::NetworkId;
 use nimiq_primitives::policy::Policy;
+use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
 use crate::inherent::Inherent;
 use crate::ExecutedTransaction;

@@ -1,7 +1,7 @@
 use bitflags::bitflags;
 use libp2p::Multiaddr;
 
-use beserial::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 bitflags! {
     /// Bitmask of services
@@ -10,7 +10,6 @@ bitflags! {
     ///  - This just serializes to its numeric value for serde, but a list of strings would be nicer.
     ///
     #[derive(Serialize, Deserialize)]
-    #[cfg_attr(feature = "peer-contact-book-persistence", derive(serde::Serialize, serde::Deserialize), serde(transparent))]
     pub struct Services: u32 {
         /// The node provides at least the latest [`nimiq_primitives::policy::NUM_BLOCKS_VERIFICATION`] as full blocks.
         const FULL_BLOCKS = 1 << 0;
@@ -90,10 +89,6 @@ impl Services {
 ///  - A bitmask of the services supported by this peer.
 ///
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "peer-contact-book-persistence",
-    derive(serde::Serialize, serde::Deserialize)
-)]
 pub struct PeerInfo {
     /// Connection address of this peer.
     address: Multiaddr,

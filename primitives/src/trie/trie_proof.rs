@@ -2,8 +2,8 @@ use log::error;
 use std::cmp::Ordering;
 use std::collections::BTreeMap;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_hash::{Blake2bHash, Hash};
+use serde::{Deserialize, Serialize};
 
 use crate::key_nibbles::KeyNibbles;
 use crate::trie::trie_proof_node::TrieProofNode;

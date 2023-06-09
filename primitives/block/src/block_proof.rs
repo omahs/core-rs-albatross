@@ -1,7 +1,7 @@
 use crate::MacroBlock;
-use beserial::{Deserialize, Serialize};
 use nimiq_primitives::policy::Policy;
 use nimiq_utils::math::log2;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 // Block inclusion proofs proof that a block is part of the blockchain.

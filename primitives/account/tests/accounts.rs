@@ -2,7 +2,6 @@ use log::info;
 use std::{convert::TryFrom, time::Instant};
 use tempfile::tempdir;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_account::{
     Account, Accounts, BasicAccount, BlockLogger, BlockState, InherentOperationReceipt, Log,
     OperationReceipt, TransactionOperationReceipt, TransactionReceipt, VestingContract,
@@ -27,6 +26,7 @@ use nimiq_test_utils::{
 };
 use nimiq_transaction::{inherent::Inherent, SignatureProof, Transaction};
 use rand::Rng;
+use serde::{Deserialize, Serialize};
 
 const VOLATILE_ENV: bool = true;
 

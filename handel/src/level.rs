@@ -181,9 +181,9 @@ impl Level {
 mod test {
     use rand::Rng;
 
-    use beserial::{Deserialize, Serialize};
     use nimiq_collections::bitset::BitSet;
     use nimiq_test_log::test;
+    use serde::{Deserialize, Serialize};
 
     use super::*;
     use crate::contribution::ContributionError;

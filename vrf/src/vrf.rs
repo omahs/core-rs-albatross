@@ -15,10 +15,10 @@ use rand::{CryptoRng, RngCore};
 use serde_big_array::BigArray;
 use sha2::{Digest, Sha256, Sha512};
 
-use beserial::{Deserialize, Serialize, SerializingError};
 use nimiq_hash::{Blake2bHash, Blake2bHasher, HashOutput, Hasher};
 use nimiq_keys::{KeyPair, PublicKey};
 use nimiq_macros::create_typed_array;
+use serde::{Deserialize, Serialize, SerializingError};
 
 use crate::rng::Rng;
 

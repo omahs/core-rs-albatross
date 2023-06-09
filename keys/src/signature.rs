@@ -1,10 +1,6 @@
-use std::convert::TryFrom;
-use std::fmt;
-use std::str::FromStr;
+use std::{convert::TryFrom, fmt, str::FromStr};
 
 use hex::FromHex;
-
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
 use crate::errors::{KeysError, ParseError};
 
@@ -72,25 +68,6 @@ impl<'a> From<&'a [u8; Self::SIZE]> for Signature {
 impl From<[u8; Self::SIZE]> for Signature {
     fn from(bytes: [u8; Self::SIZE]) -> Self {
         Signature(ed25519_zebra::Signature::from(bytes))
-    }
-}
-
-impl Deserialize for Signature {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let mut buf = [0u8; Signature::SIZE];
-        reader.read_exact(&mut buf)?;
-        Self::from_bytes(&buf).map_err(|_| SerializingError::InvalidValue)
-    }
-}
-
-impl Serialize for Signature {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        writer.write_all(&self.to_bytes())?;
-        Ok(self.serialized_size())
-    }
-
-    fn serialized_size(&self) -> usize {
-        Self::SIZE
     }
 }
 

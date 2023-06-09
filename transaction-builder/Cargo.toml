@@ -16,7 +16,6 @@ maintenance = { status = "experimental" }
 thiserror = "1.0"
 serde = { version = "1.0", features = ["derive"], optional = true }
 
-beserial = { path = "../beserial" }
 nimiq-bls = { path = "../bls" }
 nimiq-hash = { path = "../hash" }
 nimiq-keys = { path = "../keys" }

@@ -21,9 +21,9 @@ maintenance = { status = "experimental" }
 bitflags = "1.0"
 hex = "0.4"
 lazy_static = "1.2"
+serde = { version = "1.0", features = ["derive"] }
 url = "2.3"
 
-beserial = { path = "../beserial", features = ["derive", "net"] }
 nimiq-block = { path = "../primitives/block" }
 nimiq-bls = { path = "../bls" }
 nimiq-database = { path = "../database", optional = true }

@@ -1,4 +1,4 @@
-use beserial::SerializingError;
+use serde::SerializingError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq)]

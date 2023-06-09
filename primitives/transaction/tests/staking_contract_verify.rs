@@ -1,6 +1,5 @@
 use std::convert::TryInto;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::{
     CompressedPublicKey as BlsPublicKey, KeyPair as BlsKeyPair, SecretKey as BlsSecretKey,
 };
@@ -17,6 +16,7 @@ use nimiq_transaction::account::staking_contract::{
 };
 use nimiq_transaction::{account::AccountTransactionVerification, SignatureProof, Transaction};
 use nimiq_utils::key_rng::SecureGenerate;
+use serde::{Deserialize, Serialize};
 
 const VALIDATOR_ADDRESS: &str = "83fa05dbe31f85e719f4c4fd67ebdba2e444d9f8";
 const VALIDATOR_PRIVATE_KEY: &str =

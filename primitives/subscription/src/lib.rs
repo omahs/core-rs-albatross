@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_keys::Address;
 use nimiq_primitives::coin::Coin;
 use nimiq_transaction::Transaction;
+use serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[repr(u8)]

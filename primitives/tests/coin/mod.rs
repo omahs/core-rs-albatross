@@ -3,9 +3,9 @@ use std::str::FromStr;
 
 use lazy_static::lazy_static;
 
-use beserial::{Deserialize, Serialize, SerializingError};
 use nimiq_primitives::coin::Coin;
 use nimiq_test_log::test;
+use serde::{Deserialize, Serialize, SerializingError};
 
 struct NonFailingTest {
     data: &'static str,

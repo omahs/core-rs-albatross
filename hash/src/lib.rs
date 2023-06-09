@@ -1,27 +1,23 @@
+use std::borrow::Cow;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Error, Formatter};
 use std::io;
 use std::str;
 
+use ::serde::{Deserialize, Serialize};
 use blake2_rfc::blake2b::Blake2b;
 use blake2_rfc::blake2s::Blake2s;
 use hex::FromHex;
 use sha2::{Digest, Sha256, Sha512};
 
-use beserial::{Deserialize, Serialize};
-use nimiq_macros::{add_hex_io_fns_typed_arr, create_typed_array};
-
-pub use self::sha512::*;
 use nimiq_database_value::{AsDatabaseBytes, FromDatabaseValue};
+use nimiq_macros::{add_hex_io_fns_typed_arr, create_typed_array};
 use nimiq_mmr::hash::Merge;
-use std::borrow::Cow;
 
 pub mod argon2kdf;
 pub mod blake2s;
 pub mod hmac;
 pub mod pbkdf2;
-#[cfg(feature = "serde")]
-mod serde;
 pub mod sha512;
 
 #[macro_export]
@@ -52,8 +48,8 @@ macro_rules! hash_typed_array {
     };
 }
 
-pub trait Hasher: Default + io::Write {
-    type Output: HashOutput;
+pub trait Hasher<'de>: Default + io::Write {
+    type Output: HashOutput<'de>;
 
     fn finish(self) -> Self::Output;
     fn digest(mut self, bytes: &[u8]) -> Self::Output {
@@ -78,33 +74,33 @@ pub trait SerializeContent {
 }
 
 pub trait Hash: SerializeContent {
-    fn hash<H: HashOutput>(&self) -> H {
+    fn hash<'de, H: HashOutput<'de>>(&self) -> H {
         let mut h = H::Builder::default();
         self.serialize_content(&mut h).unwrap();
         h.finish()
     }
 }
 
-pub trait HashOutput:
+pub trait HashOutput<'de>:
     PartialEq
     + Eq
     + Clone
     + Serialize
-    + Deserialize
+    + Deserialize<'de>
     + Sized
     + SerializeContent
     + Debug
     + std::hash::Hash
 {
-    type Builder: Hasher<Output = Self>;
+    type Builder: Hasher<'de, Output = Self>;
 
     fn as_bytes(&self) -> &[u8];
     fn len() -> usize;
 }
 
-impl<H> SerializeContent for H
+impl<'de, H> SerializeContent for H
 where
-    H: HashOutput,
+    H: HashOutput<'de>,
 {
     fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
         writer.write_all(self.as_bytes())?;
@@ -115,11 +111,11 @@ where
 // Blake2b
 
 const BLAKE2B_LENGTH: usize = 32;
-create_typed_array!(Blake2bHash, u8, BLAKE2B_LENGTH);
+create_typed_array!(Blake2bHash, u8, BLAKE2B_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Blake2bHash, BLAKE2B_LENGTH);
 
 pub struct Blake2bHasher(Blake2b);
-impl HashOutput for Blake2bHash {
+impl HashOutput<'_> for Blake2bHash {
     type Builder = Blake2bHasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -153,7 +149,7 @@ impl io::Write for Blake2bHasher {
     }
 }
 
-impl Hasher for Blake2bHasher {
+impl Hasher<'_> for Blake2bHasher {
     type Output = Blake2bHash;
 
     fn finish(self) -> Blake2bHash {
@@ -185,21 +181,21 @@ impl Merge for Blake2bHash {
     }
 
     /// Hashes a prefix and two Blake2b hashes together.
-    fn merge(&self, other: &Self, prefix: u64) -> Self {
+    fn merge(&self, other: &Self, prefix: u64) -> Option<Self> {
         let mut message = prefix.to_be_bytes().to_vec();
-        message.append(&mut self.serialize_to_vec());
-        message.append(&mut other.serialize_to_vec());
-        message.hash()
+        message.append(&mut postcard::to_allocvec(&self).ok()?);
+        message.append(&mut postcard::to_allocvec(&other).ok()?);
+        Some(message.hash())
     }
 }
 
 // Blake2s
 
 const BLAKE2S_LENGTH: usize = 32;
-create_typed_array!(Blake2sHash, u8, BLAKE2S_LENGTH);
+create_typed_array!(Blake2sHash, u8, BLAKE2S_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Blake2sHash, BLAKE2S_LENGTH);
 pub struct Blake2sHasher(Blake2s);
-impl HashOutput for Blake2sHash {
+impl HashOutput<'_> for Blake2sHash {
     type Builder = Blake2sHasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -233,7 +229,7 @@ impl io::Write for Blake2sHasher {
     }
 }
 
-impl Hasher for Blake2sHasher {
+impl Hasher<'_> for Blake2sHasher {
     type Output = Blake2sHash;
 
     fn finish(self) -> Blake2sHash {
@@ -247,13 +243,13 @@ impl Hasher for Blake2sHasher {
 const ARGON2D_LENGTH: usize = 32;
 const NIMIQ_ARGON2_SALT: &str = "nimiqrocks!";
 const DEFAULT_ARGON2_COST: u32 = 512;
-create_typed_array!(Argon2dHash, u8, ARGON2D_LENGTH);
+create_typed_array!(Argon2dHash, u8, ARGON2D_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Argon2dHash, ARGON2D_LENGTH);
 pub struct Argon2dHasher {
     buf: Vec<u8>,
     config: argon2::Config<'static>,
 }
-impl HashOutput for Argon2dHash {
+impl HashOutput<'_> for Argon2dHash {
     type Builder = Argon2dHasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -305,7 +301,7 @@ impl io::Write for Argon2dHasher {
     }
 }
 
-impl Hasher for Argon2dHasher {
+impl Hasher<'_> for Argon2dHasher {
     type Output = Argon2dHash;
 
     fn finish(self) -> Argon2dHash {
@@ -316,10 +312,10 @@ impl Hasher for Argon2dHasher {
 // SHA256
 
 const SHA256_LENGTH: usize = 32;
-create_typed_array!(Sha256Hash, u8, SHA256_LENGTH);
+create_typed_array!(Sha256Hash, u8, SHA256_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Sha256Hash, SHA256_LENGTH);
 pub struct Sha256Hasher(Sha256);
-impl HashOutput for Sha256Hash {
+impl HashOutput<'_> for Sha256Hash {
     type Builder = Sha256Hasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -353,7 +349,7 @@ impl io::Write for Sha256Hasher {
     }
 }
 
-impl Hasher for Sha256Hasher {
+impl Hasher<'_> for Sha256Hasher {
     type Output = Sha256Hash;
 
     fn finish(self) -> Sha256Hash {
@@ -366,22 +362,22 @@ add_hash_trait_arr!([u8; 32]);
 add_hash_trait_arr!([u8; 64]);
 add_hash_trait_arr!([u8]);
 add_hash_trait_arr!(Vec<u8>);
-impl<'a> SerializeContent for &'a [u8] {
+impl<'de> SerializeContent for &'de [u8] {
     fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
         writer.write_all(self)?;
         Ok(self.len())
     }
 }
-impl<'a> Hash for &'a [u8] {}
+impl<'de> Hash for &'de [u8] {}
 
-impl<'a> SerializeContent for &'a str {
+impl<'de> SerializeContent for &'de str {
     fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
         let b = self.as_bytes();
         writer.write_all(b)?;
         Ok(b.len())
     }
 }
-impl<'a> Hash for &'a str {}
+impl<'de> Hash for &'de str {}
 
 impl SerializeContent for String {
     fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {

@@ -5,7 +5,6 @@ use parking_lot::{Mutex, RwLock};
 use wasm_bindgen_futures::spawn_local;
 use wasm_bindgen_test::wasm_bindgen_test;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_blockchain_proxy::BlockchainProxy;
 use nimiq_bls::cache::PublicKeyCache;
 use nimiq_consensus::{sync::syncer_proxy::SyncerProxy, Consensus};
@@ -15,6 +14,7 @@ use nimiq_network_interface::network::{Network, Topic};
 use nimiq_network_mock::MockHub;
 use nimiq_primitives::policy::Policy;
 use nimiq_zkp_component::ZKPComponent;
+use serde::{Deserialize, Serialize};
 
 #[wasm_bindgen_test]
 pub async fn it_can_initialize_with_mock_network() {

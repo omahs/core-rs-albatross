@@ -307,9 +307,9 @@ mod tests {
     use parking_lot::RwLock;
     use rand::Rng;
 
-    use beserial::{Deserialize, Serialize};
     use nimiq_collections::BitSet;
     use nimiq_test_log::test;
+    use serde::{Deserialize, Serialize};
 
     use super::*;
     use crate::{

@@ -8,7 +8,6 @@ use futures::{
 use parking_lot::RwLock;
 use rand::{thread_rng, Rng};
 
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::PublicKey;
 use nimiq_collections::bitset::BitSet;
 use nimiq_handel::{
@@ -30,6 +29,7 @@ use nimiq_network_interface::{
 };
 use nimiq_network_mock::{MockHub, MockNetwork};
 use nimiq_test_log::test;
+use serde::{Deserialize, Serialize};
 
 /// Dump Aggregate adding numbers.
 #[derive(Clone, Debug, Serialize, Deserialize)]

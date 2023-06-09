@@ -1,8 +1,8 @@
 use std::time::Duration;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_network_interface::request::{MessageMarker, RequestCommon};
 use nimiq_tendermint::{Step, TaggedAggregationMessage};
+use serde::{Deserialize, Serialize};
 
 use super::contribution::AggregateMessage;
 
@@ -19,10 +19,10 @@ impl RequestCommon for TendermintUpdate {
 }
 
 impl Serialize for TendermintUpdate {
-    fn serialize<W: beserial::WriteBytesExt>(
+    fn serialize<W: serde::WriteBytesExt>(
         &self,
         writer: &mut W,
-    ) -> Result<usize, beserial::SerializingError> {
+    ) -> Result<usize, serde::SerializingError> {
         let mut size = 0;
         size += Serialize::serialize(&self.0.tag.0, writer)?;
         size += Serialize::serialize(&(self.0.tag.1 as u8), writer)?;
@@ -37,12 +37,12 @@ impl Serialize for TendermintUpdate {
 }
 
 impl Deserialize for TendermintUpdate {
-    fn deserialize<R: beserial::ReadBytesExt>(
+    fn deserialize<R: serde::ReadBytesExt>(
         reader: &mut R,
-    ) -> Result<Self, beserial::SerializingError> {
+    ) -> Result<Self, serde::SerializingError> {
         let round = Deserialize::deserialize(reader)?;
         let step: u8 = Deserialize::deserialize(reader)?;
-        let step = Step::try_from(step).map_err(|_| beserial::SerializingError::InvalidValue)?;
+        let step = Step::try_from(step).map_err(|_| serde::SerializingError::InvalidValue)?;
         let aggregation = Deserialize::deserialize(reader)?;
         let height = Deserialize::deserialize(reader)?;
         Ok(TendermintUpdate(

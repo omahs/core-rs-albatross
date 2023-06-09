@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use beserial::Deserialize;
+use serde::Deserialize;
 
 use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_mempool::mempool::Mempool;

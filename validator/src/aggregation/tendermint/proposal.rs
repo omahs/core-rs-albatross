@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_block::{MacroBody, MacroHeader};
 use nimiq_hash::{Blake2bHash, Blake2sHash, Hash};
 use nimiq_keys::Signature as SchnorrSignature;
@@ -11,6 +10,7 @@ use nimiq_network_interface::{
     request::{Handle, RequestCommon, RequestMarker},
 };
 use nimiq_tendermint::{Inherent, Proposal, ProposalMessage, SignedProposalMessage};
+use serde::{Deserialize, Serialize};
 
 use crate::aggregation::tendermint::state::MacroState;
 

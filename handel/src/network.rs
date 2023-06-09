@@ -166,9 +166,9 @@ mod test {
     use parking_lot::Mutex;
     use tokio::time;
 
-    use beserial::{Deserialize, Serialize};
     use nimiq_collections::BitSet;
     use nimiq_test_log::test;
+    use serde::{Deserialize, Serialize};
 
     use crate::{
         contribution::{AggregatableContribution, ContributionError},

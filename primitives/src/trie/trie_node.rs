@@ -5,12 +5,12 @@ use std::slice;
 
 use log::error;
 
-use beserial::{
+use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
+use nimiq_hash::{Blake2bHash, Hash, HashOutput, Hasher};
+use serde::{
     Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
     SerializingError, WriteBytesExt,
 };
-use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
-use nimiq_hash::{Blake2bHash, Hash, HashOutput, Hasher};
 
 use crate::{key_nibbles::KeyNibbles, trie::error::MerkleRadixTrieError};
 

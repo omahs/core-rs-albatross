@@ -1,4 +1,3 @@
-use beserial::{Deserialize, Serialize, SerializingError};
 use nimiq_hash::{Blake2bHasher, Hasher, Sha256Hasher};
 use nimiq_keys::{Address, KeyPair, PrivateKey};
 use nimiq_primitives::{account::AccountType, networks::NetworkId, transaction::TransactionError};
@@ -11,6 +10,7 @@ use nimiq_transaction::{
     },
     SignatureProof, Transaction, TransactionFlags,
 };
+use serde::{Deserialize, Serialize, SerializingError};
 
 fn prepare_outgoing_transaction() -> (Transaction, AnyHash, SignatureProof, SignatureProof) {
     let sender_priv_key: PrivateKey = Deserialize::deserialize_from_vec(

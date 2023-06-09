@@ -1,17 +1,16 @@
-use std::cmp::Ordering;
-use std::convert::TryFrom;
-use std::convert::TryInto;
-use std::fmt;
-use std::io;
-use std::str::FromStr;
+use std::{
+    cmp::Ordering,
+    convert::{TryFrom, TryInto},
+    fmt,
+    str::FromStr,
+};
 
 use hex::FromHex;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
-use nimiq_hash::{Hash, SerializeContent};
-
-use crate::errors::{KeysError, ParseError};
-use crate::{PrivateKey, Signature};
+use crate::{
+    errors::{KeysError, ParseError},
+    PrivateKey, Signature,
+};
 
 #[derive(Clone, Copy)]
 pub struct PublicKey(pub ed25519_zebra::VerificationKeyBytes);
@@ -124,33 +123,6 @@ impl From<[u8; PublicKey::SIZE]> for PublicKey {
     }
 }
 
-impl Deserialize for PublicKey {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let mut buf = [0u8; PublicKey::SIZE];
-        reader.read_exact(&mut buf)?;
-        PublicKey::from_bytes(&buf).map_err(|_| SerializingError::InvalidValue)
-    }
-}
-
-impl Serialize for PublicKey {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        writer.write_all(self.as_bytes())?;
-        Ok(self.serialized_size())
-    }
-
-    fn serialized_size(&self) -> usize {
-        PublicKey::SIZE
-    }
-}
-
-impl SerializeContent for PublicKey {
-    fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
-        Ok(self.serialize(writer)?)
-    }
-}
-
-impl Hash for PublicKey {}
-
 impl std::hash::Hash for PublicKey {
     fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
         std::hash::Hash::hash(self.as_bytes(), state);
@@ -159,12 +131,14 @@ impl std::hash::Hash for PublicKey {
 
 #[cfg(feature = "serde-derive")]
 mod serde_derive {
-    use std::borrow::Cow;
+    use std::{borrow::Cow, io};
 
     use serde::{
         de::{Deserialize, Deserializer, Error},
         ser::{Serialize, Serializer},
     };
+
+    use nimiq_hash::{Hash, SerializeContent};
 
     use super::PublicKey;
 
@@ -186,4 +160,12 @@ mod serde_derive {
             data.parse().map_err(Error::custom)
         }
     }
+
+    impl SerializeContent for PublicKey {
+        fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
+            Ok(self.serialize(writer)?)
+        }
+    }
+
+    impl Hash for PublicKey {}
 }

@@ -28,7 +28,6 @@ rand_core = { version = "0.6", optional = true }
 serde = { version = "1.0", features = ["derive"], optional = true }
 thiserror = { version = "1.0", optional = true }
 
-beserial = { path = "../beserial", features = ["derive"], optional = true }
 nimiq-collections = { path = "../collections", optional = true }
 nimiq-database-value = { path = "../database/database-value" }
 nimiq-hash = { path = "../hash", optional = true }
@@ -40,19 +39,19 @@ nimiq-test-utils = { path = "../test-utils" }
 
 [features]
 crc = []
-key-store = ["beserial", "log", "thiserror"]
+key-rng = ["rand", "rand_core"]
+key-store = ["log", "thiserror", "serde-derive"]
+math = []
 merkle = [
-    "beserial",
     "math",
     "nimiq-collections",
     "nimiq-hash",
+    "serde-derive"
 ]
-otp = ["beserial", "clear_on_drop", "nimiq-hash", "rand"]
-time = []
-tagged-signing = ["beserial", "hex"]
-math = []
-key-rng = ["rand", "rand_core"]
+otp = ["clear_on_drop", "nimiq-hash", "rand", "serde-derive"]
 serde-derive = ["serde"]
+tagged-signing = ["hex", "serde-derive"]
+time = []
 
 # Compiles this package with all features.
 all = [

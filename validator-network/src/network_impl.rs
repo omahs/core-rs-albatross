@@ -4,12 +4,12 @@ use async_trait::async_trait;
 use futures::{stream::BoxStream, StreamExt, TryFutureExt};
 use parking_lot::RwLock;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::{lazy::LazyPublicKey, CompressedPublicKey, SecretKey};
 use nimiq_network_interface::{
     network::{MsgAcceptance, Network, NetworkEvent, Topic},
     request::{Message, Request, RequestCommon},
 };
+use serde::{Deserialize, Serialize};
 
 use super::{MessageStream, NetworkError, ValidatorNetwork};
 use crate::validator_record::{SignedValidatorRecord, ValidatorRecord};

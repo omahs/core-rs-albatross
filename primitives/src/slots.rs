@@ -19,12 +19,12 @@ use std::cmp::max;
 use std::collections::BTreeMap;
 use std::slice::Iter;
 
-use beserial::{
+use nimiq_bls::{lazy::LazyPublicKey as LazyBlsPublicKey, G2Projective, PublicKey as BlsPublicKey};
+use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
+use serde::{
     Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
     SerializingError, WriteBytesExt,
 };
-use nimiq_bls::{lazy::LazyPublicKey as LazyBlsPublicKey, G2Projective, PublicKey as BlsPublicKey};
-use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
 
 use crate::policy::Policy;
 

@@ -1,6 +1,5 @@
 use std::convert::TryInto;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_hash::{Blake2bHash, Blake2bHasher, HashOutput, Hasher};
 use nimiq_keys::{Address, KeyPair, PrivateKey};
 use nimiq_primitives::account::AccountType;
@@ -11,6 +10,7 @@ use nimiq_transaction::account::htlc_contract::{
 };
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_transaction_builder::{Recipient, TransactionBuilder};
+use serde::{Deserialize, Serialize};
 
 #[test]
 fn it_can_create_creation_transaction() {

@@ -3,7 +3,6 @@ use std::sync::Arc;
 use async_trait::async_trait;
 use parking_lot::RwLock;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_blockchain_interface::AbstractBlockchain;
 use nimiq_bls::{KeyPair as BlsKeyPair, SecretKey as BlsSecretKey};
 use nimiq_consensus::ConsensusProxy;
@@ -19,6 +18,7 @@ use nimiq_rpc_interface::{
 use nimiq_transaction::account::htlc_contract::{AnyHash, HashAlgorithm};
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_transaction_builder::TransactionBuilder;
+use serde::{Deserialize, Serialize};
 
 use crate::{error::Error, wallets::UnlockedWallets};
 

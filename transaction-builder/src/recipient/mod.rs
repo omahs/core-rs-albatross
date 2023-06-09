@@ -1,9 +1,9 @@
-use beserial::Serialize;
 use nimiq_keys::Address;
 use nimiq_primitives::{account::AccountType, policy::Policy};
 use nimiq_transaction::account::htlc_contract::CreationTransactionData as HtlcCreationData;
 use nimiq_transaction::account::staking_contract::IncomingStakingTransactionData;
 use nimiq_transaction::account::vesting_contract::CreationTransactionData as VestingCreationData;
+use serde::Serialize;
 
 use crate::recipient::htlc_contract::HtlcRecipientBuilder;
 use crate::recipient::staking_contract::StakingRecipientBuilder;

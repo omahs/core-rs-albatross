@@ -1,10 +1,13 @@
+use serde_big_array::BigArray;
+
 use super::*;
 
 // Since there are no trait implementations for [u8; 64], we have to implement everything on our own.
 pub(super) const SHA512_LENGTH: usize = 64;
 
+#[derive(Serialize, Deserialize)]
 #[repr(C)]
-pub struct Sha512Hash([u8; SHA512_LENGTH]);
+pub struct Sha512Hash(#[serde(with = "BigArray")] [u8; SHA512_LENGTH]);
 
 impl<'a> From<&'a [u8]> for Sha512Hash {
     fn from(slice: &'a [u8]) -> Self {
@@ -16,30 +19,6 @@ impl<'a> From<&'a [u8]> for Sha512Hash {
         let mut a = [0_u8; SHA512_LENGTH];
         a.clone_from_slice(&slice[0..SHA512_LENGTH]);
         Sha512Hash(a)
-    }
-}
-
-impl ::beserial::Deserialize for Sha512Hash {
-    fn deserialize<R: ::beserial::ReadBytesExt>(
-        reader: &mut R,
-    ) -> Result<Self, ::beserial::SerializingError> {
-        let mut a = [0_u8; SHA512_LENGTH];
-        reader.read_exact(&mut a[..])?;
-        Ok(Sha512Hash(a))
-    }
-}
-
-impl ::beserial::Serialize for Sha512Hash {
-    fn serialize<W: ::beserial::WriteBytesExt>(
-        &self,
-        writer: &mut W,
-    ) -> Result<usize, ::beserial::SerializingError> {
-        writer.write_all(&self.0)?;
-        Ok(SHA512_LENGTH)
-    }
-
-    fn serialized_size(&self) -> usize {
-        SHA512_LENGTH
     }
 }
 
@@ -145,7 +124,7 @@ impl Sha512Hash {
 }
 
 pub struct Sha512Hasher(Sha512);
-impl HashOutput for Sha512Hash {
+impl HashOutput<'_> for Sha512Hash {
     type Builder = Sha512Hasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -179,7 +158,7 @@ impl io::Write for Sha512Hasher {
     }
 }
 
-impl Hasher for Sha512Hasher {
+impl Hasher<'_> for Sha512Hasher {
     type Output = Sha512Hash;
 
     fn finish(self) -> Sha512Hash {

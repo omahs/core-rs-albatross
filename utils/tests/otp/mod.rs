@@ -1,6 +1,6 @@
-use beserial::{Deserialize, Serialize};
 use nimiq_test_log::test;
 use nimiq_utils::otp::*;
+use serde::{Deserialize, Serialize};
 
 #[derive(Default, Serialize, Deserialize, Eq, PartialEq, Clone)]
 struct DummyU32 {

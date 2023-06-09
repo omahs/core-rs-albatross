@@ -21,13 +21,12 @@ name = "pk_tree"
 
 [dependencies]
 bitflags = "1.0"
-thiserror = "1.0"
 hex = "0.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
 serde = { version = "1.0", features = ["derive"], optional = true }
+thiserror = "1.0"
 
-beserial = { path = "../../beserial", features = ["derive"] }
-nimiq-bls = { path = "../../bls", features = ["beserial", "cache"]}
+nimiq-bls = { path = "../../bls", features = ["cache", "serde-derive"]}
 nimiq-collections = { path = "../../collections" }
 nimiq-database-value = { path = "../../database/database-value" }
 nimiq-handel = { path = "../../handel" }
@@ -35,12 +34,12 @@ nimiq-hash = { path = "../../hash" }
 nimiq-hash_derive = { path = "../../hash/hash_derive" }
 nimiq-keys = { path = "../../keys" }
 nimiq-macros = { path = "../../macros" }
-nimiq-zkp-primitives = { path = "../../zkp-primitives" }
 nimiq-network-interface = { path = "../../network-interface" }
-nimiq-primitives = { path = "..", features = ["policy", "networks", "coin", "slots"] }
+nimiq-primitives = { path = "..", features = ["coin", "networks", "policy", "slots"] }
 nimiq-transaction = { path = "../transaction" }
 nimiq-utils = { path = "../../utils", features = ["merkle"] }
 nimiq-vrf = { path = "../../vrf" }
+nimiq-zkp-primitives = { path = "../../zkp-primitives" }
 
 [dev-dependencies]
 bencher = "0.1"

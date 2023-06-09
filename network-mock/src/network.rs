@@ -11,7 +11,6 @@ use thiserror::Error;
 use tokio::sync::{broadcast, mpsc, oneshot};
 use tokio_stream::wrappers::{errors::BroadcastStreamRecvError, BroadcastStream, ReceiverStream};
 
-use beserial::{Deserialize, Serialize};
 use nimiq_network_interface::{
     network::{
         CloseReason, MsgAcceptance, Network, NetworkEvent, PubsubId, SubscribeEvents, Topic,
@@ -22,6 +21,7 @@ use nimiq_network_interface::{
         RequestKind, RequestType,
     },
 };
+use serde::{Deserialize, Serialize};
 
 use crate::hub::{MockHubInner, RequestKey, ResponseSender};
 use crate::{observable_hash_map, MockAddress, MockPeerId, ObservableHashMap};
@@ -29,7 +29,7 @@ use crate::{observable_hash_map, MockAddress, MockPeerId, ObservableHashMap};
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum MockNetworkError {
     #[error("Serialization error: {0}")]
-    Serialization(#[from] beserial::SerializingError),
+    Serialization(#[from] serde::SerializingError),
 
     #[error("Can't connect to peer: {0}")]
     CantConnect(MockAddress),

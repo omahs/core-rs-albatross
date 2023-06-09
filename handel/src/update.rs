@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use beserial::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::contribution::AggregatableContribution;
 /// The max number of LevelUpdateMessages requests per peer.

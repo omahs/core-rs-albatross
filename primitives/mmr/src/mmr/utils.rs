@@ -24,7 +24,12 @@ pub(crate) fn bagging<H: Merge, I: Iterator<Item = Result<(H, usize), Error>>>(
             None => Some((peak_hash, peak_leaves)),
             Some((root_hash, root_leaves)) => {
                 let sum_leaves = root_leaves + peak_leaves;
-                Some((peak_hash.merge(&root_hash, sum_leaves as u64), sum_leaves))
+                Some((
+                    peak_hash
+                        .merge(&root_hash, sum_leaves as u64)
+                        .ok_or(Error::HashMergeFailure)?,
+                    sum_leaves,
+                ))
             }
         };
     }
@@ -57,7 +62,9 @@ pub fn prove_num_leaves<
                     sum_leaves,
                     Some(peak_hash.clone()),
                     Some(root_hash.clone()),
-                    peak_hash.merge(&root_hash, sum_leaves as u64),
+                    peak_hash
+                        .merge(&root_hash, sum_leaves as u64)
+                        .ok_or(Error::HashMergeFailure)?,
                 ))
             }
         };

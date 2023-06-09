@@ -1,7 +1,7 @@
-use beserial::Serialize;
 use log::metadata::LevelFilter;
 use nimiq_zkp::ZKP_VERIFYING_KEY;
 use parking_lot::RwLock;
+use serde::Serialize;
 use std::{io, path::Path, sync::Arc, time::Instant};
 use tracing_subscriber::{filter::Targets, prelude::*};
 

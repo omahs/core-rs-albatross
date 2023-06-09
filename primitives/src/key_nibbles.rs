@@ -6,9 +6,9 @@ use std::{
 
 use log::error;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 use nimiq_database_value::{AsDatabaseBytes, FromDatabaseValue};
 use nimiq_keys::Address;
+use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
 /// A compact representation of a node's key. It stores the key in big endian. Each byte
 /// stores up to 2 nibbles. Internally, we assume that a key is represented in hexadecimal form.

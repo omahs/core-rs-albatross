@@ -1,6 +1,6 @@
 use wasm_bindgen::prelude::*;
 
-use beserial::Serialize;
+use serde::Serialize;
 
 use crate::address::Address;
 use crate::public_key::PublicKey;

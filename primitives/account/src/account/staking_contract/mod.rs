@@ -1,10 +1,6 @@
 use std::collections::btree_set::BTreeSet;
 use std::collections::BTreeMap;
 
-use beserial::{
-    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
-    SerializingError, WriteBytesExt,
-};
 use nimiq_collections::BitSet;
 use nimiq_keys::Address;
 use nimiq_primitives::{
@@ -13,6 +9,10 @@ use nimiq_primitives::{
     slots::{Validators, ValidatorsBuilder},
 };
 use nimiq_vrf::{AliasMethod, VrfSeed, VrfUseCase};
+use serde::{
+    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
+    SerializingError, WriteBytesExt,
+};
 
 use crate::{
     account::staking_contract::store::{StakingContractStoreRead, StakingContractStoreReadOps},

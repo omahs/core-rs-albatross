@@ -1,7 +1,7 @@
 use log::error;
 
-use beserial::{Deserialize, Serialize, SerializeWithLength, WriteBytesExt};
 use nimiq_hash::{Blake2bHash, Hash, SerializeContent};
+use serde::{Deserialize, Serialize, SerializeWithLength, WriteBytesExt};
 
 use std::io;
 

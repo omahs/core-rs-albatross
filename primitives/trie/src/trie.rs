@@ -9,7 +9,6 @@ use std::{
 
 use log::error;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_database::{
     cursor::ReadCursor, Cursor, Database, Environment, Transaction, WriteTransaction,
 };
@@ -26,6 +25,7 @@ use nimiq_primitives::{
         trie_proof_node::TrieProofNode,
     },
 };
+use serde::{Deserialize, Serialize};
 
 /// A Merkle Radix Trie is a hybrid between a Merkle tree and a Radix trie. Like a Merkle tree each
 /// node contains the hashes of all its children. That creates a tree that is resistant to

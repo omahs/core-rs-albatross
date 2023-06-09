@@ -23,7 +23,7 @@ use std::io;
 
 use ark_relations::r1cs::SynthesisError;
 use ark_serialize::SerializationError;
-use beserial::SerializingError;
+use serde::SerializingError;
 use thiserror::Error;
 
 #[derive(Error, Debug)]

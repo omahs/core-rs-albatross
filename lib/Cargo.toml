@@ -45,7 +45,6 @@ tracing-loki = { version = "0.2.1", optional = true }
 tracing-subscriber = { version = "0.3", optional = true }
 tracing-web = { version = "0.1", optional = true}
 
-beserial = { path = "../beserial" }
 nimiq-block = { path = "../primitives/block" }
 nimiq-blockchain = { path = "../blockchain", optional = true }
 nimiq-blockchain-interface = { path = "../blockchain-interface" }

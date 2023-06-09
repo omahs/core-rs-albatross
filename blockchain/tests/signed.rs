@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use beserial::Deserialize;
 use nimiq_block::{
     MacroBlock, MultiSignature, SignedSkipBlockInfo, SkipBlockInfo, SkipBlockProof,
     TendermintIdentifier, TendermintProof, TendermintStep, TendermintVote,
@@ -19,6 +18,7 @@ use nimiq_primitives::{
 use nimiq_test_log::test;
 use nimiq_utils::time::OffsetTime;
 use nimiq_vrf::VrfEntropy;
+use serde::Deserialize;
 
 ///  works with NetworkId::UnitAlbatross
 const SECRET_KEY: &str = "99237809f3b37bd0878854d2b5b66e4cc00ba1a1d64377c374f2b6d1bf3dec7835bfae3e7ab89b6d331b3ef7d1e9a06a7f6967bf00edf9e0bcfe34b58bd1260e96406e09156e4c190ff8f69a9ce1183b4289383e6d798fd5104a3800fabd00";

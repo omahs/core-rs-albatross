@@ -1,12 +1,12 @@
 use std::{collections::BTreeMap, fmt::Debug, io};
 
-use beserial::{Deserialize, DeserializeWithLength, Serialize, SerializeWithLength};
 use nimiq_block::{MacroBody, MacroHeader};
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Blake2bHash, Blake2sHash};
 use nimiq_keys::Signature as SchnorrSignature;
 use nimiq_tendermint::{State as TendermintState, Step};
 use nimiq_validator_network::ValidatorNetwork;
+use serde::{Deserialize, DeserializeWithLength, Serialize, SerializeWithLength};
 
 use crate::tendermint::TendermintProtocol;
 
@@ -160,10 +160,10 @@ where
 }
 
 impl Serialize for MacroState {
-    fn serialize<W: beserial::WriteBytesExt>(
+    fn serialize<W: serde::WriteBytesExt>(
         &self,
         writer: &mut W,
-    ) -> Result<usize, beserial::SerializingError> {
+    ) -> Result<usize, serde::SerializingError> {
         let mut size = 0;
 
         size += Serialize::serialize(&self.block_number, writer)?;
@@ -228,14 +228,14 @@ impl Serialize for MacroState {
 }
 
 impl Deserialize for MacroState {
-    fn deserialize<R: beserial::ReadBytesExt>(
+    fn deserialize<R: serde::ReadBytesExt>(
         reader: &mut R,
-    ) -> Result<Self, beserial::SerializingError> {
+    ) -> Result<Self, serde::SerializingError> {
         let block_number = Deserialize::deserialize(reader)?;
 
         let round_number = Deserialize::deserialize(reader)?;
         let step: u8 = Deserialize::deserialize(reader)?;
-        let step = Step::try_from(step).map_err(|_| beserial::SerializingError::InvalidValue)?;
+        let step = Step::try_from(step).map_err(|_| serde::SerializingError::InvalidValue)?;
         let known_proposals = DeserializeWithLength::deserialize::<u32, _>(reader)?;
 
         let num_round_proposals: u32 = Deserialize::deserialize(reader)?;
@@ -251,8 +251,7 @@ impl Deserialize for MacroState {
         for _ in 0..num_votes {
             let round = Deserialize::deserialize(reader)?;
             let step: u8 = Deserialize::deserialize(reader)?;
-            let step =
-                Step::try_from(step).map_err(|_| beserial::SerializingError::InvalidValue)?;
+            let step = Step::try_from(step).map_err(|_| serde::SerializingError::InvalidValue)?;
             let value = Deserialize::deserialize(reader)?;
             votes.insert((round, step), value);
         }
@@ -261,8 +260,7 @@ impl Deserialize for MacroState {
         for _ in 0..num_best_votes {
             let round = Deserialize::deserialize(reader)?;
             let step: u8 = Deserialize::deserialize(reader)?;
-            let step =
-                Step::try_from(step).map_err(|_| beserial::SerializingError::InvalidValue)?;
+            let step = Step::try_from(step).map_err(|_| serde::SerializingError::InvalidValue)?;
             let value = Deserialize::deserialize(reader)?;
             best_votes.insert((round, step), value);
         }

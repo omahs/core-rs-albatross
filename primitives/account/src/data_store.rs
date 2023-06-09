@@ -1,8 +1,8 @@
-use beserial::{Deserialize, Serialize};
 use nimiq_database::{Transaction, WriteTransaction};
 use nimiq_keys::Address;
 use nimiq_primitives::key_nibbles::KeyNibbles;
 use nimiq_trie::trie::TrieNodeIter;
+use serde::{Deserialize, Serialize};
 
 use crate::{
     data_store_ops::{DataStoreIterOps, DataStoreReadOps},

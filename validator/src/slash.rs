@@ -1,7 +1,7 @@
 use std::collections::HashSet;
 
-use beserial::Serialize;
 use nimiq_block::{Block, ForkProof, MacroBlock, MacroHeader, MicroBlock};
+use serde::Serialize;
 
 #[derive(Default)]
 pub struct ForkProofPool {

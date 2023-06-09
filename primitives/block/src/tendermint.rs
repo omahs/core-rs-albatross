@@ -1,11 +1,11 @@
 use log::error;
 use std::io;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::AggregatePublicKey;
 use nimiq_hash::{Blake2sHash, Hash, SerializeContent};
 use nimiq_primitives::policy::Policy;
 use nimiq_primitives::slots::Validators;
+use serde::{Deserialize, Serialize};
 
 use crate::signed::{
     PREFIX_TENDERMINT_COMMIT, PREFIX_TENDERMINT_PREPARE, PREFIX_TENDERMINT_PROPOSAL,

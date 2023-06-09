@@ -12,9 +12,9 @@ use libp2p::{
 };
 use parking_lot::RwLock;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_network_interface::peer_info::Services;
 use nimiq_utils::tagged_signing::{TaggedKeypair, TaggedSignable, TaggedSignature};
+use serde::{Deserialize, Serialize};
 
 /// A plain peer contact. This contains:
 ///
@@ -452,7 +452,7 @@ mod serde_public_key {
     where
         S: Serializer,
     {
-        let hex_encoded = hex::encode(beserial::Serialize::serialize_to_vec(public_key));
+        let hex_encoded = hex::encode(serde::Serialize::serialize_to_vec(public_key));
 
         Serialize::serialize(&hex_encoded, serializer)
     }
@@ -465,6 +465,6 @@ mod serde_public_key {
 
         let raw = hex::decode(hex_encoded).map_err(D::Error::custom)?;
 
-        beserial::Deserialize::deserialize_from_vec(&raw).map_err(D::Error::custom)
+        serde::Deserialize::deserialize_from_vec(&raw).map_err(D::Error::custom)
     }
 }

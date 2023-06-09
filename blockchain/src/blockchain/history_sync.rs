@@ -1,7 +1,6 @@
 use parking_lot::{RwLockUpgradableReadGuard, RwLockWriteGuard};
 use std::error::Error;
 
-use beserial::Serialize;
 use nimiq_account::{BlockLogger, BlockState};
 use nimiq_block::{Block, BlockError};
 use nimiq_blockchain_interface::{
@@ -15,6 +14,7 @@ use nimiq_transaction::{
     inherent::Inherent,
     Transaction,
 };
+use serde::Serialize;
 
 use crate::Blockchain;
 

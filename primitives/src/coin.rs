@@ -11,7 +11,7 @@ use num_traits::{SaturatingAdd, SaturatingSub};
 use regex::Regex;
 use thiserror::Error;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
+use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Default, Hash)]
 #[cfg_attr(

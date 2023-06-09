@@ -1,7 +1,6 @@
 use std::collections::{BTreeMap, BTreeSet};
 use std::convert::TryInto;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_account::*;
 use nimiq_bls::{
     CompressedPublicKey as BlsPublicKey, KeyPair as BlsKeyPair, SecretKey as BlsSecretKey,
@@ -25,6 +24,7 @@ use nimiq_transaction::account::staking_contract::{
 use nimiq_transaction::inherent::Inherent;
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_utils::key_rng::SecureGenerate;
+use serde::{Deserialize, Serialize};
 
 const CONTRACT_1: &str = "00000000000000000000000000000000000000000000";
 const CONTRACT_2: &str =

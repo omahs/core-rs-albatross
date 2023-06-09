@@ -1,10 +1,10 @@
 use ark_ec::CurveGroup;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::*;
 use nimiq_test_log::test;
 use nimiq_test_utils::test_rng::test_rng;
 use nimiq_utils::key_rng::SecureGenerate;
+use serde::{Deserialize, Serialize};
 
 // Warning: You really should run these tests on release mode. Otherwise it will take too long.
 

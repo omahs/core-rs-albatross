@@ -1,12 +1,12 @@
 use std::fmt::{self, Debug, Formatter};
 
-use beserial::{
-    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
-    SerializingError, WriteBytesExt,
-};
 use nimiq_hash::Blake2bHash;
 use nimiq_mmr::mmr::proof::{Proof, RangeProof};
 use nimiq_transaction::extended_transaction::ExtendedTransaction;
+use serde::{
+    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
+    SerializingError, WriteBytesExt,
+};
 
 /// The chunk size used in our protocol.
 /// TODO: Update number.

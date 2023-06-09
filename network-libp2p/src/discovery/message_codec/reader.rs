@@ -6,7 +6,7 @@ use bytes::{Buf, BytesMut};
 use futures::{AsyncRead, Stream};
 use pin_project::pin_project;
 
-use beserial::{Deserialize, SerializingError};
+use serde::{Deserialize, SerializingError};
 
 use super::header::Header;
 
@@ -230,7 +230,7 @@ mod tests {
     use bytes::{BufMut, BytesMut};
     use futures::{io::Cursor, StreamExt};
 
-    use beserial::{Deserialize, Serialize};
+    use serde::{Deserialize, Serialize};
 
     use super::Header;
     use super::MessageReader;

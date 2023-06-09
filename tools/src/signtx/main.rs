@@ -8,11 +8,11 @@ use clap::{
 };
 use thiserror::Error;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_keys::{Address, KeyPair, PrivateKey};
 use nimiq_primitives::coin::Coin;
 use nimiq_primitives::networks::NetworkId;
 use nimiq_transaction::Transaction;
+use serde::{Deserialize, Serialize};
 
 fn run_app() -> Result<(), Error> {
     let matches = Command::new("Sign transaction")

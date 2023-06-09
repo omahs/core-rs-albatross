@@ -7,10 +7,6 @@ use ark_serialize::{
     CanonicalDeserialize, CanonicalSerialize, SerializationError as ArkSerializingError,
 };
 
-use beserial::{
-    Deserialize, DeserializeWithLength, Serialize, SerializeWithLength, SerializingError,
-    SerializingError as BeserialSerializingError,
-};
 use nimiq_block::MacroBlock;
 use nimiq_blockchain_interface::AbstractBlockchain;
 use nimiq_blockchain_proxy::BlockchainProxy;
@@ -24,6 +20,10 @@ use nimiq_network_interface::{
 };
 use nimiq_zkp_primitives::MacroBlock as ZKPMacroBlock;
 use parking_lot::RwLock;
+use serde::{
+    Deserialize, DeserializeWithLength, Serialize, SerializeWithLength, SerializingError,
+    SerializingError as BeserialSerializingError,
+};
 use std::borrow::Cow;
 use std::path::PathBuf;
 
@@ -107,10 +107,10 @@ impl ZKPState {
 /// It uses unchecked serialization of elliptic curve points for performance reasons.
 /// We only invoke it when transferring data from the proof generation process.
 impl Serialize for ZKPState {
-    fn serialize<W: beserial::WriteBytesExt>(
+    fn serialize<W: serde::WriteBytesExt>(
         &self,
         writer: &mut W,
-    ) -> Result<usize, beserial::SerializingError> {
+    ) -> Result<usize, serde::SerializingError> {
         let mut size = 0;
         let count: u16 =
             u16::try_from(self.latest_pks.len()).map_err(|_| SerializingError::Overflow)?;
@@ -150,7 +150,7 @@ impl Serialize for ZKPState {
 /// It uses unchecked deserialization of elliptic curve points for performance reasons.
 /// We only invoke it when transferring data from the proof generation process.
 impl Deserialize for ZKPState {
-    fn deserialize<R: beserial::ReadBytesExt>(
+    fn deserialize<R: serde::ReadBytesExt>(
         reader: &mut R,
     ) -> Result<Self, BeserialSerializingError> {
         let count: u16 = Deserialize::deserialize(reader)?;
@@ -232,10 +232,10 @@ impl From<ZKPState> for ZKProof {
 }
 
 impl Serialize for ZKProof {
-    fn serialize<W: beserial::WriteBytesExt>(
+    fn serialize<W: serde::WriteBytesExt>(
         &self,
         writer: &mut W,
-    ) -> Result<usize, beserial::SerializingError> {
+    ) -> Result<usize, serde::SerializingError> {
         let mut size = Serialize::serialize(&self.block_number, writer)?;
         size += Serialize::serialize(&self.proof.is_some(), writer)?;
         if let Some(ref latest_proof) = self.proof {
@@ -257,7 +257,7 @@ impl Serialize for ZKProof {
 }
 
 impl Deserialize for ZKProof {
-    fn deserialize<R: beserial::ReadBytesExt>(
+    fn deserialize<R: serde::ReadBytesExt>(
         reader: &mut R,
     ) -> Result<Self, BeserialSerializingError> {
         let block_number = Deserialize::deserialize(reader)?;
@@ -332,10 +332,10 @@ impl Default for ProofInput {
 /// It uses unchecked serialization of elliptic curve points for performance reasons.
 /// We only invoke it when transferring data to the proof generation process.
 impl Serialize for ProofInput {
-    fn serialize<W: beserial::WriteBytesExt>(
+    fn serialize<W: serde::WriteBytesExt>(
         &self,
         writer: &mut W,
-    ) -> Result<usize, beserial::SerializingError> {
+    ) -> Result<usize, serde::SerializingError> {
         let mut size = Serialize::serialize(&self.block, writer)?;
 
         let count: u16 =
@@ -393,7 +393,7 @@ impl Serialize for ProofInput {
 /// It uses unchecked deserialization of elliptic curve points for performance reasons.
 /// We only invoke it when transferring data to the proof generation process.
 impl Deserialize for ProofInput {
-    fn deserialize<R: beserial::ReadBytesExt>(
+    fn deserialize<R: serde::ReadBytesExt>(
         reader: &mut R,
     ) -> Result<Self, BeserialSerializingError> {
         let block = Deserialize::deserialize(reader)?;

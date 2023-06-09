@@ -2,7 +2,6 @@ use std::convert::TryInto;
 use std::io;
 use std::ops::RangeFrom;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 use nimiq_block::{
     Block, BlockBody, BlockComponents, BlockHeader, BlockJustification, BlockType, MacroBody,
     MacroHeader, MicroBody, MicroHeader, MicroJustification, TendermintProof,
@@ -10,6 +9,7 @@ use nimiq_block::{
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::Blake2bHash;
 use nimiq_primitives::{coin::Coin, key_nibbles::KeyNibbles, policy::Policy};
+use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
 /// Struct that, for each block, keeps information relative to the chain the block is on.
 #[derive(Clone, Debug)]

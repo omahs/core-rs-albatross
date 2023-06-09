@@ -68,7 +68,7 @@ pub enum Error {
     HexError(#[from] hex::FromHexError),
 
     #[error("{0}")]
-    Beserial(#[from] beserial::SerializingError),
+    Beserial(#[from] serde::SerializingError),
 
     #[error("{0}")]
     Argon2(#[from] nimiq_hash::argon2kdf::Argon2Error),

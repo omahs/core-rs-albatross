@@ -21,10 +21,9 @@ thiserror = "1.0"
 tsify = { version = "0.4", optional = true }
 wasm-bindgen = { version = "0.2", optional = true }
 
-beserial = { path = "../../beserial", features = ["derive"] }
 nimiq-bls = { path = "../../bls", features = ["serde-derive"] }
 nimiq-database-value = { path = "../../database/database-value"}
-nimiq-hash = { path = "../../hash", features = ["serde-derive"] }
+nimiq-hash = { path = "../../hash" }
 nimiq-hash_derive = { path = "../../hash/hash_derive" }
 nimiq-keys = { path = "../../keys", features = ["serde-derive"] }
 nimiq-macros = { path = "../../macros" }
