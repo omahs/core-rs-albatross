@@ -3,7 +3,6 @@ use std::{
     collections::{HashSet, VecDeque},
 };
 
-use beserial::Serialize;
 use nimiq_database::{
     traits::{Database, ReadCursor, ReadTransaction, WriteCursor, WriteTransaction},
     DatabaseProxy, TableFlags, TableProxy, TransactionProxy, WriteTransactionProxy,
@@ -232,7 +231,7 @@ impl HistoryStore {
                 },
             );
 
-            txns_size += ext_tx.serialized_size() as u64;
+            txns_size += postcard::to_allocvec(&ext_tx).unwrap().len() as u64;
 
             // Remove it from the leaf index database.
             // Check if you are removing the last extended transaction for this block. If yes,
@@ -964,7 +963,7 @@ impl HistoryStore {
                 }
             }
         }
-        ext_tx.serialized_size()
+        postcard::to_allocvec(&ext_tx).unwrap().len()
     }
 
     /// Returns a vector containing all leaf hashes and indexes corresponding to the given

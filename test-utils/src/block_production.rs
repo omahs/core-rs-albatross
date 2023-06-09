@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use beserial::Deserialize;
 use nimiq_block::{
     Block, MacroBlock, MacroBody, MacroHeader, MultiSignature, SignedSkipBlockInfo, SkipBlockInfo,
     SkipBlockProof, TendermintIdentifier, TendermintProof, TendermintStep, TendermintVote,
@@ -73,10 +72,10 @@ impl TemporaryBlockProducer {
         ));
 
         let signing_key = SchnorrKeyPair::from(
-            SchnorrPrivateKey::deserialize_from_vec(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
+            postcard::from_bytes::<SchnorrPrivateKey>(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
         );
         let voting_key = BlsKeyPair::from(
-            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
         let producer: BlockProducer = BlockProducer::new(signing_key, voting_key);
         TemporaryBlockProducer {
@@ -199,7 +198,7 @@ impl TemporaryBlockProducer {
         block_hash: Blake2sHash,
     ) -> (MacroBlock, AggregatePublicKey) {
         let keypair = BlsKeyPair::from(
-            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
 
         // Create a TendermintVote instance out of known properties.
@@ -249,7 +248,7 @@ impl TemporaryBlockProducer {
 
     pub fn create_skip_block_proof(&self) -> SkipBlockProof {
         let keypair = BlsKeyPair::from(
-            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
 
         let skip_block_info = {

@@ -8,8 +8,7 @@ use std::{
 
 use async_trait::async_trait;
 use base64::Engine;
-use beserial::{Deserialize, Serialize};
-use bytes::{Buf, Bytes};
+use bytes::Bytes;
 use futures::{ready, stream::BoxStream, Stream, StreamExt};
 #[cfg(not(feature = "tokio-time"))]
 use instant::Instant;
@@ -59,6 +58,7 @@ use nimiq_primitives::task_executor::TaskExecutor;
 use nimiq_utils::time::OffsetTime;
 use nimiq_validator_network::validator_record::SignedValidatorRecord;
 use parking_lot::{Mutex, RwLock};
+use serde::{de::DeserializeOwned, Serialize};
 use tokio::sync::{broadcast, mpsc, oneshot};
 #[cfg(feature = "tokio-time")]
 use tokio::time::{Instant, Interval};
@@ -769,7 +769,7 @@ impl Network {
                                     // TODO: Move uncompress to caller side
                                     {
                                         if let Ok(signed_record) =
-                                            SignedValidatorRecord::<PeerId>::deserialize_from_vec(
+                                            postcard::from_bytes::<SignedValidatorRecord<PeerId>>(
                                                 &record.value,
                                             )
                                         {
@@ -978,7 +978,10 @@ impl Network {
                                             if swarm
                                                 .behaviour_mut()
                                                 .request_response
-                                                .send_response(channel, response.serialize_to_vec())
+                                                .send_response(
+                                                    channel,
+                                                    postcard::to_allocvec(&response).unwrap(),
+                                                )
                                                 .is_err()
                                             {
                                                 error!(
@@ -1012,7 +1015,10 @@ impl Network {
                                         if swarm
                                             .behaviour_mut()
                                             .request_response
-                                            .send_response(channel, err.serialize_to_vec())
+                                            .send_response(
+                                                channel,
+                                                postcard::to_allocvec(&err).unwrap(),
+                                            )
                                             .is_err()
                                         {
                                             error!(
@@ -1510,9 +1516,7 @@ impl Network {
                 Ok(result) => {
                     let data = result?;
                     if let Ok(message) =
-                        <Result<Req::Response, InboundRequestError> as Deserialize>::deserialize(
-                            &mut data.reader(),
-                        )
+                        postcard::from_bytes::<Result<Req::Response, InboundRequestError>>(&data)
                     {
                         // Check if there was an actual response from the application or a default response from
                         // the network. If the network replied with the default response, it was because there wasn't a
@@ -1619,7 +1623,7 @@ impl Network {
                 }
 
                 // Map the (data, peer) stream to (message, peer) by deserializing the messages.
-                match Req::deserialize_request(&mut data.reader()) {
+                match Req::deserialize_request(&data) {
                     Ok(message) => Some((message, request_id, peer_id)),
                     Err(e) => {
                         error!(
@@ -1795,7 +1799,7 @@ impl Network {
         // Encapsulate it in a `Result` to signal the network that this
         // was a unsuccessful response from the application.
         let response: Result<Req::Response, InboundRequestError> = Err(response);
-        let buf = response.serialize_to_vec();
+        let buf = postcard::to_allocvec(&response)?;
 
         action_tx
             .clone()
@@ -1832,7 +1836,7 @@ impl Network {
         let subscribe_rx = ReceiverStream::new(rx.await??);
 
         Ok(Box::pin(subscribe_rx.map(|(msg, msg_id, source)| {
-            let item: <T as Topic>::Item = Deserialize::deserialize_from_vec(&msg.data).unwrap();
+            let item: <T as Topic>::Item = postcard::from_bytes(&msg.data).unwrap();
             let id = GossipsubId {
                 message_id: msg_id,
                 propagation_source: source,
@@ -1865,14 +1869,11 @@ impl Network {
     {
         let (output_tx, output_rx) = oneshot::channel();
 
-        let mut buf = vec![];
-        item.serialize(&mut buf)?;
-
         self.action_tx
             .clone()
             .send(NetworkAction::Publish {
                 topic_name,
-                data: buf,
+                data: postcard::to_allocvec(&item)?,
                 output: output_tx,
             })
             .await?;
@@ -2057,7 +2058,7 @@ impl NetworkInterface for Network {
     async fn dht_get<K, V>(&self, k: &K) -> Result<Option<V>, Self::Error>
     where
         K: AsRef<[u8]> + Send + Sync,
-        V: Deserialize + Send + Sync,
+        V: DeserializeOwned + Send + Sync,
     {
         let (output_tx, output_rx) = oneshot::channel();
         self.action_tx
@@ -2069,7 +2070,7 @@ impl NetworkInterface for Network {
             .await?;
 
         let data = output_rx.await??;
-        Ok(Some(Deserialize::deserialize_from_vec(&data)?))
+        Ok(Some(postcard::from_bytes(&data)?))
     }
 
     async fn dht_put<K, V>(&self, k: &K, v: &V) -> Result<(), Self::Error>
@@ -2079,14 +2080,11 @@ impl NetworkInterface for Network {
     {
         let (output_tx, output_rx) = oneshot::channel();
 
-        let mut buf = vec![];
-        v.serialize(&mut buf)?;
-
         self.action_tx
             .clone()
             .send(NetworkAction::DhtPut {
                 key: k.as_ref().to_owned(),
-                value: buf,
+                value: postcard::to_allocvec(&v)?,
                 output: output_tx,
             })
             .await?;
@@ -2150,18 +2148,16 @@ impl NetworkInterface for Network {
     ) -> Result<(), Self::Error> {
         let (output_tx, output_rx) = oneshot::channel();
 
-        let mut buf = vec![];
-
         // Encapsulate it in a `Result` to signal the network that this
         // was a successful response from the application.
         let response: Result<Req::Response, InboundRequestError> = Ok(response);
-        response.serialize(&mut buf)?;
+        let ser_response = postcard::to_allocvec(&response)?;
 
         self.action_tx
             .clone()
             .send(NetworkAction::SendResponse {
                 request_id,
-                response: buf,
+                response: ser_response,
                 output: output_tx,
             })
             .await?;

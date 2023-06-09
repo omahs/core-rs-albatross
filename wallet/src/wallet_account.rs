@@ -1,19 +1,19 @@
 use std::io;
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError};
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Hash, HashOutput, Sha256Hash};
 use nimiq_keys::{Address, KeyPair, PublicKey, SecureGenerate, Signature};
 use nimiq_primitives::{coin::Coin, networks::NetworkId};
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_utils::otp::Verify;
+use serde::{Deserialize, Deserializer, Serialize};
 
 pub const NIMIQ_SIGN_MESSAGE_PREFIX: &[u8] = b"\x16Nimiq Signed Message:\n";
 
 #[derive(Default, Debug, Clone, Serialize, Eq, PartialEq)]
 pub struct WalletAccount {
     pub key_pair: KeyPair,
-    #[beserial(skip)]
+    #[serde(skip)]
     pub address: Address,
 }
 
@@ -51,7 +51,7 @@ impl WalletAccount {
 
     pub fn sign_transaction(&self, transaction: &mut Transaction) {
         let proof = self.create_signature_proof(transaction);
-        transaction.proof = proof.serialize_to_vec();
+        transaction.proof = postcard::to_allocvec(&proof).unwrap();
     }
 
     pub fn create_signature_proof(&self, transaction: &Transaction) -> SignatureProof {
@@ -93,9 +93,12 @@ impl WalletAccount {
     }
 }
 
-impl Deserialize for WalletAccount {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let key_pair: KeyPair = Deserialize::deserialize(reader)?;
+impl<'de> Deserialize<'de> for WalletAccount {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let key_pair: KeyPair = Deserialize::deserialize(deserializer)?;
         Ok(WalletAccount::from(key_pair))
     }
 }
@@ -109,11 +112,11 @@ impl From<KeyPair> for WalletAccount {
 
 impl IntoDatabaseValue for WalletAccount {
     fn database_byte_size(&self) -> usize {
-        self.serialized_size()
+        postcard::to_allocvec(self).unwrap().len()
     }
 
-    fn copy_into_database(&self, mut bytes: &mut [u8]) {
-        Serialize::serialize(&self, &mut bytes).unwrap();
+    fn copy_into_database(&self, bytes: &mut [u8]) {
+        postcard::to_slice(self, bytes).unwrap();
     }
 }
 
@@ -122,7 +125,6 @@ impl FromDatabaseValue for WalletAccount {
     where
         Self: Sized,
     {
-        let mut cursor = io::Cursor::new(bytes);
-        Ok(Deserialize::deserialize(&mut cursor)?)
+        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }

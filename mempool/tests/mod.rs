@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_block::{Block, MicroBlock, MicroBody, MicroHeader};
 use nimiq_block_production::BlockProducer;
 use nimiq_blockchain::{Blockchain, BlockchainConfig};
@@ -43,7 +42,7 @@ const VALIDATOR_ADDRESS: &str = "NQ20 TSB0 DFSM UH9C 15GQ GAGJ TTE4 D3MA 859E";
 
 fn ed25519_key_pair(secret_key: &str) -> SchnorrKeyPair {
     let priv_key: SchnorrPrivateKey =
-        Deserialize::deserialize(&mut &hex::decode(secret_key).unwrap()[..]).unwrap();
+        postcard::from_bytes(&mut &hex::decode(secret_key).unwrap()[..]).unwrap();
     priv_key.into()
 }
 
@@ -507,7 +506,10 @@ async fn mempool_get_txn_max_size() {
     // Expect only 1 of the transactions because of the size we passed
     assert_eq!(rec_txns.len(), 1);
     // Need to account for one extra byte due to the transaction execution result
-    assert_eq!(txn_size, rec_txns[0].serialized_size() + 1);
+    assert_eq!(
+        txn_size,
+        postcard::to_allocvec(&rec_txns[0]).unwrap().len() + 1
+    );
 
     // Send the transactions again
     let (rec_txns, _) = send_get_mempool_txns(blockchain, txns, txns_len).await;
@@ -1730,7 +1732,7 @@ async fn applies_total_tx_size_limits() {
     // Create mempool with total size limit just below the total one of the generated transactions
     // Need to account for the executed txn size
     let mempool_config = MempoolConfig {
-        size_limit: txns_len - (1 + txns[1].serialized_size()),
+        size_limit: txns_len - (1 + postcard::to_allocvec(&txns[1]).unwrap().len()),
         ..Default::default()
     };
     let mempool = Mempool::new(blockchain, mempool_config);

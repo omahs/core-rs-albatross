@@ -20,7 +20,6 @@ serde = { version = "1.0", features = ["derive"], optional = true }
 serde-big-array = { version = "0.5.1", optional = true }
 sha2 = "0.9"
 
-beserial = { path = "../beserial" }
 nimiq-hash = { path = "../hash" }
 nimiq-keys = { path = "../keys" }
 nimiq-macros = { path = "../macros" }

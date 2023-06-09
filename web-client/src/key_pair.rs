@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_keys::SecureGenerate;
 use wasm_bindgen::prelude::*;
 
@@ -46,7 +45,7 @@ impl KeyPair {
     ///
     /// Throws when the byte array contains less than 64 bytes.
     pub fn unserialize(bytes: &[u8]) -> Result<KeyPair, JsError> {
-        let key_pair = nimiq_keys::KeyPair::deserialize(&mut &*bytes)?;
+        let key_pair = postcard::from_bytes::<nimiq_keys::KeyPair>(bytes)?;
         // TODO: Deserialize locked state if bytes remaining
         Ok(KeyPair::from_native(key_pair))
     }
@@ -62,7 +61,7 @@ impl KeyPair {
 
     /// Serializes the keypair to a byte array.
     pub fn serialize(&self) -> Vec<u8> {
-        let mut vec = self.inner.serialize_to_vec();
+        let mut vec = postcard::to_allocvec(&self.inner).unwrap();
         vec.push(0); // Unlocked state (locking is not yet implemented)
         vec
     }

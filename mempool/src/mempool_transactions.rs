@@ -3,7 +3,6 @@ use std::{
     collections::HashMap,
 };
 
-use beserial::Serialize;
 use keyed_priority_queue::KeyedPriorityQueue;
 use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_transaction::Transaction;
@@ -201,7 +200,7 @@ impl MempoolTransactions {
             .push(tx_hash, Reverse(tx.validity_start_height));
 
         // Update total tx size
-        self.total_size += tx.serialized_size();
+        self.total_size += postcard::to_allocvec(&tx).unwrap().len();
 
         true
     }
@@ -213,7 +212,7 @@ impl MempoolTransactions {
         self.worst_transactions.remove(tx_hash);
         self.oldest_transactions.remove(tx_hash);
 
-        self.total_size -= tx.serialized_size();
+        self.total_size -= postcard::to_allocvec(&tx).unwrap().len();
 
         Some(tx)
     }

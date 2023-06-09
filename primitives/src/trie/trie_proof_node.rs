@@ -1,8 +1,9 @@
 use std::io;
 
-use beserial::{Deserialize, Serialize, SerializeWithLength, WriteBytesExt};
+use byteorder::WriteBytesExt;
 use log::error;
 use nimiq_hash::{Blake2bHash, Hash, SerializeContent};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     key_nibbles::KeyNibbles,
@@ -37,9 +38,9 @@ pub struct TrieProofNode {
 #[repr(u8)]
 enum ProofValue {
     None,
-    LeafValue(#[beserial(len_type(u16))] Vec<u8>),
+    LeafValue(Vec<u8>),
     HybridHash(Blake2bHash),
-    HybridValue(#[beserial(len_type(u16))] Vec<u8>),
+    HybridValue(Vec<u8>),
 }
 
 impl From<TrieNode> for TrieProofNode {
@@ -112,7 +113,10 @@ impl TrieProofNode {
 impl SerializeContent for TrieProofNode {
     fn serialize_content<W: io::Write, H>(&self, writer: &mut W) -> io::Result<usize> {
         let mut size = 0;
-        size += self.key.serialize(writer).unwrap();
+        let ser_key = postcard::to_allocvec(&self.key)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        size += ser_key.len();
+        writer.write_all(&ser_key)?;
         size += 1;
         match &self.value {
             ProofValue::None => {
@@ -120,18 +124,30 @@ impl SerializeContent for TrieProofNode {
             }
             ProofValue::LeafValue(val) => {
                 writer.write_u8(1).unwrap();
-                size += val.serialize::<u16, _>(writer).unwrap();
+                let ser_val = postcard::to_allocvec(&val)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                size += ser_val.len();
+                writer.write_all(&ser_val)?;
             }
             ProofValue::HybridHash(val_hash) => {
                 writer.write_u8(2).unwrap();
-                size += val_hash.serialize(writer).unwrap();
+                let ser_val_hash = postcard::to_allocvec(&val_hash)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                size += ser_val_hash.len();
+                writer.write_all(&ser_val_hash)?;
             }
             ProofValue::HybridValue(val) => {
                 writer.write_u8(2).unwrap();
-                size += val.hash::<Blake2bHash>().serialize(writer).unwrap();
+                let ser_val = postcard::to_allocvec(&val.hash::<Blake2bHash>())
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+                size += ser_val.len();
+                writer.write_all(&ser_val)?;
             }
         }
-        size += self.children.serialize(writer).unwrap();
+        let ser_children = postcard::to_allocvec(&self.children)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        size += ser_children.len();
+        writer.write_all(&ser_children)?;
         Ok(size)
     }
 }

@@ -1,7 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc, time::Duration};
 
 use async_trait::async_trait;
-use beserial::{Deserialize, Serialize};
 use futures::{stream::BoxStream, StreamExt, TryFutureExt};
 use nimiq_bls::{lazy::LazyPublicKey, CompressedPublicKey, SecretKey};
 use nimiq_network_interface::{
@@ -9,6 +8,7 @@ use nimiq_network_interface::{
     request::{Message, Request, RequestCommon},
 };
 use parking_lot::RwLock;
+use serde::{de::DeserializeOwned, Serialize};
 
 use super::{MessageStream, NetworkError, ValidatorNetwork};
 use crate::validator_record::{SignedValidatorRecord, ValidatorRecord};
@@ -27,7 +27,7 @@ pub struct State<TPeerId> {
 pub struct ValidatorNetworkImpl<N>
 where
     N: Network,
-    N::PeerId: Serialize + Deserialize,
+    N::PeerId: Serialize + DeserializeOwned,
 {
     /// A reference to the network containing all peers
     network: Arc<N>,
@@ -38,7 +38,7 @@ where
 impl<N> ValidatorNetworkImpl<N>
 where
     N: Network,
-    N::PeerId: Serialize + Deserialize,
+    N::PeerId: Serialize + DeserializeOwned,
 {
     pub fn new(network: Arc<N>) -> Self {
         Self {
@@ -142,7 +142,7 @@ where
 impl<N> ValidatorNetwork for ValidatorNetworkImpl<N>
 where
     N: Network,
-    N::PeerId: Serialize + Deserialize,
+    N::PeerId: Serialize + DeserializeOwned,
     N::Error: Send,
 {
     type Error = NetworkError<N::Error>;

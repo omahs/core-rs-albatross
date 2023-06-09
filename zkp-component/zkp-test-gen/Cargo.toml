@@ -14,10 +14,11 @@ keywords = ["nimiq", "cryptocurrency", "blockchain"]
 hex = "0.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
 parking_lot = "0.12"
+postcard = "1.0"
+serde = "1.0"
 tokio = { version = "1.28", features = ["macros", "rt", "sync"] }
 tracing-subscriber = { version = "0.3" }
 
-beserial = { path = "../../beserial" }
 nimiq-block = { path = "../../primitives/block" }
 nimiq-block-production = { path = "../../block-production" }
 nimiq-blockchain = { path = "../../blockchain" }

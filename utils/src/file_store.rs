@@ -1,10 +1,10 @@
 use std::{
     fs::OpenOptions,
-    io::{BufReader, BufWriter, Error as IoError, Write},
+    io::{BufWriter, Error as IoError, Read, Write},
     path::{Path, PathBuf},
 };
 
-use beserial::{Deserialize, Serialize, SerializingError};
+use serde::{de::DeserializeOwned, Serialize};
 use thiserror::Error;
 
 pub struct FileStore {
@@ -18,17 +18,18 @@ impl FileStore {
         }
     }
 
-    pub fn load<T: Deserialize>(&self) -> Result<T, Error> {
+    pub fn load<T: DeserializeOwned>(&self) -> Result<T, Error> {
         log::debug!("Reading from: {}", self.path.display());
-        let file = OpenOptions::new().read(true).open(&self.path)?;
-        let mut buf_reader = BufReader::new(file);
-        let item = Deserialize::deserialize(&mut buf_reader)?;
+        let mut file = OpenOptions::new().read(true).open(&self.path)?;
+        let mut buffer = Vec::with_capacity(4000);
+        file.read_to_end(&mut buffer)?;
+        let item: T = postcard::from_bytes(&buffer)?;
         Ok(item)
     }
 
     pub fn load_or_store<T, F>(&self, mut f: F) -> Result<T, Error>
     where
-        T: Serialize + Deserialize,
+        T: Serialize + DeserializeOwned + Clone,
         F: FnMut() -> T,
     {
         if self.path.exists() {
@@ -41,13 +42,13 @@ impl FileStore {
     }
 
     pub fn store<T: Serialize>(&self, item: &T) -> Result<(), Error> {
-        log::debug!("Writing to: {}", self.path.display());
+        log::debug!(path = ?self.path.display(), "Writing tof file");
         let file = OpenOptions::new()
             .write(true)
             .create(true)
             .open(&self.path)?;
         let mut buf_writer = BufWriter::new(file);
-        Serialize::serialize(item, &mut buf_writer)?;
+        buf_writer.write_all(&postcard::to_allocvec(item)?)?;
         buf_writer.flush()?;
         Ok(())
     }
@@ -56,7 +57,7 @@ impl FileStore {
 #[derive(Debug, Error)]
 pub enum Error {
     #[error("Serialization error: {0}")]
-    Serialization(#[from] SerializingError),
+    Serialization(#[from] postcard::Error),
 
     #[error("IO error: {0}")]
     IoError(#[from] IoError),

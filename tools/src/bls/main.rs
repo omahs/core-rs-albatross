@@ -1,4 +1,3 @@
-use beserial::Serialize;
 use nimiq_bls::{PublicKey, SecretKey};
 use nimiq_utils::key_rng::SecureGenerate;
 
@@ -8,12 +7,15 @@ fn main() {
 
     println!("# Public Key:");
     println!();
-    let x: Vec<u8> = public_key.serialize_to_vec(); // need to apply a little bit of force to make it a slice
+    let x: Vec<u8> = postcard::to_allocvec(&public_key).unwrap(); // need to apply a little bit of force to make it a slice
     println!("{}", hex::encode(x));
     println!();
     println!("# Secret Key:");
     println!();
-    println!("{}", hex::encode(secret_key.serialize_to_vec()));
+    println!(
+        "{}",
+        hex::encode(postcard::to_allocvec(&secret_key).unwrap())
+    );
     println!();
     println!("# Proof Of Knowledge:");
     println!();

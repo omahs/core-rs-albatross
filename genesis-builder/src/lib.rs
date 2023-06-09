@@ -3,11 +3,10 @@ extern crate log;
 
 use std::{
     fs::{read_to_string, OpenOptions},
-    io::Error as IoError,
+    io::{Error as IoError, Write},
     path::Path,
 };
 
-use beserial::{Serialize, SerializeWithLength, SerializingError};
 use nimiq_account::{
     Account, Accounts, BasicAccount, StakingContract, StakingContractStoreWrite, TransactionLog,
 };
@@ -34,7 +33,7 @@ pub enum GenesisBuilderError {
     #[error("No VRF seed to generate genesis block")]
     NoVrfSeed,
     #[error("Serialization failed")]
-    SerializingError(#[from] SerializingError),
+    SerializingError(#[from] postcard::Error),
     #[error("I/O error")]
     IoError(#[from] IoError),
     #[error("Failed to parse TOML file")]
@@ -250,7 +249,7 @@ impl GenesisBuilder {
             parent_election_hash: [0u8; 32].into(),
             interlink: Some(vec![]),
             seed,
-            extra_data: supply.serialize_to_vec(),
+            extra_data: postcard::to_allocvec(&supply)?,
             state_root,
             body_root,
             history_root: Blake2bHash::default(),
@@ -341,7 +340,7 @@ impl GenesisBuilder {
             .create(true)
             .write(true)
             .open(&block_path)?;
-        block.serialize(&mut file)?;
+        file.write_all(&postcard::to_allocvec(&block)?)?;
 
         let accounts_path = directory.as_ref().join("accounts.dat");
         info!("Writing accounts to {}", accounts_path.display());
@@ -349,7 +348,7 @@ impl GenesisBuilder {
             .create(true)
             .write(true)
             .open(&accounts_path)?;
-        accounts.serialize::<u32, _>(&mut file)?;
+        file.write_all(&postcard::to_allocvec(&accounts)?)?;
 
         Ok(hash)
     }

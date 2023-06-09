@@ -6,5 +6,7 @@ pub trait Merge {
     fn empty(prefix: u64) -> Self;
 
     #[must_use]
-    fn merge(&self, other: &Self, prefix: u64) -> Self;
+    fn merge(&self, other: &Self, prefix: u64) -> Option<Self>
+    where
+        Self: Sized;
 }

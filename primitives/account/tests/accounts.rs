@@ -1,6 +1,5 @@
 use std::{convert::TryFrom, time::Instant};
 
-use beserial::{Deserialize, Serialize};
 use log::info;
 use nimiq_account::{
     Account, Accounts, BasicAccount, BlockLogger, BlockState, InherentOperationReceipt, Log,
@@ -752,7 +751,7 @@ fn accounts_performance_history_sync_batches_many_to_many() {
 
 #[test]
 fn it_commits_valid_and_failing_txns() {
-    let priv_key: PrivateKey = Deserialize::deserialize_from_vec(
+    let priv_key: PrivateKey = postcard::from_bytes(
         &hex::decode("9d5bd02379e7e45cf515c788048f5cf3c454ffabd3e83bd1d7667716c325c3c0").unwrap(),
     )
     .unwrap();
@@ -793,7 +792,7 @@ fn it_commits_valid_and_failing_txns() {
 
     let signature = key_pair.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair.public, signature);
-    tx.proof = signature_proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
 
     let block_state = BlockState::new(1, 200);
     let receipts = accounts
@@ -842,7 +841,7 @@ fn it_commits_valid_and_failing_txns() {
 
     let signature = key_pair.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair.public, signature);
-    tx.proof = signature_proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
 
     let mut block_logger = BlockLogger::empty();
     let receipts = accounts

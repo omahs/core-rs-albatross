@@ -20,11 +20,15 @@ pub enum SizeProof<H: Merge, T: Hash<H>> {
 impl<H: Merge + Eq, T: Hash<H>> SizeProof<H, T> {
     pub fn verify(&self, hash: &H) -> bool {
         let self_hash = match self {
-            SizeProof::EmptyTree => H::empty(0),
-            SizeProof::SinglePeak(size, item) => item.hash(*size),
+            SizeProof::EmptyTree => Some(H::empty(0)),
+            SizeProof::SinglePeak(size, item) => Some(item.hash(*size)),
             SizeProof::MultiplePeaks(size, left, right) => left.merge(right, *size),
         };
-        hash == &self_hash
+        if let Some(self_hash) = self_hash {
+            hash == &self_hash
+        } else {
+            false
+        }
     }
 
     pub fn size(&self) -> u64 {
@@ -37,6 +41,7 @@ impl<H: Merge + Eq, T: Hash<H>> SizeProof<H, T> {
 
 /// A Merkle proof for a MMR.
 #[derive(Clone, Debug)]
+#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 pub struct Proof<H> {
     pub mmr_size: usize,
     pub nodes: Vec<H>,
@@ -176,9 +181,12 @@ impl<H: Merge + Clone> Proof<H> {
 
             let parent_pos = position.parent();
             let parent_hash = if position.right_node {
-                sibling_hash.merge(&hash, parent_pos.num_leaves() as u64)
+                sibling_hash
+                    .merge(&hash, parent_pos.num_leaves() as u64)
+                    .ok_or(Error::HashMergeFailure)?
             } else {
                 hash.merge(&sibling_hash, parent_pos.num_leaves() as u64)
+                    .ok_or(Error::HashMergeFailure)?
             };
 
             // Add the parent to the queue.
@@ -208,6 +216,7 @@ impl<H: Merge + Clone + Eq> Proof<H> {
 
 /// A Merkle proof for a MMR. This is equal to the regular Merkle proof, but has the `assume_previous`
 /// flag which can be used when we are verifying consecutive range proofs.
+#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 pub struct RangeProof<H> {
     pub proof: Proof<H>,
     pub assume_previous: bool,

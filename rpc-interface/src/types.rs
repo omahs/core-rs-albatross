@@ -6,7 +6,6 @@ use std::{
     str::FromStr,
 };
 
-use beserial::Serialize as BeSerialize;
 use clap::ValueEnum;
 use nimiq_account::{BlockLog as BBlockLog, Log, TransactionLog};
 use nimiq_block::{MicroJustification, MultiSignature};
@@ -175,7 +174,7 @@ impl Block {
     ) -> Result<Self, BlockchainError> {
         let block_number = macro_block.block_number();
         let timestamp = macro_block.timestamp();
-        let size = macro_block.serialized_size() as u32;
+        let size = postcard::to_allocvec(&macro_block).unwrap().len() as u32;
         let batch = Policy::batch_at(block_number);
         let epoch = Policy::epoch_at(block_number);
 
@@ -234,7 +233,7 @@ impl Block {
     ) -> Result<Self, BlockchainError> {
         let block_number = block.block_number();
         let timestamp = block.timestamp();
-        let size = block.serialized_size() as u32;
+        let size = postcard::to_allocvec(&block).unwrap().len() as u32;
         let batch = Policy::batch_at(block_number);
         let epoch = Policy::epoch_at(block_number);
 

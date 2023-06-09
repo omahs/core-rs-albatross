@@ -12,8 +12,8 @@ pub trait AggregatableContribution:
     + std::fmt::Debug
     + std::marker::Send
     + std::marker::Sync
-    + beserial::Serialize
-    + beserial::Deserialize
+    + serde::Serialize
+    + serde::de::DeserializeOwned
     + Unpin
 {
     /// A BitSet signaling which contributors have contributed in this Contribution

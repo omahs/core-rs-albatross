@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use beserial::{Deserialize, Serialize};
 use futures::{future, StreamExt};
 use nimiq_blockchain_interface::AbstractBlockchain;
 use nimiq_bls::KeyPair as BlsKeyPair;
@@ -14,6 +13,7 @@ use nimiq_network_mock::MockHub;
 use nimiq_validator::validator::Validator;
 use nimiq_validator_network::network_impl::ValidatorNetworkImpl;
 use rand::{rngs::StdRng, SeedableRng};
+use serde::{de::DeserializeOwned, Serialize};
 use tokio_stream::wrappers::BroadcastStream;
 
 use crate::{node::Node, test_network::TestNetwork};
@@ -35,7 +35,7 @@ pub async fn build_validator<N: TestNetwork + NetworkInterface>(
 ) -> (Validator<N, ValidatorNetworkImpl<N>>, Consensus<N>)
 where
     N::Error: Send,
-    N::PeerId: Deserialize + Serialize,
+    N::PeerId: DeserializeOwned + Serialize,
 {
     let node =
         Node::<N>::history_with_genesis_info(peer_id, genesis_info, hub, is_prover_active).await;
@@ -66,7 +66,7 @@ pub async fn build_validators<N: TestNetwork + NetworkInterface>(
 ) -> Vec<Validator<N, ValidatorNetworkImpl<N>>>
 where
     N::Error: Send,
-    N::PeerId: Deserialize + Serialize,
+    N::PeerId: DeserializeOwned + Serialize,
 {
     let num_validators = peer_ids.len();
     // Generate validator key pairs.
@@ -148,7 +148,7 @@ pub fn validator_for_slot<N: TestNetwork + NetworkInterface>(
 ) -> &Validator<N, ValidatorNetworkImpl<N>>
 where
     N::Error: Send,
-    N::PeerId: Deserialize + Serialize,
+    N::PeerId: DeserializeOwned + Serialize,
 {
     let consensus = &validators.first().unwrap().consensus;
 
@@ -173,7 +173,7 @@ pub fn pop_validator_for_slot<N: TestNetwork + NetworkInterface>(
 ) -> Validator<N, ValidatorNetworkImpl<N>>
 where
     N::Error: Send,
-    N::PeerId: Deserialize + Serialize,
+    N::PeerId: DeserializeOwned + Serialize,
 {
     let consensus = &validators.first().unwrap().consensus;
 

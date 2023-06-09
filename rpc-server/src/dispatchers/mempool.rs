@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use beserial::Deserialize;
 use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_mempool::{mempool::Mempool, mempool_transactions::TxPriority};
 use nimiq_rpc_interface::{
@@ -33,8 +32,7 @@ impl MempoolInterface for MempoolDispatcher {
         &mut self,
         raw_tx: String,
     ) -> RPCResult<Blake2bHash, (), Self::Error> {
-        let tx: nimiq_transaction::Transaction =
-            Deserialize::deserialize_from_vec(&hex::decode(&raw_tx)?)?;
+        let tx: nimiq_transaction::Transaction = postcard::from_bytes(&hex::decode(&raw_tx)?)?;
         let txid = tx.hash::<Blake2bHash>();
 
         match self.mempool.add_transaction(tx, None).await {
@@ -48,8 +46,7 @@ impl MempoolInterface for MempoolDispatcher {
         &mut self,
         raw_tx: String,
     ) -> RPCResult<Blake2bHash, (), Self::Error> {
-        let tx: nimiq_transaction::Transaction =
-            Deserialize::deserialize_from_vec(&hex::decode(&raw_tx)?)?;
+        let tx: nimiq_transaction::Transaction = postcard::from_bytes(&hex::decode(&raw_tx)?)?;
         let txid = tx.hash::<Blake2bHash>();
 
         match self

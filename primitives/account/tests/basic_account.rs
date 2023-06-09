@@ -1,6 +1,5 @@
 use std::convert::TryInto;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_account::{
     Account, Accounts, BasicAccount, BlockLogger, BlockState, Log, TransactionLog,
     TransactionOperationReceipt, TransactionReceipt,
@@ -190,11 +189,14 @@ fn make_signed_transaction(value: u64, sender: Address, recipient: Address) -> T
     );
 
     let key_pair = KeyPair::from(
-        PrivateKey::deserialize_from_vec(&hex::decode(SECRET_KEY_1).unwrap()).unwrap(),
+        postcard::from_bytes::<PrivateKey>(&hex::decode(SECRET_KEY_1).unwrap()).unwrap(),
     );
 
-    let proof = SignatureProof::from(key_pair.public, key_pair.sign(&tx.serialize_content()))
-        .serialize_to_vec();
+    let proof = postcard::to_allocvec(&SignatureProof::from(
+        key_pair.public,
+        key_pair.sign(&tx.serialize_content()),
+    ))
+    .unwrap();
 
     tx.proof = proof;
 

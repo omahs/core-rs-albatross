@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use beserial::Deserialize;
 use nimiq_database::traits::WriteTransaction;
 use nimiq_keys::{Address, KeyPair, PrivateKey, PublicKey, Signature};
 use nimiq_rpc_interface::{
@@ -48,7 +47,7 @@ impl WalletInterface for WalletDispatcher {
     ) -> RPCResult<Address, (), Self::Error> {
         let passphrase = passphrase.unwrap_or_default();
 
-        let private_key: PrivateKey = Deserialize::deserialize_from_vec(&hex::decode(key_data)?)?;
+        let private_key: PrivateKey = postcard::from_bytes(&hex::decode(key_data)?)?;
 
         let wallet_account = WalletAccount::from(KeyPair::from(private_key));
 

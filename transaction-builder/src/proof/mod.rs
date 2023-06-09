@@ -1,6 +1,5 @@
 use std::io;
 
-use beserial::Serialize;
 use nimiq_hash::{HashOutput, SerializeContent};
 use nimiq_keys::KeyPair;
 use nimiq_primitives::account::AccountType;
@@ -368,7 +367,7 @@ impl BasicProofBuilder {
     /// Otherwise, it returns `None`.
     pub fn generate(self) -> Option<Transaction> {
         let mut tx = self.transaction;
-        tx.proof = self.signature?.serialize_to_vec();
+        tx.proof = postcard::to_allocvec(&self.signature?).ok()?;
         Some(tx)
     }
 }

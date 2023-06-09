@@ -5,7 +5,6 @@ use std::{
     time::Duration,
 };
 
-use beserial::SerializingError;
 use futures::{Sink, SinkExt, StreamExt};
 use instant::Instant;
 use libp2p::{
@@ -59,7 +58,7 @@ pub enum DiscoveryHandlerError {
     Io(#[from] std::io::Error),
 
     #[error("Serialization error: {0}")]
-    Serialization(#[from] SerializingError),
+    Serialization(#[from] postcard::Error),
 
     #[error("Unexpected message for state {state:?}: {message:?}")]
     UnexpectedMessage {
@@ -185,14 +184,14 @@ impl DiscoveryHandler {
         }
     }
 
-    fn send(&mut self, message: &DiscoveryMessage) -> Result<(), SerializingError> {
+    fn send(&mut self, message: &DiscoveryMessage) -> Result<(), postcard::Error> {
         Pin::new(self.outbound.as_mut().expect("Expected outbound substream")).start_send(message)
     }
 
     fn receive(
         &mut self,
         cx: &mut Context,
-    ) -> Poll<Option<Result<DiscoveryMessage, SerializingError>>> {
+    ) -> Poll<Option<Result<DiscoveryMessage, postcard::Error>>> {
         self.inbound
             .as_mut()
             .expect("Expected inbound substream")
@@ -295,7 +294,7 @@ impl ConnectionHandler for DiscoveryHandler {
     fn inject_dial_upgrade_error(
         &mut self,
         _info: Self::OutboundOpenInfo,
-        error: ConnectionHandlerUpgrErr<SerializingError>,
+        error: ConnectionHandlerUpgrErr<postcard::Error>,
     ) {
         error!(%error, "inject_dial_upgrade_error");
     }

@@ -3,7 +3,6 @@ use std::{
     sync::{atomic::AtomicU32, Arc},
 };
 
-use beserial::Serialize;
 use futures::{
     future::{AbortHandle, Abortable},
     lock::{Mutex, MutexGuard},
@@ -596,7 +595,7 @@ impl Mempool {
             // Calculate size. If we can't fit the transaction in the block, then we stop here.
             // TODO: We can optimize this. There might be a smaller transaction that still fits.
             // We need to account for one extra byte per transaction to encode its final execution status
-            let next_size = size + 1 + tx.serialized_size();
+            let next_size = size + 1 + postcard::to_allocvec(&tx).unwrap().len();
             if next_size > max_bytes {
                 break;
             }

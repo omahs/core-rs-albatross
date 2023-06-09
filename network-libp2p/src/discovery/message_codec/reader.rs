@@ -4,10 +4,10 @@ use std::{
     task::{Context, Poll},
 };
 
-use beserial::{Deserialize, SerializingError};
-use bytes::{Buf, BytesMut};
+use bytes::BytesMut;
 use futures::{AsyncRead, Stream};
 use pin_project::pin_project;
+use serde::de::DeserializeOwned;
 
 use super::header::Header;
 
@@ -100,7 +100,7 @@ impl<R, M> MessageReader<R, M> {
 
     pub fn into_other<N>(self) -> MessageReader<R, N>
     where
-        N: Deserialize,
+        N: DeserializeOwned,
     {
         if let ReaderState::Data { .. } = &ReaderState::Head {
             panic!("MessageReader can't be converted while data is being read.");
@@ -115,18 +115,16 @@ impl<R, M> MessageReader<R, M> {
     }
 }
 
-fn unexpected_eof<T>() -> Poll<Option<Result<T, SerializingError>>> {
-    Poll::Ready(Some(Err(SerializingError::from(std::io::Error::from(
-        std::io::ErrorKind::UnexpectedEof,
-    )))))
+fn unexpected_eof<T>() -> Poll<Option<Result<T, postcard::Error>>> {
+    Poll::Ready(Some(Err(postcard::Error::DeserializeUnexpectedEnd)))
 }
 
 impl<R, M> Stream for MessageReader<R, M>
 where
     R: AsyncRead,
-    M: Deserialize + std::fmt::Debug,
+    M: DeserializeOwned + std::fmt::Debug,
 {
-    type Item = Result<M, SerializingError>;
+    type Item = Result<M, postcard::Error>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let self_projected = self.project();
@@ -147,7 +145,7 @@ where
                     Poll::Ready(Err(e)) => {
                         return {
                             error!(error = %e, "Inner AsyncRead returned an error");
-                            Poll::Ready(Some(Err(e.into())))
+                            Poll::Ready(Some(Err(postcard::Error::DeserializeUnexpectedEnd)))
                         }
                     }
 
@@ -167,7 +165,7 @@ where
 
                 // Decode the header: 16 bit length big-endian
                 // This will also advance the read position after the header.
-                let header = match Deserialize::deserialize_from_vec(self_projected.buffer) {
+                let header = match postcard::from_bytes(self_projected.buffer) {
                     Ok(header) => header,
                     Err(e) => return Poll::Ready(Some(Err(e))),
                 };
@@ -189,7 +187,9 @@ where
                     Poll::Pending => return Poll::Pending,
 
                     // An error occurred.
-                    Poll::Ready(Err(e)) => return Poll::Ready(Some(Err(e.into()))),
+                    Poll::Ready(Err(_)) => {
+                        return Poll::Ready(Some(Err(postcard::Error::DeserializeUnexpectedEnd)))
+                    }
 
                     // EOF while reading the data.
                     Poll::Ready(Ok(false)) => return unexpected_eof(),
@@ -199,8 +199,7 @@ where
                 }
 
                 // Decode the message, the read position of the buffer is already at the start of the message.
-                let message: M = match Deserialize::deserialize(&mut self_projected.buffer.reader())
-                {
+                let message: M = match postcard::from_bytes(self_projected.buffer) {
                     Ok(message) => message,
                     Err(e) => return Poll::Ready(Some(Err(e))),
                 };
@@ -228,29 +227,31 @@ where
 
 #[cfg(test)]
 mod tests {
-    use beserial::{Deserialize, Serialize};
+    use std::io::Write;
+
     use bytes::{BufMut, BytesMut};
     use futures::{io::Cursor, StreamExt};
     use nimiq_test_log::test;
+    use serde::{Deserialize, Serialize};
 
     use super::{Header, MessageReader};
 
     #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
     struct TestMessage {
         pub foo: u32,
-        #[beserial(len_type(u8))]
         pub bar: String,
     }
 
     fn put_message<M: Serialize>(buf: &mut BytesMut, message: &M) {
-        let n = message.serialized_size();
-        buf.reserve(n + Header::SIZE);
-        let header = Header::new(n as u32);
+        let ser_message = postcard::to_allocvec(&message).unwrap();
+        buf.reserve(ser_message.len() + Header::SIZE);
+        let mut ser_header = [0u8; Header::SIZE];
+        let header = Header::new(ser_message.len() as u32);
+        postcard::to_slice(&header, &mut ser_header).unwrap();
 
         let mut w = buf.writer();
-
-        header.serialize(&mut w).unwrap();
-        message.serialize(&mut w).unwrap();
+        w.write_all(&ser_header).unwrap();
+        w.write_all(&ser_message).unwrap();
     }
 
     #[test(tokio::test)]

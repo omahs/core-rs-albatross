@@ -1,9 +1,9 @@
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError};
 use log::error;
 use nimiq_bls::{CompressedPublicKey as BlsPublicKey, CompressedSignature as BlsSignature};
 use nimiq_hash::Blake2bHash;
 use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
 use nimiq_primitives::{coin::Coin, policy::Policy};
+use serde::{Deserialize, Serialize};
 
 use crate::{SignatureProof, Transaction, TransactionError};
 
@@ -31,7 +31,6 @@ use crate::{SignatureProof, Transaction, TransactionError};
 /// over the complete transaction with the `signature` field set to `Default::default()`.
 /// The field is populated only after computing the signature.
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum IncomingStakingTransactionData {
     CreateValidator {
@@ -214,15 +213,14 @@ impl IncomingStakingTransactionData {
     pub fn set_signature_on_data(
         data: &[u8],
         signature_proof: SignatureProof,
-    ) -> Result<Vec<u8>, SerializingError> {
-        let mut data: IncomingStakingTransactionData = Deserialize::deserialize_from_vec(data)?;
+    ) -> Result<Vec<u8>, postcard::Error> {
+        let mut data: IncomingStakingTransactionData = postcard::from_bytes(data)?;
         data.set_signature(signature_proof);
-        Ok(data.serialize_to_vec())
+        postcard::to_allocvec(&data)
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum OutgoingStakingTransactionProof {
     DeleteValidator {
@@ -257,12 +255,11 @@ impl OutgoingStakingTransactionProof {
     }
 }
 
-pub fn full_parse<T: Deserialize>(mut data: &[u8]) -> Result<T, TransactionError> {
-    let reader = &mut data;
-    let data = Deserialize::deserialize(reader)?;
+pub fn full_parse<T: serde::de::DeserializeOwned>(data: &[u8]) -> Result<T, TransactionError> {
+    let (data, left_over) = postcard::take_from_bytes(data)?;
 
     // Ensure that transaction data has been fully read.
-    if reader.read_u8().is_ok() {
+    if !left_over.is_empty() {
         return Err(TransactionError::InvalidData);
     }
 

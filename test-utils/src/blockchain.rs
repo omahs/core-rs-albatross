@@ -1,6 +1,5 @@
 use std::{str::FromStr, sync::Arc, time::Instant};
 
-use beserial::Deserialize;
 use nimiq_block::{
     Block, MacroBlock, MacroBody, MacroHeader, MultiSignature, SignedSkipBlockInfo, SkipBlockInfo,
     SkipBlockProof, TendermintIdentifier, TendermintProof, TendermintStep, TendermintVote,
@@ -245,11 +244,13 @@ pub fn sign_skip_block_info(
 }
 
 pub fn voting_key() -> BlsKeyPair {
-    BlsKeyPair::from(BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap())
+    BlsKeyPair::from(
+        postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+    )
 }
 
 pub fn signing_key() -> SchnorrKeyPair {
     SchnorrKeyPair::from(
-        SchnorrPrivateKey::deserialize_from_vec(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
+        postcard::from_bytes::<SchnorrPrivateKey>(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
     )
 }

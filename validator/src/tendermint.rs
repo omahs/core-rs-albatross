@@ -1,6 +1,6 @@
-use std::sync::Arc;
+use std::{io::Write, sync::Arc};
 
-use beserial::{Serialize, WriteBytesExt};
+use byteorder::WriteBytesExt;
 use futures::{
     future::{self, FutureExt},
     stream::{BoxStream, StreamExt},
@@ -163,21 +163,18 @@ where
             .0
             .serialize_content::<_, Blake2sHash>(&mut h)
             .expect("Must be able to serialize content of the proposal to hasher");
-        proposal_msg
-            .round
-            .serialize(&mut h)
-            .expect("Must be able to serialize content of the round to hasher ");
-        proposal_msg
-            .valid_round
-            .serialize(&mut h)
-            .expect("Must be able to serialize content of the valid_round to hasher ");
+        h.write_all(
+            &postcard::to_allocvec(&proposal_msg.round)
+                .expect("Must be able to serialize content of the round to hasher "),
+        )
+        .expect("Must be able to write round to hasher");
+        h.write_all(
+            &postcard::to_allocvec(&proposal_msg.valid_round)
+                .expect("Must be able to serialize content of the valid_round to hasher "),
+        )
+        .expect("Must be able to write valid_round to hasher");
 
-        let mut v = vec![];
-        h.finish()
-            .serialize(&mut v)
-            .expect("Must be able to serialize the hash.");
-
-        v
+        postcard::to_allocvec(&h.finish()).expect("Must be able to serialize the hash.")
     }
 }
 

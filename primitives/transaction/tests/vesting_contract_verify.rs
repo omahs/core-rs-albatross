@@ -1,4 +1,3 @@
-use beserial::{Deserialize, Serialize, SerializingError};
 use nimiq_keys::{Address, KeyPair, PrivateKey};
 use nimiq_primitives::{
     account::AccountType, coin::Coin, networks::NetworkId, transaction::TransactionError,
@@ -11,7 +10,7 @@ use nimiq_transaction::{
 const OWNER_KEY: &str = "9d5bd02379e7e45cf515c788048f5cf3c454ffabd3e83bd1d7667716c325c3c0";
 
 fn key_pair() -> KeyPair {
-    KeyPair::from(PrivateKey::deserialize_from_vec(&hex::decode(OWNER_KEY).unwrap()).unwrap())
+    KeyPair::from(postcard::from_bytes::<PrivateKey>(&hex::decode(OWNER_KEY).unwrap()).unwrap())
 }
 
 #[test]
@@ -19,8 +18,8 @@ fn key_pair() -> KeyPair {
 fn it_can_verify_creation_transaction() {
     let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 8);
     let owner = Address::from([0u8; 20]);
-    Serialize::serialize(&owner, &mut data);
-    Serialize::serialize(&100u64, &mut data);
+    postcard::to_slice(&owner, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
 
     let mut transaction = Transaction::new_contract_creation(
         vec![],
@@ -65,10 +64,10 @@ fn it_can_verify_creation_transaction() {
     // Valid
     let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 24);
     let sender = Address::from([0u8; 20]);
-    Serialize::serialize(&sender, &mut data);
-    Serialize::serialize(&100u64, &mut data);
-    Serialize::serialize(&100u64, &mut data);
-    Serialize::serialize(&Coin::try_from(100).unwrap(), &mut data);
+    postcard::to_slice(&sender, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&Coin::try_from(100).unwrap(), &mut data).unwrap();
     transaction.data = data;
     transaction.recipient = transaction.contract_creation_address();
     assert_eq!(
@@ -79,11 +78,11 @@ fn it_can_verify_creation_transaction() {
     // Valid
     let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 32);
     let sender = Address::from([0u8; 20]);
-    Serialize::serialize(&sender, &mut data);
-    Serialize::serialize(&100u64, &mut data);
-    Serialize::serialize(&100u64, &mut data);
-    Serialize::serialize(&Coin::try_from(100).unwrap(), &mut data);
-    Serialize::serialize(&Coin::try_from(100).unwrap(), &mut data);
+    postcard::to_slice(&sender, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&Coin::try_from(100).unwrap(), &mut data).unwrap();
+    postcard::to_slice(&Coin::try_from(100).unwrap(), &mut data).unwrap();
     transaction.data = data;
     transaction.recipient = transaction.contract_creation_address();
     assert_eq!(
@@ -99,7 +98,7 @@ fn it_can_verify_creation_transaction() {
         step_amount: Coin::try_from(1000).unwrap(),
         total_amount: Coin::try_from(100).unwrap(),
     };
-    transaction.data = data.serialize_to_vec();
+    transaction.data = postcard::to_allocvec(&data).unwrap();
     transaction.recipient = transaction.contract_creation_address();
     assert_eq!(
         AccountType::verify_incoming_transaction(&transaction),
@@ -124,13 +123,13 @@ fn it_can_verify_outgoing_transactions() {
     assert!(matches!(
         AccountType::verify_outgoing_transaction(&tx),
         Err(TransactionError::InvalidSerialization(
-            SerializingError::IoError(_)
+            postcard::Error::DeserializeUnexpectedEnd
         ))
     ));
 
     let signature = key_pair.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair.public, signature);
-    tx.proof = signature_proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
 
     assert_eq!(AccountType::verify_outgoing_transaction(&tx), Ok(()));
 

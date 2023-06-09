@@ -1,7 +1,6 @@
-use std::fmt;
+use std::{fmt, io};
 
 use ark_ec::Group;
-use beserial::{Deserialize, Serialize, SerializeWithLength};
 use nimiq_bls::{G2Projective, PublicKey as BlsPublicKey};
 use nimiq_collections::bitset::BitSet;
 use nimiq_hash::{Blake2bHash, Blake2sHash, Hash, HashOutput, Hasher, SerializeContent};
@@ -12,6 +11,7 @@ use nimiq_primitives::{
 };
 use nimiq_transaction::reward::RewardTransaction;
 use nimiq_vrf::VrfSeed;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::{
@@ -173,7 +173,6 @@ pub struct MacroHeader {
     /// The hash of the header of the preceding election macro block.
     pub parent_election_hash: Blake2bHash,
     /// Hashes of the last blocks dividable by 2^x
-    #[beserial(len_type(u8))]
     pub interlink: Option<Vec<Blake2bHash>>,
     /// The seed of the block. This is the BLS signature of the seed of the immediately preceding
     /// block (either micro or macro) using the validator key of the block proposer.
@@ -183,7 +182,6 @@ pub struct MacroHeader {
     /// It encodes the initial supply in the genesis block, as a big-endian `u64`.
     ///
     /// No planned use otherwise.
-    #[beserial(len_type(u8, limit = 32))]
     pub extra_data: Vec<u8>,
     /// The root of the Merkle tree of the blockchain state. It just acts as a commitment to the
     /// state.
@@ -215,26 +213,63 @@ impl SerializeContent for MacroHeader {
         writer: &mut W,
     ) -> std::io::Result<usize> {
         let mut size = 0;
-        size += self.version.serialize(writer)?;
-        size += self.block_number.serialize(writer)?;
-        size += self.round.serialize(writer)?;
-        let mut a = vec![];
-        self.round.serialize(&mut a)?;
+        let ser_version = postcard::to_allocvec(&self.version)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_version)?;
+        size += ser_version.len();
+        let ser_block_number = postcard::to_allocvec(&self.block_number)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_block_number)?;
+        size += ser_block_number.len();
+        let ser_round = postcard::to_allocvec(&self.round)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_round)?;
+        size += ser_round.len();
 
-        size += self.timestamp.serialize(writer)?;
-        size += self.parent_hash.serialize(writer)?;
-        size += self.parent_election_hash.serialize(writer)?;
+        let ser_timestamp = postcard::to_allocvec(&self.timestamp)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_timestamp)?;
+        size += ser_timestamp.len();
+        let ser_parent_hash = postcard::to_allocvec(&self.parent_hash)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_parent_hash)?;
+        size += ser_parent_hash.len();
+        let ser_parent_election_hash = postcard::to_allocvec(&self.parent_election_hash)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_parent_election_hash)?;
+        size += ser_parent_election_hash.len();
 
         let interlink_hash = H::Builder::default()
-            .chain(&self.interlink.serialize_to_vec::<u8>())
+            .chain(
+                &postcard::to_allocvec(&self.interlink)
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?,
+            )
             .finish();
-        size += interlink_hash.serialize(writer)?;
+        let ser_interlink_hash = postcard::to_allocvec(&interlink_hash)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_interlink_hash)?;
+        size += ser_interlink_hash.len();
 
-        size += self.seed.serialize(writer)?;
-        size += self.extra_data.serialize::<u8, _>(writer)?;
-        size += self.state_root.serialize(writer)?;
-        size += self.body_root.serialize(writer)?;
-        size += self.history_root.serialize(writer)?;
+        let ser_seed = postcard::to_allocvec(&self.seed)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_seed)?;
+        size += ser_seed.len();
+        let ser_extra_data = postcard::to_allocvec(&self.extra_data)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_extra_data)?;
+        size += ser_extra_data.len();
+        let ser_state_root = postcard::to_allocvec(&self.state_root)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_state_root)?;
+        size += ser_state_root.len();
+        let ser_body_root = postcard::to_allocvec(&self.body_root)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_body_root)?;
+        size += ser_body_root.len();
+        let ser_history_root = postcard::to_allocvec(&self.history_root)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_history_root)?;
+        size += ser_history_root.len();
 
         Ok(size)
     }
@@ -255,7 +290,6 @@ pub struct MacroBody {
     /// reward distribution.
     pub disabled_set: BitSet,
     /// The reward related transactions of this block.
-    #[beserial(len_type(u16))]
     pub transactions: Vec<RewardTransaction>,
 }
 
@@ -278,15 +312,32 @@ impl SerializeContent for MacroBody {
         // PITODO: do we need to hash something if None?
         if let Some(ref validators) = self.validators {
             let pk_tree_root = validators.hash::<H>();
-            size += pk_tree_root.serialize(writer)?;
+            let ser_pk_tree_root = postcard::to_allocvec(&pk_tree_root)
+                .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            writer.write_all(&ser_pk_tree_root)?;
+            size += ser_pk_tree_root.len();
         } else {
-            size += 0u8.serialize(writer)?;
+            let ser_zero_byte =
+                postcard::to_allocvec(&0u8).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            writer.write_all(&ser_zero_byte)?;
+            size += ser_zero_byte.len();
         }
-        size += self.lost_reward_set.serialize(writer)?;
-        size += self.disabled_set.serialize(writer)?;
+        let ser_lost_reward_set = postcard::to_allocvec(&self.lost_reward_set)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_lost_reward_set)?;
+        size += ser_lost_reward_set.len();
+        let ser_disabled_set = postcard::to_allocvec(&self.disabled_set)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_disabled_set)?;
+        size += ser_disabled_set.len();
 
-        let transactions_hash = self.transactions.serialize_to_vec::<u16>().hash::<H>();
-        size += transactions_hash.serialize(writer)?;
+        let ser_transactions = postcard::to_allocvec(&self.transactions)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let transactions_hash = ser_transactions.hash::<H>();
+        let ser_transactions_hash = postcard::to_allocvec(&transactions_hash)
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_transactions_hash)?;
+        size += ser_transactions_hash.len();
 
         Ok(size)
     }

@@ -615,7 +615,7 @@ where
                         write_transaction.put::<str, Vec<u8>>(
                             &self.database,
                             Self::MACRO_STATE_KEY,
-                            &beserial::Serialize::serialize_to_vec(&update),
+                            &postcard::to_allocvec(&update).unwrap(),
                         );
 
                         write_transaction.commit();

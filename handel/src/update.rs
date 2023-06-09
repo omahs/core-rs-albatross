@@ -1,11 +1,12 @@
 use std::fmt::Debug;
 
-use beserial::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize};
 
 use crate::contribution::AggregatableContribution;
 /// The max number of LevelUpdateMessages requests per peer.
 pub const MAX_REQUEST_RESPONSE_LEVEL_UPDATE_MESSAGE: u32 = 1000;
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(bound = "C: AggregatableContribution")]
 pub struct LevelUpdate<C: AggregatableContribution> {
     /// The updated multi-signature for this level
     pub aggregate: C,

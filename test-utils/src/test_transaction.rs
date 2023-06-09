@@ -1,4 +1,3 @@
-use beserial::Serialize;
 use nimiq_genesis_builder::GenesisBuilder;
 use nimiq_keys::{Address, KeyPair as SchnorrKeyPair, SecureGenerate};
 use nimiq_primitives::{coin::Coin, networks::NetworkId};
@@ -72,11 +71,11 @@ pub fn generate_transactions(
                     .sign(&txn.serialize_content()),
             );
 
-            txn.proof = signature_proof.serialize_to_vec();
+            txn.proof = postcard::to_allocvec(&signature_proof).unwrap();
         }
         txns.push(txn.clone());
         //Adjust for executed txns len
-        txns_len += 1 + txn.serialized_size();
+        txns_len += 1 + postcard::to_allocvec(&txn).unwrap().len();
     }
     (txns, txns_len)
 }

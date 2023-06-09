@@ -3,9 +3,9 @@ pub extern crate hex;
 
 #[macro_export]
 macro_rules! create_typed_array {
-    ($name: ident, $t: ty, $len: expr) => {
+    ($name: ident, $t: ty, $len: expr $(,$extra_derive: meta) *) => {
         #[repr(C)]
-        #[derive(Default, Clone, PartialEq, PartialOrd, Eq, Ord, Hash)]
+        #[derive(Default, Clone, PartialEq, PartialOrd, Eq, Ord, Hash, $($extra_derive),*)]
         pub struct $name(pub [$t; $len]);
 
         impl<'a> From<&'a [$t]> for $name {
@@ -18,30 +18,6 @@ macro_rules! create_typed_array {
                 let mut a = [0 as $t; $len];
                 a.clone_from_slice(&slice[0..$len]);
                 $name(a)
-            }
-        }
-
-        impl ::beserial::Deserialize for $name {
-            fn deserialize<R: ::beserial::ReadBytesExt>(
-                reader: &mut R,
-            ) -> Result<Self, ::beserial::SerializingError> {
-                let mut a = [0 as $t; $len];
-                reader.read_exact(&mut a[..])?;
-                Ok($name(a))
-            }
-        }
-
-        impl ::beserial::Serialize for $name {
-            fn serialize<W: ::beserial::WriteBytesExt>(
-                &self,
-                writer: &mut W,
-            ) -> Result<usize, ::beserial::SerializingError> {
-                writer.write_all(&self.0)?;
-                Ok($len)
-            }
-
-            fn serialized_size(&self) -> usize {
-                $len
             }
         }
 

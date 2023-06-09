@@ -101,7 +101,9 @@ impl<H: Merge + Clone, S: Store<H>> MerkleMountainRange<H, S> {
 
             // Prefix the merged hash with the number of leaf elements below that hash, which are
             // 2^height as it is a perfect binary tree.
-            let parent_elem = left_elem.merge(&right_elem, pos.num_leaves() as u64);
+            let parent_elem = left_elem
+                .merge(&right_elem, pos.num_leaves() as u64)
+                .ok_or(Error::HashMergeFailure)?;
             store.push(parent_elem);
         }
 

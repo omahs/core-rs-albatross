@@ -1,4 +1,3 @@
-use beserial::Serialize;
 use log::debug;
 use nimiq_account::{
     Account, Accounts, BasicAccount, BlockState, HashedTimeLockedContract,
@@ -237,7 +236,7 @@ impl<R: Rng + CryptoRng> TransactionsGenerator<R> {
                 self.network_id,
             ),
             IncomingAccountData::Vesting { ref parameters } => Transaction::new_contract_creation(
-                parameters.serialize_to_vec(),
+                postcard::to_allocvec(&parameters).unwrap(),
                 sender_account.sender_address(),
                 sender.into(),
                 recipient.into(),
@@ -247,7 +246,7 @@ impl<R: Rng + CryptoRng> TransactionsGenerator<R> {
                 self.network_id,
             ),
             IncomingAccountData::Htlc { ref parameters } => Transaction::new_contract_creation(
-                parameters.serialize_to_vec(),
+                postcard::to_allocvec(&parameters).unwrap(),
                 sender_account.sender_address(),
                 sender.into(),
                 recipient.into(),
@@ -268,7 +267,7 @@ impl<R: Rng + CryptoRng> TransactionsGenerator<R> {
                         Policy::STAKING_CONTRACT_ADDRESS.clone(),
                         recipient.into(),
                         fee,
-                        parameters.serialize_to_vec(),
+                        postcard::to_allocvec(&parameters).unwrap(),
                         block_state.number,
                         self.network_id,
                     )
@@ -280,7 +279,7 @@ impl<R: Rng + CryptoRng> TransactionsGenerator<R> {
                         recipient.into(),
                         value,
                         fee,
-                        parameters.serialize_to_vec(),
+                        postcard::to_allocvec(&parameters).unwrap(),
                         block_state.number,
                         self.network_id,
                     )
@@ -545,7 +544,7 @@ impl<R: Rng + CryptoRng> TransactionsGenerator<R> {
                         reward_address: Address(self.rng.gen()),
                         signal_data: None,
                         proof_of_knowledge: validator_voting_key_pair
-                            .sign(&validator_voting_key_compressed.serialize_to_vec())
+                            .sign(&postcard::to_allocvec(&validator_voting_key_compressed).unwrap())
                             .compress(),
                         proof: SignatureProof::default(),
                     },
@@ -575,7 +574,10 @@ impl<R: Rng + CryptoRng> TransactionsGenerator<R> {
                         new_signal_data: None,
                         new_proof_of_knowledge: Some(
                             new_validator_voting_key_pair
-                                .sign(&new_validator_voting_key_compressed.serialize_to_vec())
+                                .sign(
+                                    &postcard::to_allocvec(&new_validator_voting_key_compressed)
+                                        .unwrap(),
+                                )
                                 .compress(),
                         ),
                         proof: SignatureProof::default(),

@@ -1,5 +1,4 @@
 use ark_ec::CurveGroup;
-use beserial::{Deserialize, Serialize};
 use nimiq_bls::*;
 use nimiq_test_log::test;
 use nimiq_test_utils::test_rng::test_rng;
@@ -48,24 +47,24 @@ fn serialize_deserialize() {
 
     for i in 0..100 {
         let keypair = KeyPair::generate(rng);
-        let ser_pub_key = keypair.public_key.serialize_to_vec();
+        let ser_pub_key = postcard::to_allocvec(&keypair.public_key).unwrap();
         let compress_pub_key = keypair.public_key.compress();
-        let ser_comp_pub_key = compress_pub_key.serialize_to_vec();
+        let ser_comp_pub_key = postcard::to_allocvec(&compress_pub_key).unwrap();
         let message = format!("Message {}", i);
 
         let sig = keypair.sign(&message);
-        let ser_signature = sig.serialize_to_vec();
-        let ser_comp_signature = sig.compress().serialize_to_vec();
+        let ser_signature = postcard::to_allocvec(&sig).unwrap();
+        let ser_comp_signature = postcard::to_allocvec(&sig.compress()).unwrap();
 
         // Check that we can deserialize a serialized public key
         assert_eq!(
-            PublicKey::deserialize_from_vec(&ser_pub_key).unwrap(),
+            postcard::from_bytes::<PublicKey>(&ser_pub_key).unwrap(),
             keypair.public_key
         );
 
         // Check that we can deserialize a serialized compressed public key
         assert_eq!(
-            CompressedPublicKey::deserialize_from_vec(&ser_comp_pub_key)
+            postcard::from_bytes::<CompressedPublicKey>(&ser_comp_pub_key)
                 .unwrap()
                 .uncompress()
                 .unwrap(),
@@ -74,12 +73,12 @@ fn serialize_deserialize() {
 
         // Check that we can deserialize a serialized signature
         assert_eq!(
-            Signature::deserialize_from_vec(&ser_signature).unwrap(),
+            postcard::from_bytes::<Signature>(&ser_signature).unwrap(),
             sig
         );
 
         assert_eq!(
-            Signature::deserialize_from_vec(&ser_signature)
+            postcard::from_bytes::<Signature>(&ser_signature)
                 .unwrap()
                 .compressed,
             sig.compressed
@@ -87,7 +86,7 @@ fn serialize_deserialize() {
 
         // Check that we can deserialize a serialized compressed signature
         assert_eq!(
-            CompressedSignature::deserialize_from_vec(&ser_comp_signature)
+            postcard::from_bytes::<CompressedSignature>(&ser_comp_signature)
                 .unwrap()
                 .uncompress()
                 .unwrap(),
@@ -96,7 +95,7 @@ fn serialize_deserialize() {
 
         assert_eq!(
             sig.compressed,
-            CompressedSignature::deserialize_from_vec(&ser_comp_signature)
+            postcard::from_bytes::<CompressedSignature>(&ser_comp_signature)
                 .unwrap()
                 .uncompress()
                 .unwrap()
@@ -109,8 +108,7 @@ fn serialize_deserialize() {
 fn uncompress_compress() {
     let hex_public_key = "ae4cc2e31e04add9a6d379b4379b02f302971503cbac8d02fdc5d2dc8204d24ec8d095627d037de747f1a8ea7bf3c1693262d947f78e0cc73c18ecc2f2ec5b2249d551e1680fe0c973a7951bd78d4fbe0326be71286ed34004d2443eb3b00167a02edffcfd2b8539448fa116c5454da2d181dc03ea8cfe3fedb58b9b945d5e506c794deb3ba73983005b3ff799212bf59030a8dd17ff48fd5d015695195a022fed8ba4fab28a4c3e2d6f41be0e6315e41824df161219c02be5a281c215011c13131184187e9100d2d6a5321fd9b154806ecc78e93b91331a5334b8876fd1b8ea62b17ce6045fc9e1af60b7705b0cf86dba79f5bcb8320c99a45f3b7c7178f8f87ba953de2755c61af882059c1de1d7a35357f06cd4a7d954e4bb211900";
     let raw_public_key: Vec<u8> = hex::decode(hex_public_key).unwrap();
-    let compressed_public_key: CompressedPublicKey =
-        Deserialize::deserialize_from_vec(&raw_public_key).unwrap();
+    let compressed_public_key: CompressedPublicKey = postcard::from_bytes(&raw_public_key).unwrap();
 
     println!(
         "{:?}",
@@ -177,15 +175,15 @@ fn aggregate_signatures_serialization() {
     let agg_key = AggregatePublicKey::from_public_keys(&public_keys);
 
     let agg_sig = AggregateSignature::from_signatures(&signatures);
-    let ser_agg_sig = agg_sig.serialize_to_vec();
+    let ser_agg_sig = postcard::to_allocvec(&agg_sig).unwrap();
 
     assert_eq!(
-        AggregateSignature::deserialize_from_vec(&ser_agg_sig).unwrap(),
+        postcard::from_bytes::<AggregateSignature>(&ser_agg_sig).unwrap(),
         agg_sig
     );
 
     assert!(agg_key.verify(
         &message,
-        &AggregateSignature::deserialize_from_vec(&ser_agg_sig).unwrap()
+        &postcard::from_bytes::<AggregateSignature>(&ser_agg_sig).unwrap()
     ));
 }

@@ -1,4 +1,3 @@
-use beserial::{Deserialize, Serialize};
 use nimiq_keys::Address;
 #[cfg(feature = "interaction-traits")]
 use nimiq_primitives::account::AccountType;
@@ -8,6 +7,7 @@ use nimiq_transaction::{
     account::vesting_contract::CreationTransactionData, inherent::Inherent, SignatureProof,
     Transaction,
 };
+use serde::{Deserialize, Serialize};
 
 use crate::{convert_receipt, AccountReceipt};
 #[cfg(feature = "interaction-traits")]
@@ -51,8 +51,7 @@ impl VestingContract {
         }
 
         // Check transaction signer is contract owner.
-        let signature_proof: SignatureProof =
-            Deserialize::deserialize(&mut &transaction.proof[..])?;
+        let signature_proof: SignatureProof = postcard::from_bytes(&transaction.proof[..])?;
 
         if !signature_proof.is_signed_by(&self.owner) {
             return Err(AccountError::InvalidSignature);

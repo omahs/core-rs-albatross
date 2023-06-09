@@ -1,7 +1,7 @@
-use std::{fmt, io, sync::Arc, time::Duration};
+use std::{fmt, sync::Arc, time::Duration};
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 use futures::{stream::BoxStream, Future, StreamExt};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use thiserror::Error;
 
 // The max number of request to be processed per peerID and per request type.
@@ -131,11 +131,11 @@ impl RequestKind for MessageMarker {
 }
 
 pub trait RequestCommon:
-    Serialize + Deserialize + Send + Sync + Unpin + std::fmt::Debug + 'static
+    Serialize + DeserializeOwned + Send + Sync + Unpin + std::fmt::Debug + 'static
 {
     type Kind: RequestKind;
     const TYPE_ID: u16;
-    type Response: Deserialize + Serialize + Send;
+    type Response: DeserializeOwned + Serialize + Send;
     const MAX_REQUESTS: u32;
     const TIME_WINDOW: Duration = DEFAULT_MAX_REQUEST_RESPONSE_TIME_WINDOW;
 
@@ -143,39 +143,24 @@ pub trait RequestCommon:
     /// A serialized request is composed of:
     /// - A 2 bytes (u16) for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn serialize_request<W: WriteBytesExt>(
-        &self,
-        writer: &mut W,
-    ) -> Result<usize, SerializingError> {
-        let mut size = 0;
-        size += RequestType::from_request::<Self>().0.serialize(writer)?;
-        size += self.serialize(writer)?;
-        Ok(size)
-    }
-
-    /// Computes the size in bytes of a serialized request.
-    /// A serialized request is composed of:
-    /// - A 2 bytes (u16) for the Type ID of the request
-    /// - Serialized content of the inner type.
-    fn serialized_request_size(&self) -> usize {
-        let mut size = 0;
-        size += RequestType::from_request::<Self>().0.serialized_size();
-        size += self.serialized_size();
-        size
+    fn serialize_request(&self, buffer: &mut [u8]) -> Result<(), postcard::Error> {
+        postcard::to_slice(&RequestType::from_request::<Self>().0, buffer)?;
+        postcard::to_slice(self, buffer)?;
+        Ok(())
     }
 
     /// Deserializes a request
     /// A serialized request is composed of:
     /// - A 2 bytes (u16) for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn deserialize_request<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
+    fn deserialize_request(buffer: &[u8]) -> Result<Self, postcard::Error> {
         // Check for correct type.
-        let ty: u16 = Deserialize::deserialize(reader)?;
+        let (ty, message_buf) = postcard::take_from_bytes::<u16>(buffer)?;
         if ty != RequestType::from_request::<Self>().0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Wrong message type").into());
+            return Err(postcard::Error::DeserializeBadVarint);
         }
 
-        let message: Self = Deserialize::deserialize(reader)?;
+        let message: Self = postcard::from_bytes(message_buf)?;
 
         Ok(message)
     }
@@ -187,8 +172,8 @@ pub trait Message: RequestCommon<Kind = MessageMarker, Response = ()> {}
 impl<T: RequestCommon<Kind = RequestMarker>> Request for T {}
 impl<T: RequestCommon<Kind = MessageMarker, Response = ()>> Message for T {}
 
-pub fn peek_type(buffer: &[u8]) -> Result<RequestType, SerializingError> {
-    let ty = u16::deserialize_from_vec(buffer)?;
+pub fn peek_type(buffer: &[u8]) -> Result<RequestType, postcard::Error> {
+    let ty: u16 = postcard::from_bytes(buffer)?;
     Ok(RequestType(ty))
 }
 

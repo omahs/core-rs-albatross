@@ -1,12 +1,11 @@
 use std::{
     convert::TryFrom,
-    fmt, io,
+    fmt,
     iter::Sum,
     ops::{Add, AddAssign, Div, Rem, Sub, SubAssign},
     str::FromStr,
 };
 
-use beserial::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 use lazy_static::lazy_static;
 use num_traits::{identities::Zero, SaturatingAdd, SaturatingSub};
 use regex::Regex;
@@ -197,33 +196,6 @@ impl fmt::Display for Coin {
                 self.0 % Coin::LUNAS_PER_COIN
             )
         }
-    }
-}
-
-impl Deserialize for Coin {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let value: u64 = Deserialize::deserialize(reader)?;
-
-        // Check that the value does not exceed Javascript's Number.MAX_SAFE_INTEGER.
-        if value <= Coin::MAX_SAFE_VALUE {
-            Ok(Coin(value))
-        } else {
-            Err(io::Error::new(io::ErrorKind::InvalidData, "Coin value out of bounds").into())
-        }
-    }
-}
-
-impl Serialize for Coin {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        if self.0 <= Coin::MAX_SAFE_VALUE {
-            Ok(Serialize::serialize(&self.0, writer)?)
-        } else {
-            Err(SerializingError::Overflow)
-        }
-    }
-
-    fn serialized_size(&self) -> usize {
-        Serialize::serialized_size(&self.0)
     }
 }
 

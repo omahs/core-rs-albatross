@@ -2,9 +2,6 @@
 use std::path::Path;
 use std::{collections::HashMap, env};
 
-use beserial::Deserialize;
-#[cfg(feature = "genesis-override")]
-use beserial::{Serialize, SerializeWithLength};
 use lazy_static::lazy_static;
 use nimiq_block::Block;
 #[cfg(feature = "genesis-override")]
@@ -42,8 +39,7 @@ impl NetworkInfo {
 
     #[inline]
     pub fn genesis_block(&self) -> Block {
-        Deserialize::deserialize_from_vec(self.genesis.block)
-            .expect("Failed to deserialize genesis block.")
+        postcard::from_bytes(self.genesis.block).expect("Failed to deserialize genesis block.")
     }
 
     #[inline]
@@ -53,9 +49,7 @@ impl NetworkInfo {
 
     #[inline]
     pub fn genesis_accounts(&self) -> Vec<TrieItem> {
-        use beserial::DeserializeWithLength;
-
-        DeserializeWithLength::deserialize_from_vec::<u32>(self.genesis.accounts)
+        postcard::from_bytes(self.genesis.accounts)
             .expect("Failed to deserialize genesis accounts.")
     }
 
@@ -76,8 +70,8 @@ fn read_genesis_config(config: &Path) -> Result<GenesisData, GenesisBuilderError
         accounts,
     } = GenesisBuilder::from_config_file(config)?.generate(env)?;
 
-    let block = block.serialize_to_vec();
-    let accounts = accounts.serialize_to_vec::<u32>();
+    let block = postcard::to_allocvec(&block)?;
+    let accounts = postcard::to_allocvec(&accounts)?;
 
     Ok(GenesisData {
         block: Box::leak(block.into_boxed_slice()),

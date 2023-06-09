@@ -4,14 +4,11 @@ use std::{
     ops::{Deref, DerefMut},
 };
 
-use beserial::{
-    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
-    SerializingError, WriteBytesExt,
-};
 use clear_on_drop::clear::Clear;
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::argon2kdf::{compute_argon2_kdf, Argon2Error};
 use rand::{rngs::OsRng, RngCore};
+use serde::{Deserialize, Serialize};
 
 pub trait Verify {
     fn verify(&self) -> bool;
@@ -72,12 +69,18 @@ impl<T: Clear> AsRef<T> for ClearOnDrop<T> {
 }
 
 // Unlocked container
-pub struct Unlocked<T: Clear + Deserialize + Serialize> {
+pub struct Unlocked<T>
+where
+    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
+{
     data: ClearOnDrop<T>,
     lock: Locked<T>,
 }
 
-impl<T: Clear + Deserialize + Serialize> Unlocked<T> {
+impl<T> Unlocked<T>
+where
+    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
+{
     /// Calling code should make sure to clear the password from memory after use.
     pub fn new(
         secret: T,
@@ -124,7 +127,10 @@ impl<T: Clear + Deserialize + Serialize> Unlocked<T> {
     }
 }
 
-impl<T: Clear + Deserialize + Serialize> Deref for Unlocked<T> {
+impl<T> Deref for Unlocked<T>
+where
+    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
+{
     type Target = T;
 
     #[inline]
@@ -134,14 +140,22 @@ impl<T: Clear + Deserialize + Serialize> Deref for Unlocked<T> {
 }
 
 // Locked container
-pub struct Locked<T: Clear + Deserialize + Serialize> {
+#[derive(Serialize, Deserialize)]
+pub struct Locked<T>
+where
+    for<'a> T: 'a + Clear + Deserialize<'a> + Serialize,
+{
     lock: Vec<u8>,
     salt: Vec<u8>,
     iterations: u32,
+    #[serde(skip)]
     phantom: PhantomData<T>,
 }
 
-impl<T: Clear + Deserialize + Serialize> Locked<T> {
+impl<T> Locked<T>
+where
+    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
+{
     /// Calling code should make sure to clear the password from memory after use.
     pub fn new(
         mut secret: T,
@@ -177,7 +191,7 @@ impl<T: Clear + Deserialize + Serialize> Locked<T> {
             return Err(self);
         };
 
-        let result = Deserialize::deserialize_from_vec(&key).ok();
+        let result = postcard::from_bytes(&key).ok();
 
         // Always overwrite unencrypted vector.
         for byte in key.iter_mut() {
@@ -216,7 +230,7 @@ impl<T: Clear + Deserialize + Serialize> Locked<T> {
         iterations: u32,
         salt: Vec<u8>,
     ) -> Result<Self, Argon2Error> {
-        let mut data = secret.serialize_to_vec();
+        let mut data = postcard::to_allocvec(&secret).map_err(|_| Argon2Error::MemoryTooLittle)?;
         let lock = Self::otp(&data, password, iterations, &salt)?;
 
         // Always overwrite unencrypted vector.
@@ -248,7 +262,10 @@ impl<T: Clear + Deserialize + Serialize> Locked<T> {
     }
 }
 
-impl<T: Clear + Deserialize + Serialize + Verify> Locked<T> {
+impl<T> Locked<T>
+where
+    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize + Verify,
+{
     /// Verifies integrity of data upon unlock.
     pub fn unlock(self, password: &[u8]) -> Result<Unlocked<T>, Locked<T>> {
         let unlocked = self.unlock_unchecked(password);
@@ -265,66 +282,44 @@ impl<T: Clear + Deserialize + Serialize + Verify> Locked<T> {
     }
 }
 
-impl<T: Clear + Deserialize + Serialize> Serialize for Locked<T> {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        let mut size = 0;
-        size += SerializeWithLength::serialize::<u32, _>(&self.lock, writer)?;
-        size += SerializeWithLength::serialize::<u16, _>(&self.salt, writer)?;
-        size += Serialize::serialize(&self.iterations, writer)?;
-        Ok(size)
-    }
-
-    #[inline]
-    fn serialized_size(&self) -> usize {
-        let mut size = 0;
-        size += SerializeWithLength::serialized_size::<u32>(&self.lock);
-        size += SerializeWithLength::serialized_size::<u16>(&self.salt);
-        size += Serialize::serialized_size(&self.iterations);
-        size
-    }
-}
-
-impl<T: Clear + Deserialize + Serialize> Deserialize for Locked<T> {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let lock: Vec<u8> = DeserializeWithLength::deserialize::<u32, _>(reader)?;
-        let salt: Vec<u8> = DeserializeWithLength::deserialize::<u16, _>(reader)?;
-        let iterations: u32 = Deserialize::deserialize(reader)?;
-        Ok(Locked {
-            lock,
-            salt,
-            iterations,
-            phantom: PhantomData,
-        })
-    }
-}
-
-impl<T: Default + Deserialize + Serialize> IntoDatabaseValue for Locked<T> {
+impl<T> IntoDatabaseValue for Locked<T>
+where
+    for<'de> T: 'de + Default + Deserialize<'de> + Serialize,
+{
     fn database_byte_size(&self) -> usize {
-        self.serialized_size()
+        postcard::to_allocvec(self).unwrap().len()
     }
 
-    fn copy_into_database(&self, mut bytes: &mut [u8]) {
-        Serialize::serialize(&self, &mut bytes).unwrap();
+    fn copy_into_database(&self, bytes: &mut [u8]) {
+        postcard::to_slice(self, bytes).unwrap();
     }
 }
 
-impl<T: Default + Deserialize + Serialize> FromDatabaseValue for Locked<T> {
+impl<T> FromDatabaseValue for Locked<T>
+where
+    for<'de> T: 'de + Default + Deserialize<'de> + Serialize,
+{
     fn copy_from_database(bytes: &[u8]) -> io::Result<Self>
     where
         Self: Sized,
     {
-        let mut cursor = io::Cursor::new(bytes);
-        Ok(Deserialize::deserialize(&mut cursor)?)
+        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(io::ErrorKind::Other, e))
     }
 }
 
 // Generic container
-pub enum OtpLock<T: Clear + Deserialize + Serialize> {
+pub enum OtpLock<T>
+where
+    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
+{
     Unlocked(Unlocked<T>),
     Locked(Locked<T>),
 }
 
-impl<T: Clear + Deserialize + Serialize> OtpLock<T> {
+impl<T> OtpLock<T>
+where
+    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
+{
     // Taken from Nimiq's JS implementation.
     // TODO: Adjust.
     pub const DEFAULT_ITERATIONS: u32 = 256;

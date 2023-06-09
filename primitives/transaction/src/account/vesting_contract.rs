@@ -1,7 +1,7 @@
-use beserial::{Deserialize, Serialize, SerializingError, WriteBytesExt};
 use log::error;
 use nimiq_keys::Address;
 use nimiq_primitives::{account::AccountType, coin::Coin};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     account::AccountTransactionVerification, SignatureProof, Transaction, TransactionError,
@@ -56,8 +56,7 @@ impl AccountTransactionVerification for VestingContractVerifier {
         assert_eq!(transaction.sender_type, AccountType::Vesting);
 
         // Verify signature.
-        let signature_proof: SignatureProof =
-            Deserialize::deserialize(&mut &transaction.proof[..])?;
+        let signature_proof: SignatureProof = postcard::from_bytes(&transaction.proof[..])?;
 
         if !signature_proof.verify(transaction.serialize_content().as_slice()) {
             warn!("Invalid signature for this transaction:\n{:?}", transaction);
@@ -68,8 +67,7 @@ impl AccountTransactionVerification for VestingContractVerifier {
     }
 }
 
-#[derive(Default, Clone, Debug)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CreationTransactionData {
     pub owner: Address,
     pub start_time: u64,
@@ -81,11 +79,11 @@ pub struct CreationTransactionData {
 impl CreationTransactionData {
     pub fn parse(transaction: &Transaction) -> Result<Self, TransactionError> {
         let reader = &mut &transaction.data[..];
-        let owner = Deserialize::deserialize(reader)?;
+        let (owner, left_over) = postcard::take_from_bytes(reader)?;
 
         if transaction.data.len() == Address::SIZE + 8 {
             // Only timestamp: vest full amount at that time
-            let time_step = Deserialize::deserialize(reader)?;
+            let (time_step, _) = postcard::take_from_bytes(left_over)?;
             Ok(CreationTransactionData {
                 owner,
                 start_time: 0,
@@ -94,9 +92,9 @@ impl CreationTransactionData {
                 total_amount: transaction.value,
             })
         } else if transaction.data.len() == Address::SIZE + 24 {
-            let start_time = Deserialize::deserialize(reader)?;
-            let time_step = Deserialize::deserialize(reader)?;
-            let step_amount = Deserialize::deserialize(reader)?;
+            let (start_time, left_over) = postcard::take_from_bytes(left_over)?;
+            let (time_step, left_over) = postcard::take_from_bytes(left_over)?;
+            let (step_amount, _) = postcard::take_from_bytes(left_over)?;
             Ok(CreationTransactionData {
                 owner,
                 start_time,
@@ -106,10 +104,10 @@ impl CreationTransactionData {
             })
         } else if transaction.data.len() == Address::SIZE + 32 {
             // Create a vesting account with some instantly vested funds or additional funds considered.
-            let start_time = Deserialize::deserialize(reader)?;
-            let time_step = Deserialize::deserialize(reader)?;
-            let step_amount = Deserialize::deserialize(reader)?;
-            let total_amount = Deserialize::deserialize(reader)?;
+            let (start_time, left_over) = postcard::take_from_bytes(left_over)?;
+            let (time_step, left_over) = postcard::take_from_bytes(left_over)?;
+            let (step_amount, left_over) = postcard::take_from_bytes(left_over)?;
+            let (total_amount, _) = postcard::take_from_bytes(left_over)?;
             Ok(CreationTransactionData {
                 owner,
                 start_time,
@@ -119,42 +117,6 @@ impl CreationTransactionData {
             })
         } else {
             Err(TransactionError::InvalidData)
-        }
-    }
-}
-
-impl Serialize for CreationTransactionData {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        let mut size = 0;
-        size += self.owner.serialize(writer)?;
-
-        if self.step_amount == self.total_amount {
-            if self.start_time == 0 {
-                size += self.time_step.serialize(writer)?;
-            } else {
-                size += self.start_time.serialize(writer)?;
-                size += self.time_step.serialize(writer)?;
-                size += self.step_amount.serialize(writer)?;
-            }
-        } else {
-            size += self.start_time.serialize(writer)?;
-            size += self.time_step.serialize(writer)?;
-            size += self.step_amount.serialize(writer)?;
-            size += self.total_amount.serialize(writer)?;
-        }
-
-        Ok(size)
-    }
-
-    fn serialized_size(&self) -> usize {
-        if self.step_amount == self.total_amount {
-            if self.start_time == 0 {
-                Address::SIZE + 8
-            } else {
-                Address::SIZE + 24
-            }
-        } else {
-            Address::SIZE + 32
         }
     }
 }

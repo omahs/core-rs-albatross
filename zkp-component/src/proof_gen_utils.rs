@@ -6,7 +6,6 @@ use std::{
 
 use ark_groth16::Proof;
 use ark_mnt6_753::MNT6_753;
-use beserial::{Deserialize, Serialize};
 use nimiq_block::MacroBlock;
 use nimiq_zkp::prove::prove;
 use tokio::{
@@ -71,7 +70,7 @@ pub async fn launch_generate_new_proof(
         .stdin
         .take()
         .unwrap()
-        .write_all(&proof_input.serialize_to_vec())
+        .write_all(&postcard::to_allocvec(&proof_input).unwrap())
         .await?;
 
     let mut output = child.stdout.take().unwrap();
@@ -108,5 +107,5 @@ async fn parse_proof_generation_output(
         }
     }
 
-    Deserialize::deserialize_from_vec(&output[mid..])?
+    postcard::from_bytes(&output[mid..])?
 }

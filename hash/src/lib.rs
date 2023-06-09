@@ -5,7 +5,7 @@ use std::{
     io, str,
 };
 
-use beserial::{Deserialize, Serialize};
+use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use blake2_rfc::{blake2b::Blake2b, blake2s::Blake2s};
 use hex::FromHex;
 use nimiq_database_value::{AsDatabaseBytes, FromDatabaseValue};
@@ -13,14 +13,10 @@ use nimiq_macros::{add_hex_io_fns_typed_arr, create_typed_array};
 use nimiq_mmr::hash::Merge;
 use sha2::{Digest, Sha256, Sha512};
 
-pub use self::sha512::*;
-
 pub mod argon2kdf;
 pub mod blake2s;
 pub mod hmac;
 pub mod pbkdf2;
-#[cfg(feature = "serde")]
-mod serde;
 pub mod sha512;
 
 #[macro_export]
@@ -92,7 +88,7 @@ pub trait HashOutput:
     + Eq
     + Clone
     + Serialize
-    + Deserialize
+    + DeserializeOwned
     + Sized
     + SerializeContent
     + Debug
@@ -117,7 +113,7 @@ where
 // Blake2b
 
 const BLAKE2B_LENGTH: usize = 32;
-create_typed_array!(Blake2bHash, u8, BLAKE2B_LENGTH);
+create_typed_array!(Blake2bHash, u8, BLAKE2B_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Blake2bHash, BLAKE2B_LENGTH);
 
 pub struct Blake2bHasher(Blake2b);
@@ -187,18 +183,18 @@ impl Merge for Blake2bHash {
     }
 
     /// Hashes a prefix and two Blake2b hashes together.
-    fn merge(&self, other: &Self, prefix: u64) -> Self {
+    fn merge(&self, other: &Self, prefix: u64) -> Option<Self> {
         let mut message = prefix.to_be_bytes().to_vec();
-        message.append(&mut self.serialize_to_vec());
-        message.append(&mut other.serialize_to_vec());
-        message.hash()
+        message.append(&mut postcard::to_allocvec(&self).ok()?);
+        message.append(&mut postcard::to_allocvec(&other).ok()?);
+        Some(message.hash())
     }
 }
 
 // Blake2s
 
 const BLAKE2S_LENGTH: usize = 32;
-create_typed_array!(Blake2sHash, u8, BLAKE2S_LENGTH);
+create_typed_array!(Blake2sHash, u8, BLAKE2S_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Blake2sHash, BLAKE2S_LENGTH);
 pub struct Blake2sHasher(Blake2s);
 impl HashOutput for Blake2sHash {
@@ -249,7 +245,7 @@ impl Hasher for Blake2sHasher {
 const ARGON2D_LENGTH: usize = 32;
 const NIMIQ_ARGON2_SALT: &str = "nimiqrocks!";
 const DEFAULT_ARGON2_COST: u32 = 512;
-create_typed_array!(Argon2dHash, u8, ARGON2D_LENGTH);
+create_typed_array!(Argon2dHash, u8, ARGON2D_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Argon2dHash, ARGON2D_LENGTH);
 pub struct Argon2dHasher {
     buf: Vec<u8>,
@@ -318,7 +314,7 @@ impl Hasher for Argon2dHasher {
 // SHA256
 
 const SHA256_LENGTH: usize = 32;
-create_typed_array!(Sha256Hash, u8, SHA256_LENGTH);
+create_typed_array!(Sha256Hash, u8, SHA256_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Sha256Hash, SHA256_LENGTH);
 pub struct Sha256Hasher(Sha256);
 impl HashOutput for Sha256Hash {

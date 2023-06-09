@@ -1,4 +1,3 @@
-use beserial::{Deserialize, Serialize};
 use nimiq_keys::KeyPair;
 use nimiq_transaction::{
     account::staking_contract::{IncomingStakingTransactionData, OutgoingStakingTransactionProof},
@@ -33,7 +32,7 @@ impl StakingDataBuilder {
     pub fn sign_with_key_pair(&mut self, key_pair: &KeyPair) -> &mut Self {
         // Deserialize the data.
         let mut data: IncomingStakingTransactionData =
-            Deserialize::deserialize_from_vec(&self.transaction.data[..]).unwrap();
+            postcard::from_bytes(&self.transaction.data[..]).unwrap();
 
         // If this is a stake transaction, we don't need to sign it.
         match data {
@@ -54,7 +53,7 @@ impl StakingDataBuilder {
     /// Otherwise, it returns `None`.
     pub fn generate(self) -> Option<TransactionProofBuilder> {
         let mut tx = self.transaction;
-        tx.data = self.data?.serialize_to_vec();
+        tx.data = postcard::to_allocvec(&self.data?).ok()?;
         Some(TransactionProofBuilder::without_in_staking(tx))
     }
 }
@@ -102,7 +101,7 @@ impl StakingProofBuilder {
     /// Otherwise, it returns `None`.
     pub fn generate(self) -> Option<Transaction> {
         let mut tx = self.transaction;
-        tx.proof = self.proof?.serialize_to_vec();
+        tx.proof = postcard::to_allocvec(&self.proof?).ok()?;
         Some(tx)
     }
 }

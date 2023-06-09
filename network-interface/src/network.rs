@@ -4,8 +4,8 @@ use std::{
 };
 
 use async_trait::async_trait;
-use beserial::{Deserialize, Serialize, SerializingError};
 use futures::stream::BoxStream;
+use serde::{de::DeserializeOwned, Serialize};
 use thiserror::Error;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 
@@ -24,7 +24,7 @@ pub type SubscribeEvents<PeerId> =
     BoxStream<'static, Result<NetworkEvent<PeerId>, BroadcastStreamRecvError>>;
 
 pub trait Topic {
-    type Item: Serialize + Deserialize + Send + Sync + Debug + 'static;
+    type Item: Serialize + DeserializeOwned + Send + Sync + Debug + 'static;
 
     const BUFFER_SIZE: usize;
     const NAME: &'static str;
@@ -62,15 +62,15 @@ pub enum CloseReason {
 
 #[derive(Debug, Error)]
 pub enum SendError {
-    #[error("{0}")]
-    Serialization(#[from] SerializingError),
+    #[error("Serialization error: {0}")]
+    Serialization(postcard::Error),
     #[error("Peer connection already closed")]
     AlreadyClosed,
 }
 
 pub trait RequestResponse {
-    type Request: Serialize + Deserialize + Sync;
-    type Response: Serialize + Deserialize + Sync;
+    type Request: Serialize + DeserializeOwned + Sync;
+    type Response: Serialize + DeserializeOwned + Sync;
 }
 
 #[async_trait]
@@ -157,7 +157,7 @@ pub trait Network: Send + Sync + Unpin + 'static {
     async fn dht_get<K, V>(&self, k: &K) -> Result<Option<V>, Self::Error>
     where
         K: AsRef<[u8]> + Send + Sync,
-        V: Deserialize + Send + Sync;
+        V: DeserializeOwned + Send + Sync;
 
     /// Puts a value to the distributed hash table
     async fn dht_put<K, V>(&self, k: &K, v: &V) -> Result<(), Self::Error>

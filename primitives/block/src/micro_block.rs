@@ -1,6 +1,5 @@
 use std::{cmp::Ordering, collections::HashSet, fmt, fmt::Debug, io};
 
-use beserial::{Deserialize, Serialize};
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Blake2bHash, Blake2sHash, Hash, SerializeContent};
 use nimiq_hash_derive::SerializeContent;
@@ -8,6 +7,7 @@ use nimiq_keys::{PublicKey, Signature};
 use nimiq_primitives::{policy::Policy, slots::Validators};
 use nimiq_transaction::{ExecutedTransaction, Transaction};
 use nimiq_vrf::VrfSeed;
+use serde::{Deserialize, Serialize};
 
 use crate::{fork_proof::ForkProof, skip_block::SkipBlockProof, BlockError, SkipBlockInfo};
 
@@ -110,11 +110,11 @@ impl MicroBlock {
 
 impl IntoDatabaseValue for MicroBlock {
     fn database_byte_size(&self) -> usize {
-        self.serialized_size()
+        postcard::to_allocvec(self).unwrap().len()
     }
 
-    fn copy_into_database(&self, mut bytes: &mut [u8]) {
-        Serialize::serialize(&self, &mut bytes).unwrap();
+    fn copy_into_database(&self, bytes: &mut [u8]) {
+        postcard::to_slice(self, bytes).unwrap();
     }
 }
 
@@ -123,8 +123,7 @@ impl FromDatabaseValue for MicroBlock {
     where
         Self: Sized,
     {
-        let mut cursor = io::Cursor::new(bytes);
-        Ok(Deserialize::deserialize(&mut cursor)?)
+        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }
 
@@ -136,8 +135,7 @@ impl fmt::Display for MicroBlock {
 
 /// Enumeration representing the justification for a Micro block
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde-derive", serde(rename_all = "camelCase"))]
+#[serde(rename_all = "camelCase")]
 #[repr(u8)]
 pub enum MicroJustification {
     /// Regular micro block justification which is the signature of the block producer
@@ -170,7 +168,6 @@ pub struct MicroHeader {
     /// block (either micro or macro) using the validator key of the block producer.
     pub seed: VrfSeed,
     /// The extra data of the block. It is simply 32 raw bytes. No planned use.
-    #[beserial(len_type(u8, limit = 32))]
     pub extra_data: Vec<u8>,
     /// The root of the Merkle tree of the blockchain state. It just acts as a commitment to the
     /// state.
@@ -207,10 +204,8 @@ impl fmt::Display for MicroHeader {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, SerializeContent)]
 pub struct MicroBody {
     /// A vector containing the fork proofs for this block. It might be empty.
-    #[beserial(len_type(u16))]
     pub fork_proofs: Vec<ForkProof>,
     /// A vector containing the transactions for this block. It might be empty.
-    #[beserial(len_type(u16))]
     pub transactions: Vec<ExecutedTransaction>,
 }
 
@@ -225,7 +220,7 @@ impl MicroBody {
 
     pub(crate) fn verify(&self, is_skip: bool, block_number: u32) -> Result<(), BlockError> {
         // Check that the maximum body size is not exceeded.
-        let body_size = self.serialized_size();
+        let body_size = postcard::to_allocvec(self).unwrap().len();
         if body_size > Policy::MAX_SIZE_MICRO_BODY {
             debug!(
                 body_size = body_size,

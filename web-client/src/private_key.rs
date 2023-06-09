@@ -1,6 +1,5 @@
 use std::str::FromStr;
 
-use beserial::{Deserialize, Serialize};
 use nimiq_keys::SecureGenerate;
 use wasm_bindgen::prelude::*;
 
@@ -21,7 +20,7 @@ impl PrivateKey {
     ///
     /// Throws when the byte array contains less than 32 bytes.
     pub fn unserialize(bytes: &[u8]) -> Result<PrivateKey, JsError> {
-        let key = nimiq_keys::PrivateKey::deserialize(&mut &*bytes)?;
+        let key = postcard::from_bytes::<nimiq_keys::PrivateKey>(bytes)?;
         Ok(PrivateKey::from_native(key))
     }
 
@@ -38,7 +37,7 @@ impl PrivateKey {
 
     /// Serializes the private key to a byte array.
     pub fn serialize(&self) -> Vec<u8> {
-        self.inner.serialize_to_vec()
+        postcard::to_allocvec(&self.inner).unwrap()
     }
 
     /// Parses a private key from its hex representation.

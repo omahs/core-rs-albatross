@@ -2,7 +2,6 @@
 
 use std::{fmt, hash::Hash, io::Write};
 
-use beserial::{Deserialize, Serialize, SerializingError};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use curve25519_dalek::{
     constants,
@@ -40,6 +39,9 @@ pub enum VrfUseCase {
     RewardDistribution = 4,
 }
 
+#[cfg(feature = "serde-derive")]
+create_typed_array!(VrfEntropy, u8, 32, serde::Serialize, serde::Deserialize);
+#[cfg(not(feature = "serde-derive"))]
 create_typed_array!(VrfEntropy, u8, 32);
 
 impl VrfEntropy {
@@ -248,25 +250,6 @@ impl fmt::Debug for VrfSeed {
 impl fmt::Display for VrfSeed {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}", hex::encode(self.signature))
-    }
-}
-
-impl Serialize for VrfSeed {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        writer.write_all(&self.signature)?;
-        Ok(VrfSeed::SIZE)
-    }
-
-    fn serialized_size(&self) -> usize {
-        VrfSeed::SIZE
-    }
-}
-
-impl Deserialize for VrfSeed {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let mut bytes = [0; VrfSeed::SIZE];
-        reader.read_exact(&mut bytes[..VrfSeed::SIZE])?;
-        Ok(VrfSeed { signature: bytes })
     }
 }
 

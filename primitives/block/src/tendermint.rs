@@ -1,10 +1,10 @@
 use std::io;
 
-use beserial::{Deserialize, Serialize};
 use log::error;
 use nimiq_bls::AggregatePublicKey;
 use nimiq_hash::{Blake2sHash, SerializeContent};
 use nimiq_primitives::{policy::Policy, slots::Validators};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     signed::{PREFIX_TENDERMINT_COMMIT, PREFIX_TENDERMINT_PREPARE, PREFIX_TENDERMINT_PROPOSAL},
@@ -130,16 +130,28 @@ pub struct TendermintVote {
 impl SerializeContent for TendermintVote {
     fn serialize_content<W: io::Write, H>(&self, writer: &mut W) -> io::Result<usize> {
         // First of all serialize step as this also serves as the unique prefix for this message type.
-        let mut size = self.id.step.serialize(writer)?;
+        let ser_step = postcard::to_allocvec(&self.id.step)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_step)?;
+        let mut size = ser_step.len();
 
         // serialize the round number
-        size += self.id.round_number.serialize(writer)?;
+        let ser_round_number = postcard::to_allocvec(&self.id.round_number)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_round_number)?;
+        size += ser_round_number.len();
 
         // serialize the block number
-        size += self.id.block_number.serialize(writer)?;
+        let ser_block_number = postcard::to_allocvec(&self.id.block_number)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_block_number)?;
+        size += ser_block_number.len();
 
         // serialize the proposal hash
-        size += self.proposal_hash.serialize(writer)?;
+        let ser_proposal_hash = postcard::to_allocvec(&self.proposal_hash)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        writer.write_all(&ser_proposal_hash)?;
+        size += ser_proposal_hash.len();
 
         // And return the size
         Ok(size)

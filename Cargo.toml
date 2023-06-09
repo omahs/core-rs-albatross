@@ -3,8 +3,6 @@
 ## !!! NOTE: If you add a nimiq module here, also add it to log/src/lib.rs !!!
 ##
 members = [
-  "beserial",
-  "beserial/beserial_derive",
   "block-production",
   "blockchain",
   "blockchain-interface",
@@ -42,6 +40,7 @@ members = [
   "rpc-client",
   "rpc-interface",
   "rpc-server",
+  "serde-ext",
   "spammer",
   "tendermint",
   "test-log",
@@ -95,12 +94,6 @@ opt-level = 2
 [profile.test.package.nimiq-zkp]
 opt-level = 2
 
-[profile.dev.package.beserial]
-opt-level = 2
-
-[profile.test.package.beserial]
-opt-level = 2
-
 [profile.dev.package.nimiq-pedersen-generators]
 opt-level = 2
 
@@ -146,7 +139,7 @@ opt-level = 2
 opt-level = 2
 
 [patch.crates-io]
-ark-ec = { git = "https://github.com/paberr/algebra", branch = "pb/0.4" }
-ark-ff = { git = "https://github.com/paberr/algebra", branch = "pb/0.4" }
-ark-r1cs-std = { git = "https://github.com/paberr/r1cs-std", branch = "pb/fix-pedersen" }
-wasm-timer = { git = "https://github.com/sisou/wasm-timer.git" }
+ark-ec = {git = "https://github.com/paberr/algebra", branch = "pb/0.4"}
+ark-ff = {git = "https://github.com/paberr/algebra", branch = "pb/0.4"}
+ark-r1cs-std = {git = "https://github.com/paberr/r1cs-std", branch = "pb/fix-pedersen"}
+wasm-timer = {git = "https://github.com/sisou/wasm-timer.git"}

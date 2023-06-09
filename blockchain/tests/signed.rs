@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use beserial::Deserialize;
 use nimiq_block::{
     MacroBlock, MultiSignature, SignedSkipBlockInfo, SkipBlockInfo, SkipBlockProof,
     TendermintIdentifier, TendermintProof, TendermintStep, TendermintVote,
@@ -26,7 +25,7 @@ const SECRET_KEY: &str = "99237809f3b37bd0878854d2b5b66e4cc00ba1a1d64377c374f2b6
 #[test]
 fn test_skip_block_single_signature() {
     // parse key pair
-    let key_pair = KeyPair::deserialize_from_vec(&hex::decode(SECRET_KEY).unwrap()).unwrap();
+    let key_pair: KeyPair = postcard::from_bytes(&hex::decode(SECRET_KEY).unwrap()).unwrap();
 
     // create skip block data
     let skip_block_info = SkipBlockInfo {
@@ -81,7 +80,7 @@ fn test_replay() {
     );
 
     // load key pair
-    let key_pair = KeyPair::deserialize_from_vec(&hex::decode(SECRET_KEY).unwrap()).unwrap();
+    let key_pair: KeyPair = postcard::from_bytes(&hex::decode(SECRET_KEY).unwrap()).unwrap();
 
     // create dummy block
     let mut block = MacroBlock::default();
