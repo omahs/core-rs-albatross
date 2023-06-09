@@ -1,11 +1,6 @@
-#[cfg(feature = "beserial")]
-use std::fmt;
-
 use nimiq_hash::Hash;
 use nimiq_utils::key_rng::SecureGenerate;
 use nimiq_utils::key_rng::{CryptoRng, RngCore};
-#[cfg(feature = "beserial")]
-use serde::Serialize;
 
 use crate::{PublicKey, SecretKey, SigHash, Signature};
 
@@ -61,9 +56,42 @@ impl From<SecretKey> for KeyPair {
     }
 }
 
-#[cfg(feature = "beserial")]
-impl fmt::Debug for KeyPair {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        f.write_str(&::hex::encode(self.serialize_to_vec()))
+#[cfg(feature = "serde-derive")]
+mod serde_derive {
+    // TODO: Replace this with a generic serialization using `ToHex` and `FromHex`.
+    use std::fmt;
+
+    use serde::{
+        de::{Deserialize, Deserializer},
+        ser::{Serialize, Serializer},
+    };
+
+    use super::{KeyPair, SecretKey};
+
+    impl fmt::Debug for KeyPair {
+        fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            f.write_str(&::hex::encode(
+                postcard::to_allocvec(self).map_err(|_| fmt::Error)?,
+            ))
+        }
+    }
+
+    impl Serialize for KeyPair {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            Serialize::serialize(&self.secret_key, serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for KeyPair {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let secret_key: SecretKey = Deserialize::deserialize(deserializer)?;
+            Ok(KeyPair::from(secret_key))
+        }
     }
 }

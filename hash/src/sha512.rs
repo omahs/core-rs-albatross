@@ -124,7 +124,7 @@ impl Sha512Hash {
 }
 
 pub struct Sha512Hasher(Sha512);
-impl HashOutput<'_> for Sha512Hash {
+impl HashOutput for Sha512Hash {
     type Builder = Sha512Hasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -158,7 +158,7 @@ impl io::Write for Sha512Hasher {
     }
 }
 
-impl Hasher<'_> for Sha512Hasher {
+impl Hasher for Sha512Hasher {
     type Output = Sha512Hash;
 
     fn finish(self) -> Sha512Hash {

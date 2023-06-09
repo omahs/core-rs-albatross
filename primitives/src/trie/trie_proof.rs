@@ -35,9 +35,7 @@ use crate::trie::trie_proof_node::TrieProofNode;
 /// 2. The nodes are always returned in post-order.
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct TrieProof {
-    #[beserial(len_type(u16))]
     pub nodes: Vec<TrieProofNode>,
-    #[beserial(len_type(u16))]
     missing_proven_by: BTreeMap<KeyNibbles, KeyNibbles>,
 }
 

@@ -30,15 +30,13 @@ pub trait TaggedSignable: Serialize {
     const TAG: u8;
 
     fn message_data(&self) -> Vec<u8> {
-        let n = self.serialized_size();
-
-        let mut buf = Cursor::new(Vec::with_capacity(n + 1));
+        let ser_content = postcard::to_allocvec(&self).expect("Failed to serialize message");
+        let mut buf = Cursor::new(Vec::with_capacity(ser_content.len() + 1));
 
         let tag = [Self::TAG; 1];
         buf.write_all(&tag).expect("Failed to write tag");
-        self.serialize(&mut buf)
-            .expect("Failed to serialize message");
-
+        buf.write_all(&ser_content)
+            .expect("Failed to write content");
         buf.into_inner()
     }
 }

@@ -4,7 +4,7 @@ use ark_ec::{AffineRepr, Group};
 use ark_ff::{One, PrimeField, ToConstraintField};
 use ark_mnt6_753::{Fq, G1Affine, G1Projective};
 use nimiq_hash::blake2s::Blake2sWithParameterBlock;
-use nimiq_hash::HashOutput;
+use nimiq_hash::{Hash, HashOutput};
 
 use crate::{CompressedSignature, SigHash};
 
@@ -133,14 +133,19 @@ impl From<G1Projective> for Signature {
     }
 }
 
+impl Hash for Signature {}
+
 #[cfg(feature = "serde-derive")]
 mod serde_derive {
     // TODO: Replace this with a generic serialization using `ToHex` and `FromHex`.
+    use std::io;
 
     use serde::{
         de::{Deserialize, Deserializer, Error},
         ser::{Serialize, Serializer},
     };
+
+    use nimiq_hash::SerializeContent;
 
     use super::{CompressedSignature, Signature};
 
@@ -160,6 +165,15 @@ mod serde_derive {
         {
             let compressed: CompressedSignature = Deserialize::deserialize(deserializer)?;
             compressed.uncompress().map_err(Error::custom)
+        }
+    }
+
+    impl SerializeContent for Signature {
+        fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
+            let s =
+                postcard::to_allocvec(self).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            writer.write_all(&s)?;
+            Ok(s.len())
         }
     }
 }

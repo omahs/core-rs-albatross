@@ -9,6 +9,11 @@ use crate::{AggregateSignature, PublicKey, SigHash};
 
 /// An aggregate public key. Mathematically, it is equivalent to a regular public key. However, we created a new type for it in order to help differentiate between the two use cases.
 #[derive(Clone, Copy)]
+#[cfg_attr(
+    feature = "serde-derive",
+    derive(serde::Serialize, serde::Deserialize),
+    serde(transparent)
+)]
 pub struct AggregatePublicKey(pub(crate) PublicKey);
 
 impl AggregatePublicKey {

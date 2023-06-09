@@ -16,18 +16,12 @@ use crate::math::CeilingDiv;
 /// Each proof can be verified by taking the previous proof's result into account (to minimise the amount of work required).
 /// This way, the large list of data can be transmitted in smaller chunks and one can incrementally verify
 /// the correctness of these chunks.
-pub struct IncrementalMerkleProofBuilder<H>
-where
-    for<'de> H: 'de + HashOutput<'de>,
-{
+pub struct IncrementalMerkleProofBuilder<H: HashOutput> {
     tree: Vec<Vec<H>>,
     chunk_size: usize,
 }
 
-impl<H> IncrementalMerkleProofBuilder<H>
-where
-    for<'de> H: 'de + HashOutput<'de>,
-{
+impl<H: HashOutput> IncrementalMerkleProofBuilder<H> {
     pub fn new(chunk_size: usize) -> Result<Self, IncrementalMerkleProofError> {
         if chunk_size == 0 {
             return Err(IncrementalMerkleProofError::InvalidChunkSize);
@@ -172,20 +166,14 @@ where
 /// These proofs can only be verified incrementally, i.e., one has to start with the first chunk of data.
 /// The proof for the second chunk then takes as an input the result of the first chunk's proof and so on.
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[serde(bound(deserialize = "for<'a> H: 'a + HashOutput<'a>"))]
-pub struct IncrementalMerkleProof<H>
-where
-    for<'a> H: 'a + HashOutput<'a>,
-{
+#[serde(bound(deserialize = "H: HashOutput"))]
+pub struct IncrementalMerkleProof<H: HashOutput> {
     total_len: u32,
     nodes: Vec<H>,
 }
 
 #[derive(Debug)]
-pub struct IncrementalMerkleProofResult<H>
-where
-    for<'de> H: 'de + HashOutput<'de>,
-{
+pub struct IncrementalMerkleProofResult<H: HashOutput> {
     /// The calculated root of the merkle proof.
     root: H,
     /// A set of hashes in the merkle tree that are used in the next proof's verification.
@@ -194,10 +182,7 @@ where
     next_index: usize,
 }
 
-impl<H> IncrementalMerkleProofResult<H>
-where
-    for<'de> H: 'de + HashOutput<'de>,
-{
+impl<H: HashOutput> IncrementalMerkleProofResult<H> {
     #[inline]
     pub fn root(&self) -> &H {
         &self.root
@@ -214,10 +199,7 @@ where
     }
 }
 
-impl<'de, H> IncrementalMerkleProof<H>
-where
-    for<'a> H: 'a + HashOutput<'a>,
-{
+impl<H: HashOutput> IncrementalMerkleProof<H> {
     pub fn empty(total_len: usize) -> Self {
         IncrementalMerkleProof {
             total_len: total_len as u32,

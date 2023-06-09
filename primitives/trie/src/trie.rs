@@ -25,7 +25,7 @@ use nimiq_primitives::{
         trie_proof_node::TrieProofNode,
     },
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 /// A Merkle Radix Trie is a hybrid between a Merkle tree and a Radix trie. Like a Merkle tree each
 /// node contains the hashes of all its children. That creates a tree that is resistant to
@@ -188,7 +188,7 @@ impl MerkleRadixTrie {
             .unwrap()
             .root_data
             .unwrap()
-            .incomplete
+            .incomplete_from
             .is_none()
     }
 
@@ -220,7 +220,7 @@ impl MerkleRadixTrie {
             .root_data
             .clone()
             .expect("root node needs root data")
-            .incomplete;
+            .incomplete_from;
         let mut stack = vec![root];
 
         while let Some(item) = stack.pop() {
@@ -267,7 +267,7 @@ impl MerkleRadixTrie {
 
     /// Get the value at the given key. If there's no leaf or hybrid node at the given key then it
     /// returns None.
-    pub fn get<T: Deserialize>(
+    pub fn get<T: DeserializeOwned>(
         &self,
         txn: &Transaction,
         key: &KeyNibbles,
@@ -908,7 +908,7 @@ impl MerkleRadixTrie {
         self.mark_stumps(txn, start_key.clone().., &proof.nodes)?;
 
         let mut root_node = self.get_root(txn).unwrap();
-        root_node.root_data.as_mut().unwrap().incomplete = Some(start_key..);
+        root_node.root_data.as_mut().unwrap().incomplete_from = Some(start_key);
         self.put_node(txn, &root_node);
 
         Ok(())
@@ -1229,12 +1229,12 @@ impl MerkleRadixTrie {
 
     /// Returns the range of missing keys in the partial tree.
     /// If the tree is complete, it returns `None`.
-    pub fn get_missing_range(&self, txn: &Transaction) -> Option<ops::RangeFrom<KeyNibbles>> {
+    pub fn get_missing_range(&self, txn: &Transaction) -> Option<KeyNibbles> {
         self.get_root(txn)
             .expect("trie needs root node")
             .root_data
             .expect("root node needs root data")
-            .incomplete
+            .incomplete_from
     }
 
     /// Returns the root node, if there is one.
@@ -1328,7 +1328,7 @@ impl MerkleRadixTrie {
             .root_data
             .clone()
             .expect("root node needs root data")
-            .incomplete;
+            .incomplete_from;
 
         // First, find the node.
         loop {
@@ -1412,7 +1412,7 @@ impl MerkleRadixTrie {
             .root_data
             .clone()
             .expect("root node needs root data")
-            .incomplete;
+            .incomplete_from;
 
         let mut stack = vec![root];
 
@@ -1444,7 +1444,7 @@ impl MerkleRadixTrie {
         chunk
     }
 
-    pub fn iter_nodes<'txn, T: Deserialize>(
+    pub fn iter_nodes<'txn, T: DeserializeOwned>(
         &self,
         txn: &'txn Transaction,
         start_key: &KeyNibbles,
@@ -1481,7 +1481,7 @@ impl<'txn, T> TrieNodeIter<'txn, T> {
     }
 }
 
-impl<'txn, T: Deserialize> Iterator for TrieNodeIter<'txn, T> {
+impl<'txn, T: DeserializeOwned> Iterator for TrieNodeIter<'txn, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {

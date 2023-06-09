@@ -192,7 +192,7 @@ where
             return Err(self);
         };
 
-        let result = Deserialize::deserialize_from_vec(&key).ok();
+        let result = postcard::from_bytes(&key).ok();
 
         // Always overwrite unencrypted vector.
         for byte in key.iter_mut() {
@@ -231,7 +231,7 @@ where
         iterations: u32,
         salt: Vec<u8>,
     ) -> Result<Self, Argon2Error> {
-        let mut data = secret.serialize_to_vec();
+        let mut data = postcard::to_allocvec(&secret).map_err(|_| Argon2Error::MemoryTooLittle)?;
         let lock = Self::otp(&data, password, iterations, &salt)?;
 
         // Always overwrite unencrypted vector.
@@ -288,11 +288,11 @@ where
     for<'de> T: 'de + Default + Deserialize<'de> + Serialize,
 {
     fn database_byte_size(&self) -> usize {
-        self.serialized_size()
+        postcard::to_allocvec(self).unwrap().len()
     }
 
-    fn copy_into_database(&self, mut bytes: &mut [u8]) {
-        Serialize::serialize(&self, &mut bytes).unwrap();
+    fn copy_into_database(&self, bytes: &mut [u8]) {
+        postcard::to_slice(self, bytes).unwrap();
     }
 }
 
@@ -304,8 +304,7 @@ where
     where
         Self: Sized,
     {
-        let mut cursor = io::Cursor::new(bytes);
-        Ok(Deserialize::deserialize(&mut cursor)?)
+        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(io::ErrorKind::Other, e))
     }
 }
 

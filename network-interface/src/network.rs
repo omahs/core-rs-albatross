@@ -6,7 +6,7 @@ use futures::stream::BoxStream;
 use thiserror::Error;
 use tokio_stream::wrappers::errors::BroadcastStreamRecvError;
 
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     peer_info::*,
@@ -23,7 +23,7 @@ pub type SubscribeEvents<PeerId> =
     BoxStream<'static, Result<NetworkEvent<PeerId>, BroadcastStreamRecvError>>;
 
 pub trait Topic {
-    type Item<'de>: Serialize + Deserialize<'de> + Send + Sync + Debug + 'static;
+    type Item: Serialize + DeserializeOwned + Send + Sync + Debug + 'static;
 
     const BUFFER_SIZE: usize;
     const NAME: &'static str;
@@ -61,15 +61,15 @@ pub enum CloseReason {
 
 #[derive(Debug, Error)]
 pub enum SendError {
-    #[error("{0}")]
-    Serialization(#[from] dyn serde::ser::Error),
+    #[error("Serialization error: {0}")]
+    Serialization(postcard::Error),
     #[error("Peer connection already closed")]
     AlreadyClosed,
 }
 
 pub trait RequestResponse {
-    type Request<'de>: Serialize + Deserialize<'de> + Sync;
-    type Response<'de>: Serialize + Deserialize<'de> + Sync;
+    type Request: Serialize + DeserializeOwned + Sync;
+    type Response: Serialize + DeserializeOwned + Sync;
 }
 
 #[async_trait]
@@ -113,9 +113,9 @@ pub trait Network: Send + Sync + Unpin + 'static {
     fn subscribe_events(&self) -> SubscribeEvents<Self::PeerId>;
 
     /// Subscribes to a Gossipsub topic
-    async fn subscribe<T, 'de>(
+    async fn subscribe<T>(
         &self,
-    ) -> Result<BoxStream<'static, (T::Item<'de>, Self::PubsubId)>, Self::Error>
+    ) -> Result<BoxStream<'static, (T::Item, Self::PubsubId)>, Self::Error>
     where
         T: Topic + Sync;
 
@@ -125,15 +125,15 @@ pub trait Network: Send + Sync + Unpin + 'static {
         T: Topic + Sync;
 
     /// Publishes a message to a Gossipsub topic
-    async fn publish<T, 'de>(&self, item: T::Item<'de>) -> Result<(), Self::Error>
+    async fn publish<T>(&self, item: T::Item) -> Result<(), Self::Error>
     where
         T: Topic + Sync;
 
     /// Subscribes to a Gossipsub subtopic, providing the subtopic name
-    async fn subscribe_subtopic<T, 'de>(
+    async fn subscribe_subtopic<T>(
         &self,
         subtopic: String,
-    ) -> Result<BoxStream<'static, (T::Item<'de>, Self::PubsubId)>, Self::Error>
+    ) -> Result<BoxStream<'static, (T::Item, Self::PubsubId)>, Self::Error>
     where
         T: Topic + Sync;
 
@@ -143,11 +143,7 @@ pub trait Network: Send + Sync + Unpin + 'static {
         T: Topic + Sync;
 
     /// Publishes a message to a Gossipsub subtopic
-    async fn publish_subtopic<T, 'de>(
-        &self,
-        subtopic: String,
-        item: T::Item<'de>,
-    ) -> Result<(), Self::Error>
+    async fn publish_subtopic<T>(&self, subtopic: String, item: T::Item) -> Result<(), Self::Error>
     where
         T: Topic + Sync;
 
@@ -157,10 +153,10 @@ pub trait Network: Send + Sync + Unpin + 'static {
         T: Topic + Sync;
 
     /// Gets a value from the distributed hash table
-    async fn dht_get<K, V, 'de>(&self, k: &K) -> Result<Option<V>, Self::Error>
+    async fn dht_get<K, V>(&self, k: &K) -> Result<Option<V>, Self::Error>
     where
         K: AsRef<[u8]> + Send + Sync,
-        V: Deserialize<'de> + Send + Sync;
+        V: DeserializeOwned + Send + Sync;
 
     /// Puts a value to the distributed hash table
     async fn dht_put<K, V>(&self, k: &K, v: &V) -> Result<(), Self::Error>
@@ -178,14 +174,14 @@ pub trait Network: Send + Sync + Unpin + 'static {
     fn get_local_peer_id(&self) -> Self::PeerId;
 
     /// Sends a message to a specific peer
-    async fn message<'a, M: Message<'a>>(
+    async fn message<M: Message>(
         &self,
         request: M,
         peer_id: Self::PeerId,
     ) -> Result<(), RequestError>;
 
     /// Requests data from a specific peer
-    async fn request<'a, Req: Request<'a>>(
+    async fn request<Req: Request>(
         &self,
         request: Req,
         peer_id: Self::PeerId,
@@ -193,16 +189,16 @@ pub trait Network: Send + Sync + Unpin + 'static {
 
     /// Receives messages from peers.
     /// This function returns a stream where the messages are going to be propagated.
-    fn receive_messages<'a, M: Message<'a>>(&self) -> BoxStream<'static, (M, Self::PeerId)>;
+    fn receive_messages<M: Message>(&self) -> BoxStream<'static, (M, Self::PeerId)>;
 
     /// Receives requests from peers.
     /// This function returns a stream where the requests are going to be propagated.
-    fn receive_requests<'a, Req: Request<'a>>(
+    fn receive_requests<Req: Request>(
         &self,
     ) -> BoxStream<'static, (Req, Self::RequestId, Self::PeerId)>;
 
     /// Sends a response to a specific request
-    async fn respond<'a, Req: Request<'a>>(
+    async fn respond<Req: Request>(
         &self,
         request_id: Self::RequestId,
         response: Req::Response,

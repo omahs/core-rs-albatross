@@ -1,4 +1,3 @@
-use serde::SerializingError;
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -21,6 +20,6 @@ pub enum TransactionError {
     InvalidForRecipient,
     #[error("Invalid transaction data")]
     InvalidData,
-    #[error("Invalid serialization: {0}")]
-    InvalidSerialization(#[from] SerializingError),
+    #[error("Invalid serialization")]
+    InvalidSerialization,
 }

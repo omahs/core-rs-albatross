@@ -1,4 +1,3 @@
-use std::cmp::max;
 ///! # Slot allocation primitives
 ///!
 ///! This module contains data structures describing the allocation of slots.
@@ -16,20 +15,18 @@ use std::cmp::max;
 ///!                      +-------------------------------------------+-------------------+
 ///! ```
 ///!
+use std::cmp::max;
 use std::collections::BTreeMap;
 use std::slice::Iter;
 
 use nimiq_bls::{lazy::LazyPublicKey as LazyBlsPublicKey, G2Projective, PublicKey as BlsPublicKey};
 use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
-use serde::{
-    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
-    SerializingError, WriteBytesExt,
-};
 
 use crate::policy::Policy;
 
 /// A validator that owns some slots.
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 pub struct Validator {
     pub address: Address,
     pub voting_key: LazyBlsPublicKey,
@@ -63,7 +60,8 @@ impl Validator {
 
 /// Identifies a slashed slot by the slot id.
 /// Contains the corresponding validator id for reference.
-#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SlashedSlot {
     pub slot: u16,
     pub validator_address: Address,
@@ -169,25 +167,6 @@ impl Validators {
     }
 }
 
-impl Serialize for Validators {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        let mut size = 0;
-        size += SerializeWithLength::serialize::<u16, W>(&self.validators, writer)?;
-        Ok(size)
-    }
-
-    fn serialized_size(&self) -> usize {
-        SerializeWithLength::serialized_size::<u16>(&self.validators)
-    }
-}
-
-impl Deserialize for Validators {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let validators = DeserializeWithLength::deserialize::<u16, R>(reader)?;
-        Ok(Self::new(validators))
-    }
-}
-
 /// Builder for slot collection. You can push individual slots into it and it'll compress them
 /// into a Validators struct.
 #[derive(Clone, Debug, Default)]
@@ -234,5 +213,34 @@ impl ValidatorsBuilder {
         }
 
         Validators::new(validators)
+    }
+}
+
+#[cfg(feature = "serde-derive")]
+mod serde_derive {
+    use serde::{
+        de::{Deserialize, Deserializer},
+        ser::{Serialize, Serializer},
+    };
+
+    use super::{Validator, Validators};
+
+    impl Serialize for Validators {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            Serialize::serialize(&self.validators, serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Validators {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let validators: Vec<Validator> = Deserialize::deserialize(deserializer)?;
+            Ok(Self::new(validators))
+        }
     }
 }

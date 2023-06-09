@@ -1,7 +1,6 @@
 use thiserror::Error;
 
 use nimiq_network_interface::{network::SendError, request::RequestError};
-use serde::SerializingError;
 
 /// No notion of connected or disconnected!
 /// If a peer is not connected the connection must be pursued.
@@ -11,10 +10,6 @@ pub enum NetworkError<TNetworkError>
 where
     TNetworkError: std::error::Error + 'static,
 {
-    /// Serialization or deserialization of the message failed
-    #[error("Serialization error: {0}")]
-    Serialization(SerializingError),
-
     /// Some of the peers were unreachable
     #[error("Unreachable")]
     Unreachable,

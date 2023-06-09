@@ -1,6 +1,5 @@
 use std::convert::TryFrom;
 use std::fmt;
-use std::io;
 use std::iter::Sum;
 use std::ops::{Add, AddAssign, Div, Rem, Sub, SubAssign};
 use std::str::FromStr;
@@ -10,8 +9,6 @@ use num_traits::identities::Zero;
 use num_traits::{SaturatingAdd, SaturatingSub};
 use regex::Regex;
 use thiserror::Error;
-
-use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Default, Hash)]
 #[cfg_attr(
@@ -198,33 +195,6 @@ impl fmt::Display for Coin {
                 self.0 % Coin::LUNAS_PER_COIN
             )
         }
-    }
-}
-
-impl Deserialize for Coin {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let value: u64 = Deserialize::deserialize(reader)?;
-
-        // Check that the value does not exceed Javascript's Number.MAX_SAFE_INTEGER.
-        if value <= Coin::MAX_SAFE_VALUE {
-            Ok(Coin(value))
-        } else {
-            Err(io::Error::new(io::ErrorKind::InvalidData, "Coin value out of bounds").into())
-        }
-    }
-}
-
-impl Serialize for Coin {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        if self.0 <= Coin::MAX_SAFE_VALUE {
-            Ok(Serialize::serialize(&self.0, writer)?)
-        } else {
-            Err(SerializingError::Overflow)
-        }
-    }
-
-    fn serialized_size(&self) -> usize {
-        Serialize::serialized_size(&self.0)
     }
 }
 

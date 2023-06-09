@@ -13,6 +13,7 @@ use nimiq_network_interface::{
     request::{OutboundRequestError, RequestError},
 };
 use nimiq_primitives::{key_nibbles::KeyNibbles, policy::Policy};
+
 use serde::Deserialize;
 
 use crate::messages::RequestTrieProof;

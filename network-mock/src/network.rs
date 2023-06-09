@@ -21,7 +21,7 @@ use nimiq_network_interface::{
         RequestKind, RequestType,
     },
 };
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::hub::{MockHubInner, RequestKey, ResponseSender};
 use crate::{observable_hash_map, MockAddress, MockPeerId, ObservableHashMap};
@@ -29,7 +29,7 @@ use crate::{observable_hash_map, MockAddress, MockPeerId, ObservableHashMap};
 #[derive(Debug, Error, Eq, PartialEq)]
 pub enum MockNetworkError {
     #[error("Serialization error: {0}")]
-    Serialization(#[from] serde::SerializingError),
+    Serialization(#[from] postcard::Error),
 
     #[error("Can't connect to peer: {0}")]
     CantConnect(MockAddress),
@@ -212,14 +212,17 @@ impl MockNetwork {
                 );
             } else {
                 let response: Result<(), InboundRequestError> = Ok(());
-                tx.send(response.serialize_to_vec()).unwrap();
+                tx.send(postcard::to_allocvec(&response).map_err(|_| {
+                    RequestError::OutboundRequest(OutboundRequestError::SerializationError)
+                })?)
+                .unwrap();
             }
             hub.next_request_id += 1;
 
             (sender, request_id)
         };
 
-        let mut data = Vec::with_capacity(request.serialized_request_size());
+        let mut data = Vec::with_capacity(10);
         request.serialize_request(&mut data).unwrap();
 
         let request = (data, request_id, sender_id);
@@ -240,7 +243,7 @@ impl MockNetwork {
         let hub = Arc::clone(&self.hub);
         let result = tokio::time::timeout(MockNetwork::REQUEST_TIMEOUT, rx).await;
         match result {
-            Ok(Ok(data)) => match Req::Response::deserialize(&mut &data[..]) {
+            Ok(Ok(data)) => match postcard::from_bytes(&data[..]) {
                 Ok(message) => Ok(message),
                 Err(_) => Err(RequestError::InboundRequest(
                     InboundRequestError::DeSerializationError,
@@ -274,8 +277,8 @@ impl MockNetwork {
         }
 
         ReceiverStream::new(rx)
-            .filter_map(|(data, request_id, sender)| async move {
-                match Req::deserialize_request(&mut &data[..]) {
+            .filter_map(|(mut data, request_id, sender)| async move {
+                match Req::deserialize_request(&mut data) {
                     Ok(message) => Some((message, request_id, sender)),
                     Err(e) => {
                         log::warn!("Failed to deserialize request: {}", e);
@@ -344,7 +347,7 @@ impl MockNetwork {
             async move {
                 if is_connected.load(Ordering::SeqCst) {
                     match r {
-                        Ok((data, peer_id)) => match T::Item::deserialize_from_vec(&data) {
+                        Ok((data, peer_id)) => match postcard::from_bytes::<T::Item>(&data) {
                             Ok(item) => return Some((item, peer_id)),
                             Err(e) => {
                                 log::warn!("Dropped item because deserialization failed: {}", e)
@@ -400,7 +403,7 @@ impl MockNetwork {
     {
         let mut hub = self.hub.lock();
 
-        let data = item.serialize_to_vec();
+        let data = postcard::to_allocvec(&item).map_err(MockNetworkError::Serialization)?;
 
         log::debug!(
             "Peer {} publishing on topic '{}': {:?}",
@@ -534,13 +537,13 @@ impl Network for MockNetwork {
     async fn dht_get<K, V>(&self, k: &K) -> Result<Option<V>, Self::Error>
     where
         K: AsRef<[u8]> + Send + Sync,
-        V: Deserialize + Send + Sync,
+        V: DeserializeOwned + Send + Sync,
     {
         if self.is_connected.load(Ordering::SeqCst) {
             let hub = self.hub.lock();
 
             if let Some(data) = hub.dht.get(k.as_ref()) {
-                Ok(Some(V::deserialize_from_vec(data)?))
+                Ok(Some(postcard::from_bytes::<V>(data)?))
             } else {
                 Ok(None)
             }
@@ -557,7 +560,7 @@ impl Network for MockNetwork {
         if self.is_connected.load(Ordering::SeqCst) {
             let mut hub = self.hub.lock();
 
-            let data = v.serialize_to_vec();
+            let data = postcard::to_allocvec(&v).map_err(MockNetworkError::Serialization)?;
             hub.dht.insert(k.as_ref().to_owned(), data);
             Ok(())
         } else {
@@ -616,8 +619,7 @@ impl Network for MockNetwork {
                 return Err(MockNetworkError::NotConnected);
             }
 
-            let mut data = Vec::with_capacity(response.serialized_size());
-            response.serialize(&mut data).unwrap();
+            let data = postcard::to_allocvec(&response).map_err(MockNetworkError::Serialization)?;
 
             responder
                 .sender

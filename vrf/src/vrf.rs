@@ -18,7 +18,6 @@ use sha2::{Digest, Sha256, Sha512};
 use nimiq_hash::{Blake2bHash, Blake2bHasher, HashOutput, Hasher};
 use nimiq_keys::{KeyPair, PublicKey};
 use nimiq_macros::create_typed_array;
-use serde::{Deserialize, Serialize, SerializingError};
 
 use crate::rng::Rng;
 
@@ -249,25 +248,6 @@ impl fmt::Debug for VrfSeed {
 impl fmt::Display for VrfSeed {
     fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         write!(f, "{}", hex::encode(self.signature))
-    }
-}
-
-impl Serialize for VrfSeed {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        writer.write_all(&self.signature)?;
-        Ok(VrfSeed::SIZE)
-    }
-
-    fn serialized_size(&self) -> usize {
-        VrfSeed::SIZE
-    }
-}
-
-impl Deserialize for VrfSeed {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let mut bytes = [0; VrfSeed::SIZE];
-        reader.read_exact(&mut bytes[..VrfSeed::SIZE])?;
-        Ok(VrfSeed { signature: bytes })
     }
 }
 

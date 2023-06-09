@@ -6,6 +6,7 @@ use bytes::{Buf, BytesMut};
 use futures::{AsyncRead, Stream};
 use pin_project::pin_project;
 
+use serde::de::DeserializeOwned;
 use serde::{Deserialize, SerializingError};
 
 use super::header::Header;
@@ -99,7 +100,7 @@ impl<R, M> MessageReader<R, M> {
 
     pub fn into_other<N>(self) -> MessageReader<R, N>
     where
-        N: Deserialize,
+        N: DeserializeOwned,
     {
         if let ReaderState::Data { .. } = &ReaderState::Head {
             panic!("MessageReader can't be converted while data is being read.");
@@ -123,7 +124,7 @@ fn unexpected_eof<T>() -> Poll<Option<Result<T, SerializingError>>> {
 impl<R, M> Stream for MessageReader<R, M>
 where
     R: AsyncRead,
-    M: Deserialize + std::fmt::Debug,
+    M: DeserializeOwned + std::fmt::Debug,
 {
     type Item = Result<M, SerializingError>;
 
@@ -239,7 +240,6 @@ mod tests {
     #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
     struct TestMessage {
         pub foo: u32,
-        #[beserial(len_type(u8))]
         pub bar: String,
     }
 

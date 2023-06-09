@@ -3,11 +3,9 @@ use std::borrow::Cow;
 use byteorder::{BigEndian, WriteBytesExt};
 use regex::Regex;
 
-use nimiq_hash::hmac::*;
-use nimiq_hash::Sha512Hash;
+use nimiq_hash::{hmac::*, sha512::Sha512Hash};
 use nimiq_keys::Address;
 use nimiq_keys::{PrivateKey, PublicKey};
-use serde::Serialize;
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct ExtendedPrivateKey {
@@ -49,7 +47,7 @@ impl ExtendedPrivateKey {
 
         let mut data = Vec::<u8>::with_capacity(1 + PrivateKey::SIZE + 4);
         data.write_u8(0).ok()?;
-        self.key.serialize(&mut data).ok()?;
+        postcard::to_slice(&self.key, &mut data[1..]).ok()?;
         data.write_u32::<BigEndian>(index).ok()?;
 
         let hash = compute_hmac_sha512(&self.chain_code, data.as_slice());

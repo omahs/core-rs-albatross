@@ -137,7 +137,6 @@ impl CreationTransactionData {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum OutgoingHTLCTransactionProof {
-    #[beserial(discriminant = 1)]
     RegularTransfer {
         hash_algorithm: HashAlgorithm,
         hash_depth: u8,
@@ -145,12 +144,10 @@ pub enum OutgoingHTLCTransactionProof {
         pre_image: AnyHash,
         signature_proof: SignatureProof,
     },
-    #[beserial(discriminant = 2)]
     EarlyResolve {
         signature_proof_recipient: SignatureProof,
         signature_proof_sender: SignatureProof,
     },
-    #[beserial(discriminant = 3)]
     TimeoutResolve {
         signature_proof_sender: SignatureProof,
     },

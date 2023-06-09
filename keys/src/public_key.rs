@@ -163,7 +163,10 @@ mod serde_derive {
 
     impl SerializeContent for PublicKey {
         fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
-            Ok(self.serialize(writer)?)
+            let ser =
+                postcard::to_allocvec(self).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+            writer.write_all(&ser)?;
+            Ok(ser.len())
         }
     }
 

@@ -1,14 +1,12 @@
 use std::fmt;
-use std::io;
 use std::sync::Arc;
 use std::time::Duration;
 
 use futures::stream::BoxStream;
 use futures::Future;
 use futures::StreamExt;
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use thiserror::Error;
-
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
 // The max number of request to be processed per peerID and per request type.
 
@@ -35,7 +33,7 @@ impl RequestType {
     const fn new(type_id: u16, requires_response: bool) -> RequestType {
         RequestType((type_id << 1) | requires_response as u16)
     }
-    pub fn from_request<'de, R: RequestCommon<'de>>() -> RequestType {
+    pub fn from_request<'de, R: RequestCommon>() -> RequestType {
         RequestType::new(R::TYPE_ID, R::Kind::EXPECT_RESPONSE)
     }
     pub const fn request(type_id: u16) -> RequestType {
@@ -136,12 +134,12 @@ impl RequestKind for MessageMarker {
     const EXPECT_RESPONSE: bool = false;
 }
 
-pub trait RequestCommon<'de>:
-    Serialize + Deserialize<'de> + Send + Sync + Unpin + std::fmt::Debug + 'static
+pub trait RequestCommon:
+    Serialize + DeserializeOwned + Send + Sync + Unpin + std::fmt::Debug + 'static
 {
     type Kind: RequestKind;
     const TYPE_ID: u16;
-    type Response: Deserialize<'de> + Serialize + Send;
+    type Response: DeserializeOwned + Serialize + Send;
     const MAX_REQUESTS: u32;
     const TIME_WINDOW: Duration = DEFAULT_MAX_REQUEST_RESPONSE_TIME_WINDOW;
 
@@ -149,54 +147,37 @@ pub trait RequestCommon<'de>:
     /// A serialized request is composed of:
     /// - A 2 bytes (u16) for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn serialize_request<S: Serializer>(
-        &self,
-        writer: &mut S,
-    ) -> Result<usize, dyn serde::ser::Error> {
-        let mut size = 0;
-        size += RequestType::from_request::<Self>().0.serialize(writer)?;
-        size += self.serialize(writer)?;
-        Ok(size)
-    }
-
-    /// Computes the size in bytes of a serialized request.
-    /// A serialized request is composed of:
-    /// - A 2 bytes (u16) for the Type ID of the request
-    /// - Serialized content of the inner type.
-    fn serialized_request_size(&self) -> usize {
-        let mut size = 0;
-        size += RequestType::from_request::<Self>().0.serialized_size();
-        size += self.serialized_size();
-        size
+    fn serialize_request(&self, buffer: &mut [u8]) -> Result<(), postcard::Error> {
+        postcard::to_slice(&RequestType::from_request::<Self>().0, buffer)?;
+        postcard::to_slice(self, buffer)?;
+        Ok(())
     }
 
     /// Deserializes a request
     /// A serialized request is composed of:
     /// - A 2 bytes (u16) for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn deserialize_request<D: Deserializer<'de>>(
-        reader: &mut D,
-    ) -> Result<Self, dyn serde::de::Error> {
+    fn deserialize_request(buffer: &mut [u8]) -> Result<Self, postcard::Error> {
         // Check for correct type.
-        let ty: u16 = Deserialize::deserialize(reader)?;
+        let (ty, message_buf) = postcard::take_from_bytes::<u16>(buffer)?;
         if ty != RequestType::from_request::<Self>().0 {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "Wrong message type").into());
+            return Err(postcard::Error::DeserializeBadVarint);
         }
 
-        let message: Self = Deserialize::deserialize(reader)?;
+        let message: Self = postcard::from_bytes(message_buf)?;
 
         Ok(message)
     }
 }
 
-pub trait Request<'de>: RequestCommon<'de, Kind = RequestMarker> {}
-pub trait Message<'de>: RequestCommon<'de, Kind = MessageMarker, Response = ()> {}
+pub trait Request: RequestCommon<Kind = RequestMarker> {}
+pub trait Message: RequestCommon<Kind = MessageMarker, Response = ()> {}
 
-impl<'de, T: RequestCommon<'de, Kind = RequestMarker>> Request<'de> for T {}
-impl<'de, T: RequestCommon<'de, Kind = MessageMarker, Response = ()>> Message<'de> for T {}
+impl<T: RequestCommon<Kind = RequestMarker>> Request for T {}
+impl<T: RequestCommon<Kind = MessageMarker, Response = ()>> Message for T {}
 
-pub fn peek_type(buffer: &[u8]) -> Result<RequestType, dyn serde::de::Error> {
-    let ty = u16::deserialize_from_vec(buffer)?;
+pub fn peek_type(buffer: &[u8]) -> Result<RequestType, postcard::Error> {
+    let ty: u16 = postcard::from_bytes(buffer)?;
     Ok(RequestType(ty))
 }
 
@@ -215,7 +196,7 @@ const MAX_CONCURRENT_HANDLERS: usize = 64;
 pub fn request_handler<
     'de,
     T: Send + Sync + Clone + 'static,
-    Req: Handle<N, Req::Response, T> + Request<'de>,
+    Req: Handle<N, Req::Response, T> + Request,
     N: Network,
 >(
     network: &Arc<N>,
@@ -263,7 +244,7 @@ pub fn request_handler<
 pub fn message_handler<
     'de,
     T: Send + Sync + Clone + 'static,
-    Msg: MessageHandle<N, T> + Message<'de>,
+    Msg: MessageHandle<N, T> + Message,
     N: Network,
 >(
     _network: &Arc<N>,

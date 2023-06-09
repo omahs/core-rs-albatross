@@ -4,7 +4,6 @@ use strum_macros::Display;
 use thiserror::Error;
 
 use nimiq_keys::Address;
-use serde::{Deserialize, Serialize, SerializingError};
 
 use crate::coin::CoinUnderflowError;
 use crate::{
@@ -13,7 +12,7 @@ use crate::{
     trie::error::MerkleRadixTrieError,
 };
 
-#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Serialize, Deserialize, Display)]
+#[derive(Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Debug, Display)]
 #[repr(u8)]
 #[cfg_attr(
     any(feature = "serde-derive", feature = "ts-types"),
@@ -82,7 +81,7 @@ pub enum AccountError {
     #[error("Invalid receipt")]
     InvalidReceipt,
     #[error("Invalid serialization")]
-    InvalidSerialization(#[from] SerializingError),
+    InvalidSerialization,
     #[error("Invalid transaction")]
     InvalidTransaction(#[from] TransactionError),
     #[error("Invalid coin value")]
@@ -110,7 +109,7 @@ impl From<CoinUnderflowError> for AccountError {
     }
 }
 
-#[derive(Debug, Clone, Copy, Error, PartialEq, Eq, Serialize, Deserialize, Hash)]
+#[derive(Debug, Clone, Copy, Error, PartialEq, Eq, Hash)]
 #[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum FailReason {
@@ -160,7 +159,7 @@ impl From<AccountError> for FailReason {
             AccountError::InvalidForRecipient => FailReason::InvalidForRecipient,
             AccountError::InvalidForTarget => FailReason::InvalidForTarget,
             AccountError::InvalidReceipt => FailReason::InvalidReceipt,
-            AccountError::InvalidSerialization(_) => FailReason::InvalidSerialization,
+            AccountError::InvalidSerialization => FailReason::InvalidSerialization,
             AccountError::InvalidTransaction(_) => FailReason::InvalidTransaction,
             AccountError::InvalidCoinValue => FailReason::InvalidCoinValue,
             AccountError::CoinParse(_) => FailReason::CoinParse,

@@ -4,7 +4,7 @@ use std::fmt::{Debug, Error, Formatter};
 use std::io;
 use std::str;
 
-use ::serde::{Deserialize, Serialize};
+use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
 use blake2_rfc::blake2b::Blake2b;
 use blake2_rfc::blake2s::Blake2s;
 use hex::FromHex;
@@ -48,8 +48,8 @@ macro_rules! hash_typed_array {
     };
 }
 
-pub trait Hasher<'de>: Default + io::Write {
-    type Output: HashOutput<'de>;
+pub trait Hasher: Default + io::Write {
+    type Output: HashOutput;
 
     fn finish(self) -> Self::Output;
     fn digest(mut self, bytes: &[u8]) -> Self::Output {
@@ -74,33 +74,33 @@ pub trait SerializeContent {
 }
 
 pub trait Hash: SerializeContent {
-    fn hash<'de, H: HashOutput<'de>>(&self) -> H {
+    fn hash<H: HashOutput>(&self) -> H {
         let mut h = H::Builder::default();
         self.serialize_content(&mut h).unwrap();
         h.finish()
     }
 }
 
-pub trait HashOutput<'de>:
+pub trait HashOutput:
     PartialEq
     + Eq
     + Clone
     + Serialize
-    + Deserialize<'de>
+    + DeserializeOwned
     + Sized
     + SerializeContent
     + Debug
     + std::hash::Hash
 {
-    type Builder: Hasher<'de, Output = Self>;
+    type Builder: Hasher<Output = Self>;
 
     fn as_bytes(&self) -> &[u8];
     fn len() -> usize;
 }
 
-impl<'de, H> SerializeContent for H
+impl<H> SerializeContent for H
 where
-    H: HashOutput<'de>,
+    H: HashOutput,
 {
     fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
         writer.write_all(self.as_bytes())?;
@@ -115,7 +115,7 @@ create_typed_array!(Blake2bHash, u8, BLAKE2B_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Blake2bHash, BLAKE2B_LENGTH);
 
 pub struct Blake2bHasher(Blake2b);
-impl HashOutput<'_> for Blake2bHash {
+impl HashOutput for Blake2bHash {
     type Builder = Blake2bHasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -149,7 +149,7 @@ impl io::Write for Blake2bHasher {
     }
 }
 
-impl Hasher<'_> for Blake2bHasher {
+impl Hasher for Blake2bHasher {
     type Output = Blake2bHash;
 
     fn finish(self) -> Blake2bHash {
@@ -195,7 +195,7 @@ const BLAKE2S_LENGTH: usize = 32;
 create_typed_array!(Blake2sHash, u8, BLAKE2S_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Blake2sHash, BLAKE2S_LENGTH);
 pub struct Blake2sHasher(Blake2s);
-impl HashOutput<'_> for Blake2sHash {
+impl HashOutput for Blake2sHash {
     type Builder = Blake2sHasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -229,7 +229,7 @@ impl io::Write for Blake2sHasher {
     }
 }
 
-impl Hasher<'_> for Blake2sHasher {
+impl Hasher for Blake2sHasher {
     type Output = Blake2sHash;
 
     fn finish(self) -> Blake2sHash {
@@ -249,7 +249,7 @@ pub struct Argon2dHasher {
     buf: Vec<u8>,
     config: argon2::Config<'static>,
 }
-impl HashOutput<'_> for Argon2dHash {
+impl HashOutput for Argon2dHash {
     type Builder = Argon2dHasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -301,7 +301,7 @@ impl io::Write for Argon2dHasher {
     }
 }
 
-impl Hasher<'_> for Argon2dHasher {
+impl Hasher for Argon2dHasher {
     type Output = Argon2dHash;
 
     fn finish(self) -> Argon2dHash {
@@ -315,7 +315,7 @@ const SHA256_LENGTH: usize = 32;
 create_typed_array!(Sha256Hash, u8, SHA256_LENGTH, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(Sha256Hash, SHA256_LENGTH);
 pub struct Sha256Hasher(Sha256);
-impl HashOutput<'_> for Sha256Hash {
+impl HashOutput for Sha256Hash {
     type Builder = Sha256Hasher;
 
     fn as_bytes(&self) -> &[u8] {
@@ -349,7 +349,7 @@ impl io::Write for Sha256Hasher {
     }
 }
 
-impl Hasher<'_> for Sha256Hasher {
+impl Hasher for Sha256Hasher {
     type Output = Sha256Hash;
 
     fn finish(self) -> Sha256Hash {

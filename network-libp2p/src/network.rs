@@ -41,6 +41,7 @@ use libp2p::{dns, tcp, websocket};
 use libp2p_websys_transport::WebsocketTransport;
 use log::Instrument;
 use parking_lot::{Mutex, RwLock};
+use serde::de::DeserializeOwned;
 use tokio::sync::{broadcast, mpsc, oneshot};
 #[cfg(feature = "tokio-time")]
 use tokio::time::{Instant, Interval};
@@ -1618,7 +1619,7 @@ impl Network {
                 }
 
                 // Map the (data, peer) stream to (message, peer) by deserializing the messages.
-                match Req::deserialize_request(&mut data.reader()) {
+                match Req::deserialize_request(&mut data) {
                     Ok(message) => Some((message, request_id, peer_id)),
                     Err(e) => {
                         error!(
@@ -2056,7 +2057,7 @@ impl NetworkInterface for Network {
     async fn dht_get<K, V>(&self, k: &K) -> Result<Option<V>, Self::Error>
     where
         K: AsRef<[u8]> + Send + Sync,
-        V: Deserialize + Send + Sync,
+        V: DeserializeOwned + Send + Sync,
     {
         let (output_tx, output_rx) = oneshot::channel();
         self.action_tx

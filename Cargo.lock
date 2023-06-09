@@ -3641,10 +3641,12 @@ dependencies = [
  "byteorder",
  "hex",
  "nimiq-hash",
+ "nimiq-serde-ext",
  "nimiq-test-log",
  "nimiq-test-utils",
  "nimiq-utils",
  "parking_lot 0.12.1",
+ "postcard",
  "rand 0.8.5",
  "serde",
  "thiserror",
@@ -3910,6 +3912,7 @@ dependencies = [
  "nimiq-hash",
  "nimiq-keys",
  "nimiq-test-log",
+ "postcard",
  "regex",
  "serde",
 ]
@@ -3928,6 +3931,7 @@ dependencies = [
  "nimiq-test-log",
  "nimiq-test-utils",
  "nimiq-utils",
+ "postcard",
  "rand 0.8.5",
  "rand_core 0.6.4",
  "serde",
@@ -4128,6 +4132,7 @@ dependencies = [
  "futures-util",
  "libp2p",
  "nimiq-test-log",
+ "postcard",
  "serde",
  "thiserror",
  "tokio",
@@ -4181,6 +4186,7 @@ dependencies = [
  "nimiq-network-interface",
  "nimiq-test-log",
  "parking_lot 0.12.1",
+ "postcard",
  "serde",
  "thiserror",
  "tokio",
@@ -4207,17 +4213,20 @@ name = "nimiq-primitives"
 version = "0.1.0"
 dependencies = [
  "bitvec",
+ "byteorder",
  "hex",
  "lazy_static",
  "nimiq-bls",
  "nimiq-database-value",
  "nimiq-hash",
  "nimiq-keys",
+ "nimiq-serde-ext",
  "nimiq-test-log",
  "nimiq-utils",
  "num-traits",
  "once_cell",
  "parking_lot 0.12.1",
+ "postcard",
  "regex",
  "serde",
  "strum_macros",
@@ -4325,6 +4334,15 @@ dependencies = [
  "tokio",
  "tokio-stream",
  "tracing",
+]
+
+[[package]]
+name = "nimiq-serde-ext"
+version = "0.1.0"
+dependencies = [
+ "hex",
+ "serde",
+ "serde-big-array",
 ]
 
 [[package]]
@@ -4552,6 +4570,7 @@ dependencies = [
  "nimiq-test-log",
  "nimiq-test-utils",
  "parking_lot 0.12.1",
+ "postcard",
  "rand 0.8.5",
  "rand_core 0.6.4",
  "serde",
@@ -4618,6 +4637,7 @@ dependencies = [
  "nimiq-network-interface",
  "nimiq-utils",
  "parking_lot 0.12.1",
+ "postcard",
  "serde",
  "thiserror",
  "tokio",
