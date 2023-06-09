@@ -5,7 +5,7 @@ use nimiq_hash::Blake2bHash;
 use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
 use nimiq_primitives::coin::Coin;
 use nimiq_primitives::policy::Policy;
-use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError};
+use serde::{Deserialize, Serialize};
 
 use crate::SignatureProof;
 use crate::{Transaction, TransactionError};
@@ -34,7 +34,7 @@ use crate::{Transaction, TransactionError};
 /// It is important to note that all `signature` fields contain the signature
 /// over the complete transaction with the `signature` field set to `Default::default()`.
 /// The field is populated only after computing the signature.
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum IncomingStakingTransactionData {
@@ -232,8 +232,8 @@ impl IncomingStakingTransactionData {
     pub fn set_signature_on_data(
         data: &[u8],
         signature_proof: SignatureProof,
-    ) -> Result<Vec<u8>, SerializingError> {
-        let mut data: IncomingStakingTransactionData = Deserialize::deserialize_from_vec(data)?;
+    ) -> Result<Vec<u8>, postcard::Error> {
+        let mut data: IncomingStakingTransactionData = postcard::from_bytes(data)?;
         data.set_signature(signature_proof);
         Ok(data.serialize_to_vec())
     }
@@ -275,9 +275,9 @@ impl OutgoingStakingTransactionProof {
     }
 }
 
-pub fn full_parse<T: Deserialize>(mut data: &[u8]) -> Result<T, TransactionError> {
-    let reader = &mut data;
-    let data = Deserialize::deserialize(reader)?;
+#[cfg(feature = "serde-derive")]
+pub fn full_parse<T: serde::de::DeserializeOwned>(mut data: &[u8]) -> Result<T, TransactionError> {
+    let data = postcard::from_bytes(data)?;
 
     // Ensure that transaction data has been fully read.
     if reader.read_u8().is_ok() {

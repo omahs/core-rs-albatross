@@ -118,6 +118,7 @@ impl SerializeContent for TrieProofNode {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         size += ser_key.len();
         writer.write_all(&ser_key)?;
+        size += 1;
         match &self.value {
             ProofValue::None => {
                 writer.write_u8(0).unwrap();
@@ -138,7 +139,7 @@ impl SerializeContent for TrieProofNode {
             }
             ProofValue::HybridValue(val) => {
                 writer.write_u8(2).unwrap();
-                let ser_val = postcard::to_allocvec(&val)
+                let ser_val = postcard::to_allocvec(&val.hash::<Blake2bHash>())
                     .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
                 size += ser_val.len();
                 writer.write_all(&ser_val)?;

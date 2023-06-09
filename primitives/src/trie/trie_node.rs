@@ -1,4 +1,3 @@
-use std::ops::RangeFrom;
 use std::slice;
 use std::{io, io::Write};
 
@@ -254,22 +253,30 @@ impl TrieNode {
     pub fn hash<H: HashOutput>(&self) -> Option<H> {
         self.can_hash().then(|| {
             let mut hasher = H::Builder::default();
-            hasher.write_all(&postcard::to_allocvec(&self.key).unwrap());
+            hasher
+                .write_all(&postcard::to_allocvec(&self.key).unwrap())
+                .unwrap();
             match (self.has_children(), &self.value) {
                 (_, None) => {
                     hasher.write_u8(0).unwrap();
                 }
                 (false, Some(val)) => {
                     hasher.write_u8(1).unwrap();
-                    hasher.write_all(&postcard::to_allocvec(&val).unwrap());
+                    hasher
+                        .write_all(&postcard::to_allocvec(&val).unwrap())
+                        .unwrap();
                 }
                 (true, Some(val)) => {
                     hasher.write_u8(2).unwrap();
                     let val_hash: Blake2bHash = val.hash();
-                    hasher.write_all(&postcard::to_allocvec(&val_hash).unwrap());
+                    hasher
+                        .write_all(&postcard::to_allocvec(&val_hash).unwrap())
+                        .unwrap();
                 }
             }
-            hasher.write_all(&postcard::to_allocvec(&self.children).unwrap());
+            hasher
+                .write_all(&postcard::to_allocvec(&self.children).unwrap())
+                .unwrap();
             hasher.finish()
         })
     }
@@ -433,13 +440,16 @@ mod serde_derive {
                     &self,
                 )); // Mismatch flags for value
             }
-            let child_count: u8 = seq
+            let exp_child_count: u8 = seq
                 .next_element()?
                 .ok_or_else(|| A::Error::invalid_length(3, &self))?;
             let children: [Option<TrieNodeChild>; 16] = seq
                 .next_element()?
                 .ok_or_else(|| A::Error::invalid_length(4, &self))?;
-            if children.len() as u8 != child_count {
+            let child_count: u8 = children
+                .iter()
+                .fold(0, |acc, child| acc + u8::from(!child.is_none()));
+            if exp_child_count != child_count {
                 return Err(A::Error::invalid_value(
                     Unexpected::Other("Unexpected number of children"),
                     &self,

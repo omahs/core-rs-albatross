@@ -157,7 +157,6 @@ mod tests {
     #[derive(Clone, Debug, Serialize, Deserialize, Eq, PartialEq)]
     struct TestMessage {
         pub foo: u32,
-        #[beserial(len_type(u8))]
         pub bar: String,
     }
 

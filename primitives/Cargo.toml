@@ -36,7 +36,7 @@ wasm-bindgen = { version = "0.2", optional = true }
 nimiq-bls = { path = "../bls", features = ["serde-derive"], optional = true }
 nimiq-database-value = { path = "../database/database-value", optional = true }
 nimiq-hash = { path = "../hash", optional = true }
-nimiq-keys = { path = "../keys", optional = true }
+nimiq-keys = { path = "../keys", optional = true, features = ["serde-derive"] }
 nimiq-serde-ext = { path = "../serde-ext", optional = true }
 nimiq-utils = { path = "../utils", features = ["math"], optional = true }
 

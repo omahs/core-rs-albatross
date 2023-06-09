@@ -8,6 +8,7 @@ use std::sync::Arc;
 
 use bitflags::bitflags;
 use num_traits::SaturatingAdd;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use nimiq_hash::{Blake2bHash, Hash, SerializeContent};
@@ -19,10 +20,6 @@ use nimiq_primitives::{
     transaction::TransactionError,
 };
 use nimiq_utils::merkle::{Blake2bMerklePath, Blake2bMerkleProof};
-use serde::{
-    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
-    SerializingError, WriteBytesExt,
-};
 
 use crate::account::AccountTransactionVerification;
 
@@ -57,7 +54,6 @@ impl Topic for ControlTransactionTopic {
 }
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TransactionsProof {
-    #[beserial(len_type(u16))]
     pub transactions: Vec<Transaction>,
     pub proof: Blake2bMerkleProof,
 }
@@ -106,14 +102,6 @@ impl TryFrom<u8> for TransactionFlags {
 impl From<TransactionFlags> for u8 {
     fn from(flags: TransactionFlags) -> Self {
         flags.bits()
-    }
-}
-
-// Fail when deserializing invalid flags.
-impl Deserialize for TransactionFlags {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let flag_data: u8 = reader.read_u8()?;
-        TransactionFlags::from_bits(flag_data).ok_or(SerializingError::InvalidValue)
     }
 }
 

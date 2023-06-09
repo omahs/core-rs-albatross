@@ -417,7 +417,7 @@ mod serde_derive {
                 ));
             }
             let mut nibble_bytes = [0u8; KeyNibbles::MAX_BYTES];
-            nibble_bytes.copy_from_slice(&bytes[..bytes_length]);
+            nibble_bytes[..bytes_length].copy_from_slice(&bytes);
             Ok(KeyNibbles {
                 bytes: nibble_bytes,
                 length,

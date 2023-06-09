@@ -133,6 +133,7 @@ impl std::fmt::Debug for Protocol {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(bound = "C: AggregatableContribution")]
 struct Update<C: AggregatableContribution>(pub LevelUpdate<C>);
 
 impl<C: AggregatableContribution + 'static> RequestCommon for Update<C> {

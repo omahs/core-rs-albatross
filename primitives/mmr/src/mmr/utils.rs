@@ -103,11 +103,11 @@ pub(crate) mod test_utils {
         }
 
         let mid = len >> 1;
-        Some(H::merge(
+        H::merge(
             &hash_perfect_tree(&values[..mid])?,
             &hash_perfect_tree(&values[mid..])?,
             len as u64,
-        ))
+        )
     }
 
     pub(crate) fn hash_mmr<H: Merge, T: Hash<H>>(values: &[T]) -> H {
@@ -135,8 +135,8 @@ pub(crate) mod test_utils {
             TestHash(prefix as usize)
         }
 
-        fn merge(&self, other: &Self, prefix: u64) -> Self {
-            TestHash(self.0 * 2 + other.0 * 3 + prefix as usize)
+        fn merge(&self, other: &Self, prefix: u64) -> Option<Self> {
+            Some(TestHash(self.0 * 2 + other.0 * 3 + prefix as usize))
         }
     }
 

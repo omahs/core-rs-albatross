@@ -25,4 +25,6 @@ pub enum MerkleRadixTrieError {
     InvalidChunk(&'static str),
     #[error("Trie is not complete")]
     IncompleteTrie,
+    #[error("Serialization error")]
+    Serialization(#[from] postcard::Error),
 }
