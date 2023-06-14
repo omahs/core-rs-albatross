@@ -3,7 +3,6 @@ use std::str::FromStr;
 use wasm_bindgen::prelude::*;
 
 use nimiq_keys::SecureGenerate;
-use serde::{Deserialize, Serialize};
 
 /// The secret (private) part of an asymmetric key pair that is typically used to digitally sign or decrypt data.
 #[wasm_bindgen]
@@ -22,7 +21,7 @@ impl PrivateKey {
     ///
     /// Throws when the byte array contains less than 32 bytes.
     pub fn unserialize(bytes: &[u8]) -> Result<PrivateKey, JsError> {
-        let key = nimiq_keys::PrivateKey::deserialize(&mut &*bytes)?;
+        let key = postcard::from_bytes::<nimiq_keys::PrivateKey>(&mut &*bytes)?;
         Ok(PrivateKey::from_native(key))
     }
 
@@ -39,7 +38,7 @@ impl PrivateKey {
 
     /// Serializes the private key to a byte array.
     pub fn serialize(&self) -> Vec<u8> {
-        self.inner.serialize_to_vec()
+        postcard::to_allocvec(&self.inner).unwrap()
     }
 
     /// Parses a private key from its hex representation.

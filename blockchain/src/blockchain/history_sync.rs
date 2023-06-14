@@ -14,7 +14,6 @@ use nimiq_transaction::{
     inherent::Inherent,
     Transaction,
 };
-use serde::Serialize;
 
 use crate::Blockchain;
 
@@ -114,7 +113,7 @@ impl Blockchain {
             if let ExtTxData::Basic(tx) = &history[i].data {
                 cum_tx_fees += tx.get_raw_transaction().fee;
             }
-            cum_ext_tx_size += history[i].data.serialized_size() as u64;
+            cum_ext_tx_size += postcard::to_allocvec(&history[i].data).unwrap().len() as u64;
         }
 
         // Create the chain info for the given block and store it.

@@ -8,6 +8,7 @@ use std::{
 };
 
 use log::error;
+use serde::{de::DeserializeOwned, Serialize};
 
 use nimiq_database::{
     cursor::ReadCursor, Cursor, Database, Environment, Transaction, WriteTransaction,
@@ -25,7 +26,7 @@ use nimiq_primitives::{
         trie_proof_node::TrieProofNode,
     },
 };
-use serde::{de::DeserializeOwned, Serialize};
+use nimiq_serde_ext::SerRangeFrom;
 
 /// A Merkle Radix Trie is a hybrid between a Merkle tree and a Radix trie. Like a Merkle tree each
 /// node contains the hashes of all its children. That creates a tree that is resistant to
@@ -188,7 +189,7 @@ impl MerkleRadixTrie {
             .unwrap()
             .root_data
             .unwrap()
-            .incomplete_from
+            .incomplete
             .is_none()
     }
 
@@ -220,7 +221,8 @@ impl MerkleRadixTrie {
             .root_data
             .clone()
             .expect("root node needs root data")
-            .incomplete_from;
+            .incomplete
+            .map(|range| range.0);
         let mut stack = vec![root];
 
         while let Some(item) = stack.pop() {
@@ -272,8 +274,8 @@ impl MerkleRadixTrie {
         txn: &Transaction,
         key: &KeyNibbles,
     ) -> Result<Option<T>, IncompleteTrie> {
-        let missing_from = self.get_missing_from(txn);
-        if !self.is_within_complete_part(key, &missing_from) {
+        let missing_range = self.get_missing_range(txn);
+        if !self.is_within_complete_part(key, &missing_range) {
             return Err(IncompleteTrie);
         }
         Ok(self
@@ -312,11 +314,11 @@ impl MerkleRadixTrie {
         value: T,
     ) -> Result<(), MerkleRadixTrieError> {
         // PITODO: Return value needs to change, we don't need the error anymore
-        let missing_from = self.get_missing_from(txn);
-        if self.is_within_complete_part(key, &missing_from) {
-            self.put_raw(txn, key, postcard::to_allocvec(&value)?, &missing_from);
+        let missing_range = self.get_missing_range(txn);
+        if self.is_within_complete_part(key, &missing_range) {
+            self.put_raw(txn, key, postcard::to_allocvec(&value)?, &missing_range);
         } else {
-            self.update_within_missing_part_raw(txn, key, &missing_from)?;
+            self.update_within_missing_part_raw(txn, key, &missing_range)?;
         }
 
         Ok(())
@@ -326,12 +328,12 @@ impl MerkleRadixTrie {
     /// then this function just returns silently. You can't use this to check the existence of a
     /// given prefix.
     pub fn remove(&self, txn: &mut WriteTransaction, key: &KeyNibbles) {
-        let missing_from = self.get_missing_from(txn);
-        if self.is_within_complete_part(key, &missing_from) {
-            self.remove_raw(txn, key, &missing_from);
+        let missing_range = self.get_missing_range(txn);
+        if self.is_within_complete_part(key, &missing_range) {
+            self.remove_raw(txn, key, &missing_range);
         } else {
             // PITODO: return error
-            self.update_within_missing_part_raw(txn, key, &missing_from)
+            self.update_within_missing_part_raw(txn, key, &missing_range)
                 .expect("should not happen or be returned");
         }
     }
@@ -343,7 +345,7 @@ impl MerkleRadixTrie {
         txn: &mut WriteTransaction,
         key: &KeyNibbles,
         value: Vec<u8>,
-        missing_from: &Option<KeyNibbles>,
+        missing_range: &Option<ops::RangeFrom<KeyNibbles>>,
     ) {
         // Start by getting the root node.
         let mut cur_node = self
@@ -415,7 +417,7 @@ impl MerkleRadixTrie {
             }
 
             // Try to find a child of the current node that matches our key.
-            match cur_node.child_key(key, missing_from) {
+            match cur_node.child_key(key, missing_range) {
                 // If no matching child exists, add a new child to the current node.
                 Err(_) => {
                     // Create and store the new node.
@@ -457,8 +459,8 @@ impl MerkleRadixTrie {
         txn: &mut WriteTransaction,
         key: &KeyNibbles,
     ) -> Result<(), MerkleRadixTrieError> {
-        let missing_from = self.get_missing_from(txn);
-        self.update_within_missing_part_raw(txn, key, &missing_from)
+        let missing_range = self.get_missing_range(txn);
+        self.update_within_missing_part_raw(txn, key, &missing_range)
     }
 
     /// Resets the hashes for a path to a node in the missing part of the tree.
@@ -468,7 +470,7 @@ impl MerkleRadixTrie {
         &self,
         txn: &mut WriteTransaction,
         key: &KeyNibbles,
-        missing_from: &Option<KeyNibbles>,
+        missing_range: &Option<ops::RangeFrom<KeyNibbles>>,
     ) -> Result<(), MerkleRadixTrieError> {
         let mut node = self
             .get_root(txn)
@@ -486,7 +488,7 @@ impl MerkleRadixTrie {
             }
 
             // Descend to the corresponding child.
-            match node.child_key(key, missing_from) {
+            match node.child_key(key, missing_range) {
                 Ok(child_key) => {
                     let child = self
                         .get_node(txn, &child_key)
@@ -558,17 +560,18 @@ impl MerkleRadixTrie {
 
     /// Removes empty stump children on the rightmost path in the tree.
     /// These stumps are stored in the existing nodes to mark the (yet) missing parts of the partial tree.
-    fn clear_stumps(&self, txn: &mut WriteTransaction, key_from: KeyNibbles) {
+    fn clear_stumps(&self, txn: &mut WriteTransaction, keys: ops::RangeFrom<KeyNibbles>) {
         // Start by getting the root node.
         let mut cur_node = self
             .get_root(txn)
             .expect("Merkle Radix Trie must have a root node!");
 
-        let missing_from = cur_node
+        let missing_range = cur_node
             .root_data
             .clone()
             .expect("root node needs root data")
-            .incomplete_from;
+            .incomplete
+            .map(|range| range.0);
 
         // And initialize the root path.
         let mut root_path: Vec<TrieNode> = vec![];
@@ -576,7 +579,7 @@ impl MerkleRadixTrie {
 
         loop {
             // If we're no longer a prefix of the limit, we're done.
-            if !cur_node.key.is_prefix_of(&key_from) {
+            if !cur_node.key.is_prefix_of(&keys.start) {
                 break;
             }
             // Assume we have a tree with the following nodes:
@@ -598,8 +601,8 @@ impl MerkleRadixTrie {
             // clear from 122..: this means clearing 2, 3 from node 12 and 3 from node 1
             // clear from 121..: this means clearing 1, 2, 3 from node 12 and 3 from node 1
             {
-                let cur_digit = key_from.get(cur_node.key.len());
-                let is_last_digit = key_from.len() <= cur_node.key.len() + 1;
+                let cur_digit = keys.start.get(cur_node.key.len());
+                let is_last_digit = keys.start.len() <= cur_node.key.len() + 1;
                 let prune_from = cur_digit.unwrap_or(0) // can only be `None` for the root node
                     + usize::from(!is_last_digit);
                 assert!(cur_node.key.is_empty() || cur_digit.is_some());
@@ -607,7 +610,7 @@ impl MerkleRadixTrie {
                 for child in &mut cur_node.children[prune_from..16] {
                     assert!(child
                         .as_ref()
-                        .map(|c| c.is_stump(&cur_node.key, &missing_from))
+                        .map(|c| c.is_stump(&cur_node.key, &missing_range))
                         .unwrap_or(true));
                     *child = None;
                 }
@@ -624,7 +627,7 @@ impl MerkleRadixTrie {
                         .iter_children()
                         .next()
                         .unwrap()
-                        .key(&cur_node.key, &missing_from)
+                        .key(&cur_node.key, &missing_range)
                         .expect("no stump");
 
                     cur_node = root_path.pop().unwrap();
@@ -635,14 +638,14 @@ impl MerkleRadixTrie {
                 self.put_node(txn, &cur_node);
             }
 
-            if cur_node.key.len() == key_from.len() {
+            if cur_node.key.len() == keys.start.len() {
                 // If we got to our actual key, we're done.
                 root_path.push(cur_node);
                 break;
             }
 
             // Try to find a child of the current node that matches our key.
-            let maybe_child_key = cur_node.child_key(&key_from, &missing_from);
+            let maybe_child_key = cur_node.child_key(&keys.start, &missing_range);
             root_path.push(cur_node);
             match maybe_child_key {
                 // If no matching child exists, we're done.
@@ -661,11 +664,11 @@ impl MerkleRadixTrie {
     fn mark_stumps(
         &self,
         txn: &mut WriteTransaction,
-        key_from: KeyNibbles,
+        keys: ops::RangeFrom<KeyNibbles>,
         last_item_proof: &[TrieProofNode],
     ) -> Result<(), MerkleRadixTrieError> {
         let mut last_item_proof = last_item_proof.iter().rev();
-        let missing_range = Some(key_from.clone());
+        let missing_range = Some(keys.clone());
 
         // Start by getting the root node.
         let mut cur_node = self
@@ -699,9 +702,10 @@ impl MerkleRadixTrie {
             }
 
             // Mark everything as stump that's in the stump range and is contained in the proof.
-            let start_idx = key_from
+            let start_idx = keys
+                .start
                 .get(cur_node.key.len())
-                .map(|x| x + usize::from(cur_node.key.len() + 1 < key_from.len()))
+                .map(|x| x + usize::from(cur_node.key.len() + 1 < keys.start.len()))
                 .unwrap_or(0);
             let prev_kind = cur_node.kind();
             for i in start_idx..16 {
@@ -723,7 +727,7 @@ impl MerkleRadixTrie {
             }
 
             // Try to find a child of the current node that matches our missing key range.
-            let maybe_child_key = cur_node.child_key(&key_from, &missing_range);
+            let maybe_child_key = cur_node.child_key(&keys.start, &missing_range);
             root_path.push(cur_node);
             match maybe_child_key {
                 // If no matching child exists, we're done.
@@ -753,9 +757,10 @@ impl MerkleRadixTrie {
             .unwrap()
             .root_data
             .unwrap()
-            .incomplete_from
+            .incomplete
+            .map(|range| range.0)
         {
-            Some(i) if i == start_key => {}
+            Some(i) if i.start == start_key => {}
             Some(_) => return Ok(TrieChunkPushResult::Ignored),
             None => return Err(MerkleRadixTrieError::TrieAlreadyComplete),
         }
@@ -779,7 +784,7 @@ impl MerkleRadixTrie {
                     ));
                 }
             }
-            let end_key_range = chunk.end_key.clone();
+            let end_key_range = chunk.end_key.clone().map(|end_key| end_key..);
             for proof_node in chunk.proof.nodes.iter() {
                 for child in proof_node.iter_children() {
                     if let Ok(key) = child.key(&proof_node.key, &end_key_range) {
@@ -835,16 +840,16 @@ impl MerkleRadixTrie {
         }
 
         // First, clear the tree's stumps.
-        self.clear_stumps(txn, start_key);
+        self.clear_stumps(txn, start_key..);
         // Then, put all the new items.
-        let missing_range = chunk.end_key.clone();
+        let missing_range = chunk.end_key.clone().map(|end| end..);
         for item in chunk.items {
             self.put_raw(txn, &item.key, item.value, &missing_range);
         }
 
         // Mark the remaining stumps.
         if let Some(end_key) = &chunk.end_key {
-            self.mark_stumps(txn, end_key.clone(), &chunk.proof.nodes)?;
+            self.mark_stumps(txn, end_key.clone().., &chunk.proof.nodes)?;
         }
 
         // Update the hashes and check that we're good.
@@ -861,7 +866,8 @@ impl MerkleRadixTrie {
         }
 
         let mut root_node = self.get_root(txn).unwrap();
-        root_node.root_data.as_mut().unwrap().incomplete_from = chunk.end_key.clone();
+        root_node.root_data.as_mut().unwrap().incomplete =
+            chunk.end_key.clone().map(|end| SerRangeFrom(end..));
         self.put_node(txn, &root_node);
 
         Ok(TrieChunkPushResult::Applied)
@@ -873,7 +879,7 @@ impl MerkleRadixTrie {
         txn: &mut WriteTransaction,
         start_key: KeyNibbles,
     ) -> Result<(), MerkleRadixTrieError> {
-        let missing_from = self.get_missing_from(txn);
+        let missing_range = self.get_missing_range(txn);
 
         // PITODO: Optimize this.
         // Currently, we need the whole list of remaining nodes to generate the chunk proof,
@@ -900,7 +906,7 @@ impl MerkleRadixTrie {
         };
 
         // Then, clear the tree's stumps.
-        if let Some(ref missing_range) = missing_from {
+        if let Some(ref missing_range) = missing_range {
             self.clear_stumps(txn, missing_range.clone());
         }
 
@@ -910,10 +916,11 @@ impl MerkleRadixTrie {
         }
 
         // Mark the remaining stumps.
-        self.mark_stumps(txn, start_key.clone(), &proof.nodes)?;
+        self.mark_stumps(txn, start_key.clone().., &proof.nodes)?;
 
         let mut root_node = self.get_root(txn).unwrap();
-        root_node.root_data.as_mut().unwrap().incomplete_from = Some(start_key);
+        root_node.root_data.as_mut().unwrap().incomplete =
+            Some(SerRangeFrom(ops::RangeFrom { start: start_key }));
         self.put_node(txn, &root_node);
 
         Ok(())
@@ -926,7 +933,7 @@ impl MerkleRadixTrie {
         &self,
         txn: &mut WriteTransaction,
         key: &KeyNibbles,
-        missing_from: &Option<KeyNibbles>,
+        missing_range: &Option<ops::RangeFrom<KeyNibbles>>,
     ) {
         // PITODO: add result type
         // Start by getting the root node.
@@ -967,7 +974,7 @@ impl MerkleRadixTrie {
                             .iter_children()
                             .next()
                             .unwrap()
-                            .key(&cur_node.key, missing_from)
+                            .key(&cur_node.key, missing_range)
                             .expect("no stump");
 
                         let only_child = self.get_node(txn, &only_child_key).unwrap();
@@ -1005,7 +1012,7 @@ impl MerkleRadixTrie {
             }
 
             // Try to find a child of the current node that matches our key.
-            match cur_node.child_key(key, missing_from) {
+            match cur_node.child_key(key, missing_range) {
                 // If no matching child exists, then the key doesn't exist and we stop here.
                 Err(_) => {
                     return;
@@ -1048,7 +1055,7 @@ impl MerkleRadixTrie {
                     .iter_children()
                     .next()
                     .unwrap()
-                    .key(&parent_node.key, missing_from)
+                    .key(&parent_node.key, missing_range)
                     .expect("no stump");
 
                 let only_child = self.get_node(txn, &only_child_key).unwrap();
@@ -1116,9 +1123,9 @@ impl MerkleRadixTrie {
         // We sort the keys in post-order.
         keys.sort_by(|&k1, &k2| k1.post_order_cmp(k2));
 
-        let missing_range = self.get_missing_from(txn);
+        let missing_range = self.get_missing_range(txn);
         if let Some(missing) = &missing_range {
-            if keys.iter().any(|&key| (missing..).contains(&key)) {
+            if keys.iter().any(|&key| missing.contains(&key)) {
                 return Err(IncompleteTrie);
             }
         }
@@ -1215,27 +1222,32 @@ impl MerkleRadixTrie {
     }
 
     pub fn update_root(&self, txn: &mut WriteTransaction) -> Result<(), MerkleRadixTrieError> {
-        let missing_fom = self.get_missing_from(txn);
-        self.update_hashes(txn, &KeyNibbles::ROOT, &missing_fom)
+        let missing_range = self.get_missing_range(txn);
+        self.update_hashes(txn, &KeyNibbles::ROOT, &missing_range)
             .map_err(|_| MerkleRadixTrieError::IncompleteTrie)?;
         Ok(())
     }
 
-    fn is_within_complete_part(&self, key: &KeyNibbles, missing_from: &Option<KeyNibbles>) -> bool {
-        missing_from
+    fn is_within_complete_part(
+        &self,
+        key: &KeyNibbles,
+        missing_range: &Option<ops::RangeFrom<KeyNibbles>>,
+    ) -> bool {
+        missing_range
             .as_ref()
-            .map(|r| !(r..).contains(&key))
+            .map(|r| !r.contains(&key))
             .unwrap_or(true)
     }
 
     /// Returns the range of missing keys in the partial tree.
     /// If the tree is complete, it returns `None`.
-    pub fn get_missing_from(&self, txn: &Transaction) -> Option<KeyNibbles> {
+    pub fn get_missing_range(&self, txn: &Transaction) -> Option<ops::RangeFrom<KeyNibbles>> {
         self.get_root(txn)
             .expect("trie needs root node")
             .root_data
             .expect("root node needs root data")
-            .incomplete_from
+            .incomplete
+            .map(|range| range.0)
     }
 
     /// Returns the root node, if there is one.
@@ -1291,7 +1303,7 @@ impl MerkleRadixTrie {
         &self,
         txn: &mut WriteTransaction,
         key: &KeyNibbles,
-        missing_from: &Option<KeyNibbles>,
+        missing_range: &Option<ops::RangeFrom<KeyNibbles>>,
     ) -> Result<Blake2bHash, IncompleteTrie> {
         let mut node: TrieNode = self.get_node(txn, key).unwrap();
         if !node.has_children() {
@@ -1303,13 +1315,13 @@ impl MerkleRadixTrie {
         for child in node.iter_children_mut() {
             if !child.has_hash() {
                 // We only update the hashes for non-stump children.
-                let child_key = match child.key(key, missing_from) {
+                let child_key = match child.key(key, missing_range) {
                     Ok(key) => key,
                     Err(MerkleRadixTrieError::ChildIsStump) => continue,
                     _ => unreachable!(),
                 };
                 // TODO This could be parallelized.
-                if let Ok(hash) = self.update_hashes(txn, &child_key, missing_from) {
+                if let Ok(hash) = self.update_hashes(txn, &child_key, missing_range) {
                     child.hash = hash;
                 }
             }
@@ -1329,7 +1341,8 @@ impl MerkleRadixTrie {
             .root_data
             .clone()
             .expect("root node needs root data")
-            .incomplete_from;
+            .incomplete
+            .map(|range| range.0);
 
         // First, find the node.
         loop {
@@ -1413,7 +1426,8 @@ impl MerkleRadixTrie {
             .root_data
             .clone()
             .expect("root node needs root data")
-            .incomplete_from;
+            .incomplete
+            .map(|range| range.0);
 
         let mut stack = vec![root];
 

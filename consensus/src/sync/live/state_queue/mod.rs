@@ -61,9 +61,7 @@ impl Display for Chunk {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum ResponseChunk {
-    #[beserial(discriminant = 1)]
     Chunk(Chunk),
-    #[beserial(discriminant = 2)]
     IncompleteState,
 }
 

@@ -29,7 +29,11 @@ impl VerifyingKeyMetadata {
 
     pub fn save_to_file(self, path: &Path) -> Result<(), io::Error> {
         let mut file = File::create(path.join("meta_data.bin"))?;
-        self.serialize(&mut file)?;
+        io::Write::write_all(
+            &mut file,
+            &postcard::to_allocvec(&self)
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?,
+        )?;
         file.sync_all()?;
 
         Ok(())

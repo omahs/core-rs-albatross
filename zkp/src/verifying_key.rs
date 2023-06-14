@@ -8,7 +8,6 @@ use once_cell::sync::OnceCell;
 
 use nimiq_primitives::networks::NetworkId;
 use nimiq_zkp_circuits::metadata::VerifyingKeyMetadata;
-use serde::Deserialize;
 
 pub struct ZKPVerifyingKey {
     cell: OnceCell<VerifyingKey<MNT6<Config>>>,
@@ -64,7 +63,7 @@ impl ZKPVerifyingKey {
             _ => panic!("Network id {:?} does not have a verifying key!", network_id),
         };
 
-        let metadata = VerifyingKeyMetadata::deserialize_from_vec(metadata_bytes)
+        let metadata = postcard::from_bytes::<VerifyingKeyMetadata>(metadata_bytes)
             .expect("Invalid metadata. Please rebuild the ZKP keys.");
 
         assert!(

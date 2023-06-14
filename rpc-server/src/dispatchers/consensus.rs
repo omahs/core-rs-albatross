@@ -18,7 +18,6 @@ use nimiq_rpc_interface::{
 use nimiq_transaction::account::htlc_contract::{AnyHash, HashAlgorithm};
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_transaction_builder::TransactionBuilder;
-use serde::{Deserialize, Serialize};
 
 use crate::{error::Error, wallets::UnlockedWallets};
 
@@ -64,7 +63,7 @@ impl ConsensusDispatcher {
 }
 
 fn transaction_to_hex_string(transaction: &Transaction) -> String {
-    hex::encode(transaction.serialize_to_vec())
+    hex::encode(postcard::to_allocvec(&transaction).unwrap())
 }
 
 #[nimiq_jsonrpc_derive::service(rename_all = "camelCase")]
@@ -82,7 +81,7 @@ impl ConsensusInterface for ConsensusDispatcher {
         &mut self,
         raw_tx: String,
     ) -> RPCResult<RPCTransaction, (), Self::Error> {
-        let transaction: Transaction = Deserialize::deserialize_from_vec(&hex::decode(raw_tx)?)?;
+        let transaction: Transaction = postcard::from_bytes(&hex::decode(raw_tx)?)?;
         Ok(RPCTransaction::from_transaction(transaction).into())
     }
 
@@ -91,7 +90,7 @@ impl ConsensusInterface for ConsensusDispatcher {
         &mut self,
         raw_tx: String,
     ) -> RPCResult<Blake2bHash, (), Self::Error> {
-        let tx: Transaction = Deserialize::deserialize_from_vec(&hex::decode(&raw_tx)?)?;
+        let tx: Transaction = postcard::from_bytes(&hex::decode(&raw_tx)?)?;
         let txid = tx.hash::<Blake2bHash>();
 
         match self.consensus.send_transaction(tx).await {
@@ -475,11 +474,11 @@ impl ConsensusInterface for ConsensusDispatcher {
         fee: Coin,
         validity_start_height: ValidityStartHeight,
     ) -> RPCResult<String, (), Self::Error> {
-        let sig_sender = SignatureProof::deserialize_from_vec(&hex::decode(htlc_sender_signature)?)
+        let sig_sender: SignatureProof = postcard::from_bytes(&hex::decode(htlc_sender_signature)?)
             .map_err(|_| Error::InvalidArgument("Signing Key".to_string()))?;
 
-        let sig_recipient =
-            SignatureProof::deserialize_from_vec(&hex::decode(htlc_recipient_signature)?)
+        let sig_recipient: SignatureProof =
+            postcard::from_bytes(&hex::decode(htlc_recipient_signature)?)
                 .map_err(|_| Error::InvalidArgument("Recipient Key".to_string()))?;
 
         let transaction = TransactionBuilder::new_redeem_htlc_early(
@@ -544,7 +543,7 @@ impl ConsensusInterface for ConsensusDispatcher {
             self.get_network_id(),
         )?;
 
-        Ok(hex::encode(sig.serialize_to_vec()).into())
+        Ok(hex::encode(postcard::to_allocvec(&sig).unwrap()).into())
     }
 
     /// Returns a serialized `new_staker` transaction. You need to provide the address of a basic
@@ -750,13 +749,13 @@ impl ConsensusInterface for ConsensusDispatcher {
         fee: Coin,
         validity_start_height: ValidityStartHeight,
     ) -> RPCResult<String, (), Self::Error> {
-        let voting_secret_key =
-            BlsSecretKey::deserialize_from_vec(&hex::decode(voting_secret_key)?)
+        let voting_secret_key: BlsSecretKey =
+            postcard::from_bytes(&hex::decode(voting_secret_key)?)
                 .map_err(|_| Error::InvalidArgument("Voting Key".to_string()))?;
         let hot_keypair = BlsKeyPair::from(voting_secret_key);
 
-        let signing_secret_key =
-            PrivateKey::deserialize_from_vec(&hex::decode(signing_secret_key)?)
+        let signing_secret_key: PrivateKey =
+            postcard::from_bytes(&hex::decode(signing_secret_key)?)
                 .map_err(|_| Error::InvalidArgument("Signing Key".to_string()))?;
         let signing_key = PublicKey::from(&signing_secret_key);
 
@@ -770,7 +769,7 @@ impl ConsensusInterface for ConsensusDispatcher {
             None
         } else {
             Some(
-                Blake2bHash::deserialize_from_vec(&hex::decode(signal_data)?)
+                postcard::from_bytes::<Blake2bHash>(&hex::decode(signal_data)?)
                     .map_err(|_| Error::InvalidArgument("Signal Data".to_string()))?,
             )
         };
@@ -843,7 +842,7 @@ impl ConsensusInterface for ConsensusDispatcher {
     ) -> RPCResult<String, (), Self::Error> {
         let new_voting_keypair = match new_voting_secret_key {
             Some(key) => {
-                let new_secret_key = BlsSecretKey::deserialize_from_vec(&hex::decode(key)?)
+                let new_secret_key: BlsSecretKey = postcard::from_bytes(&hex::decode(key)?)
                     .map_err(|_| Error::InvalidArgument("Voting Key".to_string()))?;
                 Some(BlsKeyPair::from(new_secret_key))
             }
@@ -852,7 +851,7 @@ impl ConsensusInterface for ConsensusDispatcher {
 
         let new_signing_key = match new_signing_secret_key {
             Some(key) => {
-                let secret_key = PrivateKey::deserialize_from_vec(&hex::decode(key)?)
+                let secret_key: PrivateKey = postcard::from_bytes(&hex::decode(key)?)
                     .map_err(|_| Error::InvalidArgument("Signing Key".to_string()))?;
                 Some(PublicKey::from(&secret_key))
             }
@@ -872,7 +871,7 @@ impl ConsensusInterface for ConsensusDispatcher {
                     Some(None)
                 } else {
                     Some(Some(
-                        Blake2bHash::deserialize_from_vec(&hex::decode(string)?)
+                        postcard::from_bytes::<Blake2bHash>(&hex::decode(string)?)
                             .map_err(|_| Error::InvalidArgument("Signal Data".to_string()))?,
                     ))
                 }
@@ -938,7 +937,7 @@ impl ConsensusInterface for ConsensusDispatcher {
         fee: Coin,
         validity_start_height: ValidityStartHeight,
     ) -> RPCResult<String, (), Self::Error> {
-        let secret_key = PrivateKey::deserialize_from_vec(&hex::decode(signing_secret_key)?)
+        let secret_key: PrivateKey = postcard::from_bytes(&hex::decode(signing_secret_key)?)
             .map_err(|_| Error::InvalidArgument("Signing Key".to_string()))?;
 
         let signing_key_pair = KeyPair::from(secret_key);
@@ -988,7 +987,7 @@ impl ConsensusInterface for ConsensusDispatcher {
         fee: Coin,
         validity_start_height: ValidityStartHeight,
     ) -> RPCResult<String, (), Self::Error> {
-        let secret_key = PrivateKey::deserialize_from_vec(&hex::decode(signing_secret_key)?)
+        let secret_key: PrivateKey = postcard::from_bytes(&hex::decode(signing_secret_key)?)
             .map_err(|_| Error::InvalidArgument("Signing Key".to_string()))?;
         let signing_key_pair = KeyPair::from(secret_key);
 
@@ -1037,7 +1036,7 @@ impl ConsensusInterface for ConsensusDispatcher {
         fee: Coin,
         validity_start_height: ValidityStartHeight,
     ) -> RPCResult<String, (), Self::Error> {
-        let secret_key = PrivateKey::deserialize_from_vec(&hex::decode(signing_secret_key)?)
+        let secret_key: PrivateKey = postcard::from_bytes(&hex::decode(signing_secret_key)?)
             .map_err(|_| Error::InvalidArgument("Signing Key".to_string()))?;
 
         let signing_key_pair = KeyPair::from(secret_key);

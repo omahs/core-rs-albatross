@@ -34,8 +34,7 @@ use crate::{Transaction, TransactionError};
 /// It is important to note that all `signature` fields contain the signature
 /// over the complete transaction with the `signature` field set to `Default::default()`.
 /// The field is populated only after computing the signature.
-#[derive(Clone, Debug)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[repr(u8)]
 pub enum IncomingStakingTransactionData {
     CreateValidator {
@@ -235,12 +234,11 @@ impl IncomingStakingTransactionData {
     ) -> Result<Vec<u8>, postcard::Error> {
         let mut data: IncomingStakingTransactionData = postcard::from_bytes(data)?;
         data.set_signature(signature_proof);
-        Ok(data.serialize_to_vec())
+        postcard::to_allocvec(&data)
     }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 #[repr(u8)]
 pub enum OutgoingStakingTransactionProof {
     DeleteValidator {
@@ -275,12 +273,11 @@ impl OutgoingStakingTransactionProof {
     }
 }
 
-#[cfg(feature = "serde-derive")]
-pub fn full_parse<T: serde::de::DeserializeOwned>(mut data: &[u8]) -> Result<T, TransactionError> {
-    let data = postcard::from_bytes(data)?;
+pub fn full_parse<T: serde::de::DeserializeOwned>(data: &[u8]) -> Result<T, TransactionError> {
+    let (data, left_over) = postcard::take_from_bytes(data)?;
 
     // Ensure that transaction data has been fully read.
-    if reader.read_u8().is_ok() {
+    if !left_over.is_empty() {
         return Err(TransactionError::InvalidData);
     }
 

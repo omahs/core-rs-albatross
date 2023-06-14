@@ -13,8 +13,6 @@ use serde_with::{serde_as, DeserializeFromStr, DisplayFromStr, SerializeDisplay}
 
 use nimiq_account::{BlockLog as BBlockLog, Log, TransactionLog};
 use nimiq_block::{MicroJustification, MultiSignature};
-use serde::Serialize as BeSerialize;
-
 use nimiq_blockchain_proxy::BlockchainReadProxy;
 use nimiq_bls::CompressedPublicKey;
 use nimiq_collections::BitSet;
@@ -178,7 +176,7 @@ impl Block {
     ) -> Result<Self, BlockchainError> {
         let block_number = block.block_number();
         let timestamp = block.timestamp();
-        let size = block.serialized_size() as u32;
+        let size = postcard::to_allocvec(&block).unwrap().len() as u32;
         let batch = Policy::batch_at(block_number);
         let epoch = Policy::epoch_at(block_number);
 

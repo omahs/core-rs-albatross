@@ -3,6 +3,7 @@ use crate::utils::Step;
 use futures::{future::BoxFuture, stream::BoxStream};
 
 use nimiq_collections::BitSet;
+use serde::{Deserialize, Serialize};
 
 /// Error for proposal verification. Currently not really used, but in place to allow for potential
 /// punishment of misbehaving contributors to the tendermint protocol.
@@ -35,7 +36,7 @@ pub struct SignedProposalMessage<Proposal, ProposalSignature> {
     pub signature: ProposalSignature,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct TaggedAggregationMessage<AggregationMessage> {
     pub tag: (u32, Step),
     pub aggregation: AggregationMessage,

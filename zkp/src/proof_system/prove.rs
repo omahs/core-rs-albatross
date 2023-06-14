@@ -1,5 +1,6 @@
 use std::fs;
 use std::fs::{DirBuilder, File};
+use std::io::Write;
 use std::path::Path;
 
 use ark_crypto_primitives::snark::SNARK;
@@ -28,7 +29,6 @@ use nimiq_zkp_primitives::{
     pk_tree_construct, serialize_g1_mnt6, serialize_g2_mnt6, state_commitment, vk_commitment,
     MacroBlock, NanoZKPError, PK_TREE_DEPTH,
 };
-use serde::{Deserialize, Serialize};
 
 /// Checks whether cached proofs are compatible with the current proof.
 /// If not, it clears the folder and creates a new metadata file.
@@ -42,8 +42,9 @@ pub fn update_proof_cache(
     let metadata_file = proofs.join("meta_data.bin");
 
     if metadata_file.exists() {
-        let mut file = File::open(&metadata_file)?;
-        let meta_data_hash: [u8; 32] = Deserialize::deserialize(&mut file)?;
+        let file = File::open(&metadata_file)?;
+        let reader = std::io::BufReader::new(file);
+        let meta_data_hash: [u8; 32] = postcard::from_bytes(&reader.buffer())?;
 
         // If the hash in the meta data matches, return.
         if &meta_data_hash == current_header_hash {
@@ -59,7 +60,7 @@ pub fn update_proof_cache(
     // Create a new meta data file.
     DirBuilder::new().recursive(true).create(&proofs)?;
     let mut file = File::create(&metadata_file)?;
-    current_header_hash.serialize(&mut file)?;
+    file.write_all(&postcard::to_allocvec(&current_header_hash)?)?;
 
     Ok(())
 }

@@ -20,7 +20,6 @@ use nimiq_transaction::{
     history_proof::HistoryTreeProof,
     inherent::Inherent,
 };
-use serde::Serialize;
 
 use crate::history::{mmr_store::MMRStore, ordered_hash::OrderedHash, HistoryTreeChunk};
 
@@ -221,7 +220,7 @@ impl HistoryStore {
                 },
             );
 
-            txns_size += ext_tx.serialized_size() as u64;
+            txns_size += postcard::to_allocvec(&ext_tx).unwrap().len() as u64;
 
             // Remove it from the leaf index database.
             // Check if you are removing the last extended transaction for this block. If yes,
@@ -953,7 +952,7 @@ impl HistoryStore {
                 }
             }
         }
-        ext_tx.serialized_size()
+        postcard::to_allocvec(&ext_tx).unwrap().len()
     }
 
     /// Returns a vector containing all leaf hashes and indexes corresponding to the given

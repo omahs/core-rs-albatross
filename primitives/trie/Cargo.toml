@@ -20,6 +20,7 @@ thiserror = "1.0"
 nimiq-database = { path = "../../database" }
 nimiq-hash = { path = "../../hash" }
 nimiq-primitives = { path = "..", features = ["key-nibbles", "serde-derive", "trie"] }
+nimiq-serde-ext = { path = "../../serde-ext" }
 
 [dev-dependencies]
 nimiq-test-log = { path = "../../test-log" }

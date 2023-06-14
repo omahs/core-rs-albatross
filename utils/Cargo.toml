@@ -34,6 +34,8 @@ nimiq-database-value = { path = "../database/database-value" }
 nimiq-hash = { path = "../hash", optional = true }
 
 [dev-dependencies]
+postcard = "1.0"
+
 nimiq-keys = { path = "../keys" }
 nimiq-test-log = { path = "../test-log" }
 nimiq-test-utils = { path = "../test-utils" }

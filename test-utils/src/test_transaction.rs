@@ -4,7 +4,6 @@ use nimiq_primitives::coin::Coin;
 use nimiq_primitives::networks::NetworkId;
 use nimiq_transaction::{SignatureProof, Transaction};
 use rand::{CryptoRng, Rng};
-use serde::Serialize;
 
 #[derive(Clone)]
 pub struct TestAccount {
@@ -73,11 +72,11 @@ pub fn generate_transactions(
                     .sign(&txn.serialize_content()),
             );
 
-            txn.proof = signature_proof.serialize_to_vec();
+            txn.proof = postcard::to_allocvec(&signature_proof).unwrap();
         }
         txns.push(txn.clone());
         //Adjust for executed txns len
-        txns_len += 1 + txn.serialized_size();
+        txns_len += 1 + postcard::to_allocvec(&txn).unwrap().len();
     }
     (txns, txns_len)
 }

@@ -8,7 +8,6 @@ use nimiq_bls::PublicKey as BlsPublicKey;
 use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
 use nimiq_primitives::coin::Coin;
 use nimiq_vrf::VrfSeed;
-use serde::Deserialize as BDeserialize;
 
 #[derive(Clone, Debug, Deserialize)]
 pub struct GenesisConfig {
@@ -104,7 +103,7 @@ where
 {
     let pkey_hex: String = Deserialize::deserialize(deserializer)?;
     let pkey_raw = hex::decode(pkey_hex).map_err(Error::custom)?;
-    BlsPublicKey::deserialize_from_vec(&pkey_raw).map_err(Error::custom)
+    postcard::from_bytes(&pkey_raw).map_err(Error::custom)
 }
 
 pub(crate) fn deserialize_schnorr_public_key<'de, D>(
@@ -115,7 +114,7 @@ where
 {
     let pkey_hex: String = Deserialize::deserialize(deserializer)?;
     let pkey_raw = hex::decode(pkey_hex).map_err(Error::custom)?;
-    SchnorrPublicKey::deserialize_from_vec(&pkey_raw).map_err(Error::custom)
+    postcard::from_bytes(&pkey_raw).map_err(Error::custom)
 }
 
 pub fn deserialize_timestamp<'de, D>(deserializer: D) -> Result<Option<OffsetDateTime>, D::Error>
@@ -141,7 +140,7 @@ where
     if let Some(vrf_seed_hex) = vrf_seed_hex {
         let vrf_seed_raw = hex::decode(vrf_seed_hex).map_err(Error::custom)?;
         Ok(Some(
-            VrfSeed::deserialize_from_vec(&vrf_seed_raw).map_err(Error::custom)?,
+            postcard::from_bytes::<VrfSeed>(&vrf_seed_raw).map_err(Error::custom)?,
         ))
     } else {
         Ok(None)

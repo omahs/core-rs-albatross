@@ -8,7 +8,7 @@ use nimiq_mmr::hash::Hash as MMRHash;
 use nimiq_primitives::coin::Coin;
 use nimiq_primitives::networks::NetworkId;
 use nimiq_primitives::policy::Policy;
-use serde::{Deserialize, ReadBytesExt, Serialize, SerializingError, WriteBytesExt};
+use serde::{Deserialize, Serialize};
 
 use crate::inherent::Inherent;
 use crate::ExecutedTransaction;
@@ -16,7 +16,7 @@ use crate::Transaction as BlockchainTransaction;
 
 /// A single struct that stores information that represents any possible transaction (basic
 /// transaction or inherent) on the blockchain.
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct ExtendedTransaction {
     // The ID of the network where the transaction happened.
     pub network_id: NetworkId,
@@ -170,53 +170,18 @@ impl MMRHash<Blake2bHash> for ExtendedTransaction {
     /// to include it into the History Tree.
     fn hash(&self, prefix: u64) -> Blake2bHash {
         let mut message = prefix.to_be_bytes().to_vec();
-        message.append(&mut self.serialize_to_vec());
+        message.append(&mut postcard::to_allocvec(self).unwrap());
         message.hash()
-    }
-}
-
-impl Serialize for ExtendedTransaction {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        let mut size = 0;
-        size += Serialize::serialize(&self.network_id, writer)?;
-        size += Serialize::serialize(&self.block_number, writer)?;
-        size += Serialize::serialize(&self.block_time, writer)?;
-        size += Serialize::serialize(&self.data, writer)?;
-        Ok(size)
-    }
-
-    fn serialized_size(&self) -> usize {
-        let mut size = 0;
-        size += Serialize::serialized_size(&self.network_id);
-        size += Serialize::serialized_size(&self.block_number);
-        size += Serialize::serialized_size(&self.block_time);
-        size += Serialize::serialized_size(&self.data);
-        size
-    }
-}
-
-impl Deserialize for ExtendedTransaction {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let network_id: NetworkId = Deserialize::deserialize(reader)?;
-        let block_number: u32 = Deserialize::deserialize(reader)?;
-        let block_time: u64 = Deserialize::deserialize(reader)?;
-        let data: ExtTxData = Deserialize::deserialize(reader)?;
-        Ok(ExtendedTransaction {
-            network_id,
-            block_number,
-            block_time,
-            data,
-        })
     }
 }
 
 impl IntoDatabaseValue for ExtendedTransaction {
     fn database_byte_size(&self) -> usize {
-        self.serialized_size()
+        postcard::to_allocvec(self).unwrap().len()
     }
 
-    fn copy_into_database(&self, mut bytes: &mut [u8]) {
-        Serialize::serialize(&self, &mut bytes).unwrap();
+    fn copy_into_database(&self, bytes: &mut [u8]) {
+        postcard::to_slice(self, bytes).unwrap();
     }
 }
 
@@ -225,8 +190,7 @@ impl FromDatabaseValue for ExtendedTransaction {
     where
         Self: Sized,
     {
-        let mut cursor = io::Cursor::new(bytes);
-        Ok(Deserialize::deserialize(&mut cursor)?)
+        postcard::from_bytes(&bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }
 
@@ -234,68 +198,10 @@ impl FromDatabaseValue for ExtendedTransaction {
 /// transaction.
 // TODO: The transactions include a lot of unnecessary information (ex: the signature). Don't
 //       include all of it here.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
 pub enum ExtTxData {
-    // A basic transaction. It simply contains the transaction as contained in the block.
+    /// A basic transaction. It simply contains the transaction as contained in the block.
     Basic(ExecutedTransaction),
-    // An inherent transaction. It simply contains the transaction as contained in the block.
+    /// An inherent transaction. It simply contains the transaction as contained in the block.
     Inherent(Inherent),
-}
-
-impl Serialize for ExtTxData {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        match self {
-            ExtTxData::Basic(tx) => {
-                let mut size = 0;
-                size += Serialize::serialize(&ExtendedTransactionDataType::Basic, writer)?;
-                size += Serialize::serialize(tx, writer)?;
-                Ok(size)
-            }
-            ExtTxData::Inherent(tx) => {
-                let mut size = 0;
-                size += Serialize::serialize(&ExtendedTransactionDataType::Inherent, writer)?;
-                size += Serialize::serialize(tx, writer)?;
-                Ok(size)
-            }
-        }
-    }
-
-    fn serialized_size(&self) -> usize {
-        match self {
-            ExtTxData::Basic(tx) => {
-                let mut size = 1;
-                size += Serialize::serialized_size(tx);
-                size
-            }
-            ExtTxData::Inherent(tx) => {
-                let mut size = 1;
-                size += Serialize::serialized_size(tx);
-                size
-            }
-        }
-    }
-}
-
-impl Deserialize for ExtTxData {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let ext_tx_data_type: ExtendedTransactionDataType = Deserialize::deserialize(reader)?;
-        match ext_tx_data_type {
-            ExtendedTransactionDataType::Basic => {
-                let tx = Deserialize::deserialize(reader)?;
-                Ok(ExtTxData::Basic(tx))
-            }
-            ExtendedTransactionDataType::Inherent => {
-                let tx = Deserialize::deserialize(reader)?;
-                Ok(ExtTxData::Inherent(tx))
-            }
-        }
-    }
-}
-
-/// Just a convenience enum to help with the serialization/deserialization functions.
-#[derive(Clone, Copy, Debug, Serialize, Deserialize)]
-#[repr(u8)]
-pub enum ExtendedTransactionDataType {
-    Basic,
-    Inherent,
 }

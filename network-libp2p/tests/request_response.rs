@@ -49,39 +49,23 @@ impl RequestCommon for TestRequest {
 
     const MAX_REQUESTS: u32 = MAX_REQUEST_RESPONSE_TEST_REQUEST;
 
-    fn serialize_request<W: serde::WriteBytesExt>(
-        &self,
-        writer: &mut W,
-    ) -> Result<usize, serde::SerializingError> {
-        let mut size = 0;
-        size += nimiq_network_interface::request::RequestType::from_request::<Self>()
-            .0
-            .serialize(writer)?;
-        size += self.serialize(writer)?;
-        Ok(size)
+    fn serialize_request(&self, buffer: &mut [u8]) -> Result<(), postcard::Error> {
+        postcard::to_slice(
+            &nimiq_network_interface::request::RequestType::from_request::<Self>().0,
+            buffer,
+        )?;
+        postcard::to_slice(self, buffer)?;
+        Ok(())
     }
 
-    fn serialized_request_size(&self) -> usize {
-        let mut size = 0;
-        size += nimiq_network_interface::request::RequestType::from_request::<Self>()
-            .0
-            .serialized_size();
-        size += self.serialized_size();
-        size
-    }
-
-    fn deserialize_request<R: serde::ReadBytesExt>(
-        reader: &mut R,
-    ) -> Result<Self, serde::SerializingError> {
+    fn deserialize_request(buffer: &[u8]) -> Result<Self, postcard::Error> {
         // Check for correct type.
-        let ty: u16 = Deserialize::deserialize(reader)?;
+        let (ty, message_buf) = postcard::take_from_bytes::<u16>(buffer)?;
         if ty != nimiq_network_interface::request::RequestType::from_request::<Self>().0 {
-            return Err(
-                std::io::Error::new(std::io::ErrorKind::InvalidData, "Wrong message type").into(),
-            );
+            return Err(postcard::Error::DeserializeBadVarint);
         }
 
-        let message: Self = Deserialize::deserialize(reader)?;
+        let message: Self = postcard::from_bytes(message_buf)?;
 
         Ok(message)
     }

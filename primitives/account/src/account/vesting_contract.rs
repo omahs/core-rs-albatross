@@ -51,8 +51,7 @@ impl VestingContract {
         }
 
         // Check transaction signer is contract owner.
-        let signature_proof: SignatureProof =
-            Deserialize::deserialize(&mut &transaction.proof[..])?;
+        let signature_proof: SignatureProof = postcard::from_bytes(&transaction.proof[..])?;
 
         if !signature_proof.is_signed_by(&self.owner) {
             return Err(AccountError::InvalidSignature);

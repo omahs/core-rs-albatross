@@ -1,7 +1,5 @@
 use wasm_bindgen::prelude::*;
 
-use serde::Serialize;
-
 use crate::address::Address;
 use crate::public_key::PublicKey;
 use crate::signature::Signature;
@@ -49,7 +47,7 @@ impl SignatureProof {
 
     /// Serializes the proof to a byte array, e.g. for assigning it to a `transaction.proof` field.
     pub fn serialize(&self) -> Vec<u8> {
-        self.inner.serialize_to_vec()
+        postcard::to_allocvec(&self.inner).unwrap()
     }
 }
 

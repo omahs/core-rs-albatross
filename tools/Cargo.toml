@@ -27,8 +27,8 @@ anyhow = "1.0"
 clap = { version = "4.2", features = ["cargo"] }
 hex = "0.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
+postcard = "1.0"
 rand = "0.8"
-serde = "1.0"
 thiserror = "1.0"
 
 nimiq-bls = { path = "../bls" }

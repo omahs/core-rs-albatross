@@ -23,7 +23,6 @@ use nimiq_primitives::{
 use nimiq_tendermint::ProposalMessage;
 use nimiq_transaction::Transaction;
 use nimiq_utils::time::OffsetTime;
-use serde::Deserialize;
 
 /// Secret keys of validator. Tests run with `genesis/src/genesis/unit-albatross.toml`
 const SIGNING_KEY: &str = "041580cc67e66e9e08b68fd9e4c9deb68737168fbe7488de2638c2e906c2f5ad";
@@ -72,10 +71,10 @@ impl TemporaryBlockProducer {
         ));
 
         let signing_key = SchnorrKeyPair::from(
-            SchnorrPrivateKey::deserialize_from_vec(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
+            postcard::from_bytes::<SchnorrPrivateKey>(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
         );
         let voting_key = BlsKeyPair::from(
-            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
         let producer: BlockProducer = BlockProducer::new(signing_key, voting_key);
         TemporaryBlockProducer {
@@ -195,7 +194,7 @@ impl TemporaryBlockProducer {
         block_hash: Blake2sHash,
     ) -> MacroBlock {
         let keypair = BlsKeyPair::from(
-            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
 
         // Create a TendermintVote instance out of known properties.
@@ -237,7 +236,7 @@ impl TemporaryBlockProducer {
 
     pub fn create_skip_block_proof(&self) -> SkipBlockProof {
         let keypair = BlsKeyPair::from(
-            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
 
         let skip_block_info = {

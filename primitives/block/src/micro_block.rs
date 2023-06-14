@@ -117,11 +117,11 @@ impl MicroBlock {
 
 impl IntoDatabaseValue for MicroBlock {
     fn database_byte_size(&self) -> usize {
-        self.serialized_size()
+        postcard::to_allocvec(self).unwrap().len()
     }
 
-    fn copy_into_database(&self, mut bytes: &mut [u8]) {
-        Serialize::serialize(&self, &mut bytes).unwrap();
+    fn copy_into_database(&self, bytes: &mut [u8]) {
+        postcard::to_slice(self, bytes).unwrap();
     }
 }
 
@@ -130,8 +130,7 @@ impl FromDatabaseValue for MicroBlock {
     where
         Self: Sized,
     {
-        let mut cursor = io::Cursor::new(bytes);
-        Ok(Deserialize::deserialize(&mut cursor)?)
+        postcard::from_bytes(&bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }
 
@@ -143,8 +142,7 @@ impl fmt::Display for MicroBlock {
 
 /// Enumeration representing the justification for a Micro block
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "serde-derive", serde(rename_all = "camelCase"))]
+#[serde(rename_all = "camelCase")]
 #[repr(u8)]
 pub enum MicroJustification {
     /// Regular micro block justification which is the signature of the block producer
@@ -234,7 +232,7 @@ impl MicroBody {
 
     pub(crate) fn verify(&self, is_skip: bool, block_number: u32) -> Result<(), BlockError> {
         // Check that the maximum body size is not exceeded.
-        let body_size = self.serialized_size();
+        let body_size = postcard::to_allocvec(self).unwrap().len();
         if body_size > Policy::MAX_SIZE_MICRO_BODY {
             debug!(
                 body_size = body_size,

@@ -9,7 +9,6 @@ use nimiq_keys::{Address, PublicKey};
 use nimiq_primitives::slots::ValidatorsBuilder;
 use nimiq_test_log::test;
 use nimiq_vrf::VrfSeed;
-use serde::{Deserialize, Serialize};
 
 mod block_proof;
 mod macro_block;
@@ -123,7 +122,7 @@ fn create_multisig() -> MultiSignature {
         39f69107cc0b6f4ecd00a250c74409510100",
     )
     .unwrap();
-    let key_pair = KeyPair::deserialize_from_vec(&raw_key).unwrap();
+    let key_pair: KeyPair = postcard::from_bytes(&raw_key).unwrap();
     let signature = key_pair.sign(&"foobar");
     let signature = AggregateSignature::from_signatures(&[signature]);
     let mut signers = BitSet::default();
@@ -134,11 +133,10 @@ fn create_multisig() -> MultiSignature {
 #[test]
 fn test_serialize_deserialize_level_update() {
     let update = LevelUpdate::new(create_multisig(), None, 2, 3);
-    let data = update.serialize_to_vec();
-    let update_2: LevelUpdate<MultiSignature> = Deserialize::deserialize_from_vec(&data).unwrap();
+    let data = postcard::to_allocvec(&update).unwrap();
+    let update_2: LevelUpdate<MultiSignature> = postcard::from_bytes(&data).unwrap();
 
-    assert_eq!(data.len(), update.serialized_size());
-    assert_eq!(update.serialized_size(), 108);
+    assert_eq!(data.len(), 108);
     // assert!(update_2.individual.is_none()); // not publicly accessible
     assert_eq!(update_2.level(), 2);
     assert_eq!(update_2.origin(), 3);
@@ -147,5 +145,5 @@ fn test_serialize_deserialize_level_update() {
 #[test]
 fn test_serialize_deserialize_with_message() {
     let update = LevelUpdate::new(create_multisig(), None, 2, 3);
-    assert_eq!(update.serialized_size(), 108);
+    assert_eq!(postcard::to_allocvec(&update).unwrap().len(), 108);
 }

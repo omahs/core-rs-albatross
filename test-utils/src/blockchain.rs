@@ -23,7 +23,6 @@ use nimiq_primitives::coin::Coin;
 use nimiq_primitives::policy::Policy;
 use nimiq_transaction::Transaction;
 use nimiq_transaction_builder::TransactionBuilder;
-use serde::Deserialize;
 
 /// Secret keys of validator. Tests run with `genesis/src/genesis/unit-albatross.toml`
 pub const SIGNING_KEY: &str = "041580cc67e66e9e08b68fd9e4c9deb68737168fbe7488de2638c2e906c2f5ad";
@@ -248,11 +247,13 @@ pub fn sign_skip_block_info(
 }
 
 pub fn voting_key() -> BlsKeyPair {
-    BlsKeyPair::from(BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap())
+    BlsKeyPair::from(
+        postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+    )
 }
 
 pub fn signing_key() -> SchnorrKeyPair {
     SchnorrKeyPair::from(
-        SchnorrPrivateKey::deserialize_from_vec(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
+        postcard::from_bytes::<SchnorrPrivateKey>(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
     )
 }

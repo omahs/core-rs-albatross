@@ -1,3 +1,4 @@
+use std::io::Write;
 use std::marker::PhantomData;
 use std::pin::Pin;
 use std::task::{Context, Poll};
@@ -6,7 +7,7 @@ use bytes::{Buf, BufMut, BytesMut};
 use futures::{ready, AsyncWrite, Sink};
 use pin_project::pin_project;
 
-use serde::{Serialize, SerializingError};
+use serde::Serialize;
 
 use super::header::Header;
 
@@ -14,7 +15,7 @@ fn write_from_buf<W>(
     inner: &mut W,
     buffer: &mut BytesMut,
     cx: &mut Context,
-) -> Poll<Result<(), SerializingError>>
+) -> Poll<Result<(), postcard::Error>>
 where
     W: AsyncWrite + Unpin,
 {
@@ -22,9 +23,7 @@ where
         match Pin::new(inner).poll_write(cx, buffer.chunk()) {
             Poll::Ready(Ok(0)) => {
                 warn!("MessageWriter: write_from_buf: Unexpected EOF.");
-                Poll::Ready(Err(SerializingError::from(std::io::Error::from(
-                    std::io::ErrorKind::UnexpectedEof,
-                ))))
+                Poll::Ready(Err(postcard::Error::SerdeSerCustom))
             }
 
             Poll::Ready(Ok(n)) => {
@@ -37,7 +36,7 @@ where
                 }
             }
 
-            Poll::Ready(Err(e)) => Poll::Ready(Err(e.into())),
+            Poll::Ready(Err(_)) => Poll::Ready(Err(postcard::Error::SerdeSerCustom)),
 
             Poll::Pending => Poll::Pending,
         }
@@ -72,7 +71,7 @@ where
     W: AsyncWrite + Unpin,
     M: Serialize + std::fmt::Debug,
 {
-    type Error = SerializingError;
+    type Error = postcard::Error;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
         let self_projected = self.project();
@@ -90,24 +89,26 @@ where
 
         if !self_projected.buffer.is_empty() {
             warn!("MessageWriter: Trying to send while buffer is not empty");
-            return Err(SerializingError::from(std::io::Error::from(
-                std::io::ErrorKind::WouldBlock,
-            )));
+            return Err(postcard::Error::SerdeSerCustom);
         }
 
         // Reserve space for the header and message.
-        let n = Serialize::serialized_size(item);
-        self_projected.buffer.reserve(n + Header::SIZE);
+        let ser_item = postcard::to_allocvec(&item)?;
+        self_projected.buffer.reserve(ser_item.len() + Header::SIZE);
 
-        let header = Header::new(n as u32);
+        let header = Header::new(ser_item.len() as u32);
+        let mut ser_header = [0u8; Header::SIZE];
+        postcard::to_slice(&header, &mut ser_header)?;
 
         let mut w = self_projected.buffer.writer();
 
         // Write header
-        Serialize::serialize(&header, &mut w)?;
+        w.write_all(&ser_header)
+            .map_err(|_| postcard::Error::SerdeSerCustom)?;
 
         // Serialize the message into the buffer.
-        Serialize::serialize(item, &mut w)?;
+        w.write_all(&ser_item)
+            .map_err(|_| postcard::Error::SerdeSerCustom)?;
 
         Ok(())
     }
@@ -122,7 +123,8 @@ where
             Poll::Ready(Ok(())) => {
                 // Finished writing the message. Flush the underlying `AsyncWrite`.
                 Poll::Ready(
-                    ready!(Pin::new(self_projected.inner).poll_flush(cx)).map_err(|e| e.into()),
+                    ready!(Pin::new(self_projected.inner).poll_flush(cx))
+                        .map_err(|_| postcard::Error::SerdeSerCustom),
                 )
             }
         }
@@ -138,7 +140,8 @@ where
             Poll::Ready(Ok(())) => {
                 // Finished writing the message. Close the underlying `AsyncWrite`.
                 Poll::Ready(
-                    ready!(Pin::new(self_projected.inner).poll_close(cx)).map_err(|e| e.into()),
+                    ready!(Pin::new(self_projected.inner).poll_close(cx))
+                        .map_err(|_| postcard::Error::SerdeSerCustom),
                 )
             }
         }
@@ -173,6 +176,9 @@ mod tests {
 
         let data = message_writer.into_inner();
 
-        assert_eq!(&test_message.serialize_to_vec(), &data[Header::SIZE..])
+        assert_eq!(
+            postcard::to_allocvec(&test_message).unwrap(),
+            &data[Header::SIZE..]
+        )
     }
 }

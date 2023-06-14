@@ -200,7 +200,10 @@ mod tests {
         let msg1 = Message(42);
         let msg2 = AnotherMessage(42);
 
-        assert_eq!(msg1.serialize_to_vec(), msg2.serialize_to_vec());
+        assert_eq!(
+            postcard::to_allocvec(&msg1).unwrap(),
+            postcard::to_allocvec(&msg2).unwrap()
+        );
         assert_ne!(msg1.message_data(), msg2.message_data());
     }
 
@@ -210,7 +213,10 @@ mod tests {
         let msg2 = AnotherMessage(42);
 
         // The messages serialize to the same data and could be used for replay attacks in an untagged signature scheme.
-        assert_eq!(msg1.serialize_to_vec(), msg2.serialize_to_vec());
+        assert_eq!(
+            postcard::to_allocvec(&msg1).unwrap(),
+            postcard::to_allocvec(&msg2).unwrap()
+        );
 
         let keypair = TestKeypair::generate();
 

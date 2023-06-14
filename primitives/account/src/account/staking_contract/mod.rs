@@ -1,6 +1,8 @@
 use std::collections::btree_set::BTreeSet;
 use std::collections::BTreeMap;
 
+use serde::{Deserialize, Serialize};
+
 use nimiq_collections::BitSet;
 use nimiq_keys::Address;
 use nimiq_primitives::{
@@ -9,10 +11,6 @@ use nimiq_primitives::{
     slots::{Validators, ValidatorsBuilder},
 };
 use nimiq_vrf::{AliasMethod, VrfSeed, VrfUseCase};
-use serde::{
-    Deserialize, DeserializeWithLength, ReadBytesExt, Serialize, SerializeWithLength,
-    SerializingError, WriteBytesExt,
-};
 
 use crate::{
     account::staking_contract::store::{StakingContractStoreRead, StakingContractStoreReadOps},
@@ -56,8 +54,7 @@ mod validator;
 ///     - A list of Validators. Each of them is a subtrie containing the Validator struct, with all
 ///       the information relative to the Validator.
 ///     - A list of Stakers, with each Staker struct containing all information about a staker.
-#[derive(Debug, Default, Clone, PartialEq, Eq)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
+#[derive(Debug, Default, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct StakingContract {
     // The total amount of coins staked (also includes validators deposits).
     pub balance: Coin,
@@ -201,97 +198,5 @@ impl StakingContract {
     /// Returns a Vector with the addresses of all the currently parked Validators.
     pub fn parked_set(&self) -> Vec<Address> {
         self.parked_set.iter().cloned().collect()
-    }
-}
-
-impl Serialize for StakingContract {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        let mut size = 0;
-
-        size += Serialize::serialize(&self.balance, writer)?;
-
-        size += SerializeWithLength::serialize::<u32, _>(&self.active_validators, writer)?;
-
-        size += SerializeWithLength::serialize::<u32, _>(&self.parked_set, writer)?;
-
-        size += Serialize::serialize(&self.current_lost_rewards, writer)?;
-        size += Serialize::serialize(&self.previous_lost_rewards, writer)?;
-
-        size += Serialize::serialize(&(self.current_disabled_slots.len() as u16), writer)?;
-        for (key, slots) in self.current_disabled_slots.iter() {
-            size += Serialize::serialize(key, writer)?;
-            size += SerializeWithLength::serialize::<u16, _>(slots, writer)?;
-        }
-        size += Serialize::serialize(&(self.previous_disabled_slots.len() as u16), writer)?;
-        for (key, slots) in self.previous_disabled_slots.iter() {
-            size += Serialize::serialize(key, writer)?;
-            size += SerializeWithLength::serialize::<u16, _>(slots, writer)?;
-        }
-
-        Ok(size)
-    }
-
-    fn serialized_size(&self) -> usize {
-        let mut size = 0;
-        size += Serialize::serialized_size(&self.balance);
-
-        size += SerializeWithLength::serialized_size::<u32>(&self.active_validators);
-
-        size += SerializeWithLength::serialized_size::<u32>(&self.parked_set);
-
-        size += Serialize::serialized_size(&self.current_lost_rewards);
-        size += Serialize::serialized_size(&self.previous_lost_rewards);
-
-        size += Serialize::serialized_size(&(self.current_disabled_slots.len() as u16));
-        for (key, slots) in self.current_disabled_slots.iter() {
-            size += Serialize::serialized_size(key);
-            size += SerializeWithLength::serialized_size::<u16>(slots);
-        }
-        size += Serialize::serialized_size(&(self.previous_disabled_slots.len() as u16));
-        for (key, slots) in self.previous_disabled_slots.iter() {
-            size += Serialize::serialized_size(key);
-            size += SerializeWithLength::serialized_size::<u16>(slots);
-        }
-
-        size
-    }
-}
-
-impl Deserialize for StakingContract {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let balance = Deserialize::deserialize(reader)?;
-
-        let active_validators = DeserializeWithLength::deserialize::<u32, _>(reader)?;
-
-        let parked_set = DeserializeWithLength::deserialize::<u32, _>(reader)?;
-
-        let current_lost_rewards = Deserialize::deserialize(reader)?;
-        let previous_lost_rewards = Deserialize::deserialize(reader)?;
-
-        let num_current_disabled_slots: u16 = Deserialize::deserialize(reader)?;
-        let mut current_disabled_slots = BTreeMap::new();
-        for _ in 0..num_current_disabled_slots {
-            let key: Address = Deserialize::deserialize(reader)?;
-            let value = DeserializeWithLength::deserialize::<u16, _>(reader)?;
-            current_disabled_slots.insert(key, value);
-        }
-
-        let num_previous_disabled_slots: u16 = Deserialize::deserialize(reader)?;
-        let mut previous_disabled_slots = BTreeMap::new();
-        for _ in 0..num_previous_disabled_slots {
-            let key: Address = Deserialize::deserialize(reader)?;
-            let value = DeserializeWithLength::deserialize::<u16, _>(reader)?;
-            previous_disabled_slots.insert(key, value);
-        }
-
-        Ok(StakingContract {
-            balance,
-            active_validators,
-            parked_set,
-            current_lost_rewards,
-            previous_lost_rewards,
-            current_disabled_slots,
-            previous_disabled_slots,
-        })
     }
 }

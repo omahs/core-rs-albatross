@@ -12,7 +12,6 @@ use nimiq_test_utils::{
     accounts_revert::TestCommitRevert, test_rng::test_rng, transactions::TransactionsGenerator,
 };
 use nimiq_transaction::{SignatureProof, Transaction};
-use serde::{Deserialize, Serialize};
 
 const SECRET_KEY_1: &str = "d0fbb3690f5308f457e245a3cc65ae8d6945155eadcac60d489ffc5583a60b9b";
 
@@ -190,11 +189,14 @@ fn make_signed_transaction(value: u64, sender: Address, recipient: Address) -> T
     );
 
     let key_pair = KeyPair::from(
-        PrivateKey::deserialize_from_vec(&hex::decode(SECRET_KEY_1).unwrap()).unwrap(),
+        postcard::from_bytes::<PrivateKey>(&hex::decode(SECRET_KEY_1).unwrap()).unwrap(),
     );
 
-    let proof = SignatureProof::from(key_pair.public, key_pair.sign(&tx.serialize_content()))
-        .serialize_to_vec();
+    let proof = postcard::to_allocvec(&SignatureProof::from(
+        key_pair.public,
+        key_pair.sign(&tx.serialize_content()),
+    ))
+    .unwrap();
 
     tx.proof = proof;
 

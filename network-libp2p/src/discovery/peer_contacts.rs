@@ -24,19 +24,11 @@ use serde::{Deserialize, Serialize};
 ///  - A timestamp when this contact information was generated.
 ///
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "peer-contact-book-persistence",
-    derive(serde::Serialize, serde::Deserialize)
-)]
 pub struct PeerContact {
-    #[beserial(len_type(u8))]
     pub addresses: Vec<Multiaddr>,
 
     /// Public key of this peer.
-    #[cfg_attr(
-        feature = "peer-contact-book-persistence",
-        serde(with = "self::serde_public_key")
-    )]
+    #[serde(with = "self::serde_public_key")]
     pub public_key: PublicKey,
 
     /// Services supported by this peer.
@@ -123,13 +115,9 @@ impl TaggedSignable for PeerContact {
 
 /// A signed peer contact.
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
-#[cfg_attr(
-    feature = "peer-contact-book-persistence",
-    derive(serde::Serialize, serde::Deserialize)
-)]
 pub struct SignedPeerContact {
     /// The wrapped peer contact.
-    #[cfg_attr(feature = "peer-contact-book-persistence", serde(flatten))]
+    #[serde(flatten)]
     pub inner: PeerContact,
 
     /// The signature over the serialized peer contact.
@@ -149,11 +137,7 @@ impl SignedPeerContact {
 }
 
 /// Meta information attached to peer contact info objects. This is meant to be mutable and change over time.
-#[derive(Clone, Debug)]
-#[cfg_attr(
-    feature = "peer-contact-book-persistence",
-    derive(serde::Serialize, serde::Deserialize)
-)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 struct PeerContactMeta {
     score: f64,
 }
@@ -443,7 +427,6 @@ impl PeerContactBook {
     }
 }
 
-#[cfg(feature = "peer-contact-book-persistence")]
 mod serde_public_key {
     use libp2p::identity::PublicKey;
     use serde::{de::Error, Deserialize, Deserializer, Serialize, Serializer};
@@ -452,19 +435,20 @@ mod serde_public_key {
     where
         S: Serializer,
     {
-        let hex_encoded = hex::encode(serde::Serialize::serialize_to_vec(public_key));
-
-        Serialize::serialize(&hex_encoded, serializer)
+        match public_key {
+            PublicKey::Ed25519(pk) => Serialize::serialize(&pk.encode(), serializer),
+        }
     }
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<PublicKey, D::Error>
     where
         D: Deserializer<'de>,
     {
-        let hex_encoded: String = Deserialize::deserialize(deserializer)?;
+        let hex_encoded: [u8; 32] = Deserialize::deserialize(deserializer)?;
 
-        let raw = hex::decode(hex_encoded).map_err(D::Error::custom)?;
+        let pk = libp2p::identity::ed25519::PublicKey::decode(&hex_encoded)
+            .map_err(|_| D::Error::custom("Invalid value"))?;
 
-        serde::Deserialize::deserialize_from_vec(&raw).map_err(D::Error::custom)
+        Ok(PublicKey::Ed25519(pk))
     }
 }

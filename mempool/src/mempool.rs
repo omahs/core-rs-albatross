@@ -15,7 +15,6 @@ use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_keys::Address;
 use nimiq_network_interface::network::{Network, Topic};
 use nimiq_transaction::{ControlTransactionTopic, Transaction, TransactionTopic};
-use serde::Serialize;
 
 use crate::config::MempoolConfig;
 use crate::executor::MempoolExecutor;
@@ -591,7 +590,7 @@ impl Mempool {
             // Calculate size. If we can't fit the transaction in the block, then we stop here.
             // TODO: We can optimize this. There might be a smaller transaction that still fits.
             // We need to account for one extra byte per transaction to encode its final execution status
-            let next_size = size + 1 + tx.serialized_size();
+            let next_size = size + 1 + postcard::to_allocvec(&tx).unwrap().len();
             if next_size > max_bytes {
                 break;
             }

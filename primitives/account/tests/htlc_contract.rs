@@ -21,7 +21,6 @@ use nimiq_transaction::{
     },
     SignatureProof, Transaction,
 };
-use serde::{Deserialize, Serialize};
 
 const HTLC: &str = "00000000000000001b215589344cf570d36bec770825eae30b73213924786862babbdb05e7c4430612135eb2a836812303daebe368963c60d22098a5e9f1ebcb8e54d0b7beca942a2a0a9d95391804fe8f0100000000000296350000000000000001";
 
@@ -40,15 +39,14 @@ fn create_serialized_contract() {
         timeout: 169525,
         total_amount: Coin::from_u64_unchecked(1),
     };
-    let mut bytes: Vec<u8> = Vec::with_capacity(contract.serialized_size());
-    contract.serialize(&mut bytes).unwrap();
+    let bytes: Vec<u8> = postcard::to_allocvec(&contract).unwrap();
     assert_eq!(HTLC, hex::encode(bytes));
 }
 
 #[test]
 fn it_can_deserialize_a_htlc() {
     let bytes: Vec<u8> = hex::decode(HTLC).unwrap();
-    let htlc: HashedTimeLockedContract = Deserialize::deserialize(&mut &bytes[..]).unwrap();
+    let htlc: HashedTimeLockedContract = postcard::from_bytes(&mut &bytes[..]).unwrap();
     assert_eq!(htlc.balance, Coin::ZERO);
     assert_eq!(htlc.hash_algorithm, HashAlgorithm::Sha256);
     assert_eq!(htlc.hash_count, 1);
@@ -71,10 +69,8 @@ fn it_can_deserialize_a_htlc() {
 #[test]
 fn it_can_serialize_a_htlc() {
     let bytes: Vec<u8> = hex::decode(HTLC).unwrap();
-    let htlc: HashedTimeLockedContract = Deserialize::deserialize(&mut &bytes[..]).unwrap();
-    let mut bytes2: Vec<u8> = Vec::with_capacity(htlc.serialized_size());
-    let size = htlc.serialize(&mut bytes2).unwrap();
-    assert_eq!(size, htlc.serialized_size());
+    let htlc: HashedTimeLockedContract = postcard::from_bytes(&mut &bytes[..]).unwrap();
+    let bytes2: Vec<u8> = postcard::to_allocvec(&htlc).unwrap();
     assert_eq!(hex::encode(bytes2), HTLC);
 }
 
@@ -91,7 +87,7 @@ fn it_can_create_contract_from_transaction() {
     };
 
     let transaction = Transaction::new_contract_creation(
-        data.serialize_to_vec(),
+        postcard::to_allocvec(&data).unwrap(),
         data.sender.clone(),
         AccountType::Basic,
         AccountType::HTLC,
@@ -188,7 +184,7 @@ fn it_can_apply_and_revert_regular_transfer() {
         pre_image: pre_image.clone(),
         signature_proof: recipient_signature_proof,
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let mut tx_logger = TransactionLog::empty();
     let _receipt = accounts
@@ -231,7 +227,7 @@ fn it_can_apply_and_revert_early_resolve() {
         signature_proof_recipient: recipient_signature_proof,
         signature_proof_sender: sender_signature_proof,
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let mut tx_logger = TransactionLog::empty();
     let _receipt = accounts
@@ -270,7 +266,7 @@ fn it_can_apply_and_revert_timeout_resolve() {
     let proof = OutgoingHTLCTransactionProof::TimeoutResolve {
         signature_proof_sender: sender_signature_proof,
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let block_state = BlockState::new(1, 101);
 
@@ -315,7 +311,7 @@ fn it_refuses_invalid_transactions() {
         pre_image: pre_image.clone(),
         signature_proof: recipient_signature_proof.clone(),
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let mut htlc = start_contract.clone();
 
@@ -340,7 +336,7 @@ fn it_refuses_invalid_transactions() {
         pre_image: pre_image.clone(),
         signature_proof: recipient_signature_proof.clone(),
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let block_state = BlockState::new(1, 1);
 
@@ -363,7 +359,7 @@ fn it_refuses_invalid_transactions() {
         pre_image: pre_image.clone(),
         signature_proof: sender_signature_proof.clone(),
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let mut tx_logger = TransactionLog::empty();
     let result = accounts.test_commit_outgoing_transaction(
@@ -386,7 +382,7 @@ fn it_refuses_invalid_transactions() {
         )),
         signature_proof: recipient_signature_proof.clone(),
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let mut tx_logger = TransactionLog::empty();
     let result = accounts.test_commit_outgoing_transaction(
@@ -410,7 +406,7 @@ fn it_refuses_invalid_transactions() {
         signature_proof_recipient: sender_signature_proof.clone(),
         signature_proof_sender: recipient_signature_proof.clone(),
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let mut tx_logger = TransactionLog::empty();
     let result = accounts.test_commit_outgoing_transaction(
@@ -427,7 +423,7 @@ fn it_refuses_invalid_transactions() {
     let proof = OutgoingHTLCTransactionProof::TimeoutResolve {
         signature_proof_sender: sender_signature_proof,
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let mut tx_logger = TransactionLog::empty();
     let result = accounts.test_commit_outgoing_transaction(
@@ -444,7 +440,7 @@ fn it_refuses_invalid_transactions() {
     let proof = OutgoingHTLCTransactionProof::TimeoutResolve {
         signature_proof_sender: recipient_signature_proof,
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     let block_state = BlockState::new(1, 101);
 
@@ -467,11 +463,11 @@ fn prepare_outgoing_transaction() -> (
     SignatureProof,
     SignatureProof,
 ) {
-    let sender_priv_key: PrivateKey = Deserialize::deserialize_from_vec(
+    let sender_priv_key: PrivateKey = postcard::from_bytes(
         &hex::decode("9d5bd02379e7e45cf515c788048f5cf3c454ffabd3e83bd1d7667716c325c3c0").unwrap(),
     )
     .unwrap();
-    let recipient_priv_key: PrivateKey = Deserialize::deserialize_from_vec(
+    let recipient_priv_key: PrivateKey = postcard::from_bytes(
         &hex::decode("bd1cfcd49a81048c8c8d22a25766bd01bfa0f6b2eb0030f65241189393af96a2").unwrap(),
     )
     .unwrap();

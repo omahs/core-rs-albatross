@@ -12,7 +12,6 @@ use nimiq_keys::{Address, KeyPair, PrivateKey};
 use nimiq_primitives::coin::Coin;
 use nimiq_primitives::networks::NetworkId;
 use nimiq_transaction::Transaction;
-use serde::{Deserialize, Serialize};
 
 fn run_app() -> Result<(), Error> {
     let matches = Command::new("Sign transaction")
@@ -81,7 +80,7 @@ fn run_app() -> Result<(), Error> {
     let tx = if matches.get_flag("tx_from_stdin") {
         let mut line = String::new();
         stdin().read_line(&mut line)?;
-        Transaction::deserialize_from_vec(&hex::decode(line.trim_end())?)?
+        postcard::from_bytes(&hex::decode(line.trim_end())?)?
     } else {
         let from_address = Address::from_user_friendly_address(
             matches
@@ -115,9 +114,9 @@ fn run_app() -> Result<(), Error> {
     // sign transaction
     if let Some(hex_secret_key) = matches.get_one::<String>("secret_key") {
         let raw_secret_key = hex::decode(hex_secret_key)?;
-        let key_pair: KeyPair = PrivateKey::deserialize_from_vec(&raw_secret_key)?.into();
+        let key_pair: KeyPair = postcard::from_bytes::<PrivateKey>(&raw_secret_key)?.into();
         let signature = key_pair.sign(tx.serialize_content().as_slice());
-        let raw_signature = signature.serialize_to_vec();
+        let raw_signature = postcard::to_allocvec(&signature).unwrap();
         println!("{}", hex::encode(raw_signature));
         Ok(())
     } else {

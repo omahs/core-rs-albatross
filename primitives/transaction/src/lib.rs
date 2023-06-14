@@ -8,7 +8,7 @@ use std::sync::Arc;
 
 use bitflags::bitflags;
 use num_traits::SaturatingAdd;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
 use nimiq_hash::{Blake2bHash, Hash, SerializeContent};
@@ -69,7 +69,7 @@ pub struct TransactionReceipt {
 #[repr(u8)]
 #[cfg_attr(
     feature = "ts-types",
-    derive(serde::Serialize, serde::Deserialize, tsify::Tsify),
+    derive(tsify::Tsify),
     serde(rename = "PlainTransactionFormat", rename_all = "lowercase"),
     wasm_bindgen::prelude::wasm_bindgen
 )]
@@ -79,8 +79,8 @@ pub enum TransactionFormat {
 }
 
 bitflags! {
-    #[derive(Default, Serialize)]
-    #[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize), serde(try_from = "u8", into = "u8"))]
+    #[derive(Default, Serialize, Deserialize)]
+    #[serde(try_from = "u8", into = "u8")]
     pub struct TransactionFlags: u8 {
         const CONTRACT_CREATION = 0b1;
         const SIGNALING = 0b10;
@@ -186,7 +186,6 @@ impl ExecutedTransaction {
 }
 
 #[derive(Clone, Eq, Debug)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 #[repr(C)]
 pub struct Transaction {
     pub data: Vec<u8>,
@@ -318,7 +317,7 @@ impl Transaction {
             && self.data.is_empty()
             && self.flags.is_empty()
         {
-            if let Ok(signature_proof) = SignatureProof::deserialize_from_vec(&self.proof) {
+            if let Ok(signature_proof) = postcard::from_bytes::<SignatureProof>(&self.proof) {
                 if self.sender == Address::from(&signature_proof.public_key)
                     && signature_proof.merkle_path.is_empty()
                 {
@@ -419,20 +418,20 @@ impl Transaction {
     }
 
     pub fn fee_per_byte(&self) -> f64 {
-        u64::from(self.fee) as f64 / self.serialized_size() as f64
+        u64::from(self.fee) as f64 / postcard::to_allocvec(self).unwrap().len() as f64
     }
 
     pub fn serialize_content(&self) -> Vec<u8> {
-        let mut res: Vec<u8> = self.data.serialize_to_vec::<u16>();
-        res.append(&mut self.sender.serialize_to_vec());
-        res.append(&mut self.sender_type.serialize_to_vec());
-        res.append(&mut self.recipient.serialize_to_vec());
-        res.append(&mut self.recipient_type.serialize_to_vec());
-        res.append(&mut self.value.serialize_to_vec());
-        res.append(&mut self.fee.serialize_to_vec());
-        res.append(&mut self.validity_start_height.serialize_to_vec());
-        res.append(&mut self.network_id.serialize_to_vec());
-        res.append(&mut self.flags.serialize_to_vec());
+        let mut res = postcard::to_allocvec(&self.data).unwrap();
+        res.append(&mut postcard::to_allocvec(&self.sender).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.sender_type).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.recipient).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.recipient_type).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.value).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.fee).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.validity_start_height).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.network_id).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.flags).unwrap());
         res
     }
 
@@ -450,130 +449,49 @@ impl Transaction {
     }
 }
 
-impl Serialize for Transaction {
-    fn serialize<W: WriteBytesExt>(&self, writer: &mut W) -> Result<usize, SerializingError> {
-        match self.format() {
-            TransactionFormat::Basic => {
-                let signature_proof = SignatureProof::deserialize_from_vec(&self.proof)?;
-                let mut size = 0;
-                size += Serialize::serialize(&TransactionFormat::Basic, writer)?;
-                size += Serialize::serialize(&signature_proof.public_key, writer)?;
-                size += Serialize::serialize(&self.recipient, writer)?;
-                size += Serialize::serialize(&self.value, writer)?;
-                size += Serialize::serialize(&self.fee, writer)?;
-                size += Serialize::serialize(&self.validity_start_height, writer)?;
-                size += Serialize::serialize(&self.network_id, writer)?;
-                size += Serialize::serialize(&signature_proof.signature, writer)?;
-                Ok(size)
-            }
-            TransactionFormat::Extended => {
-                let mut size = 0;
-                size += Serialize::serialize(&TransactionFormat::Extended, writer)?;
-                size += SerializeWithLength::serialize::<u16, W>(&self.data, writer)?;
-                size += Serialize::serialize(&self.sender, writer)?;
-                size += Serialize::serialize(&self.sender_type, writer)?;
-                size += Serialize::serialize(&self.recipient, writer)?;
-                size += Serialize::serialize(&self.recipient_type, writer)?;
-                size += Serialize::serialize(&self.value, writer)?;
-                size += Serialize::serialize(&self.fee, writer)?;
-                size += Serialize::serialize(&self.validity_start_height, writer)?;
-                size += Serialize::serialize(&self.network_id, writer)?;
-                size += Serialize::serialize(&self.flags, writer)?;
-                size += SerializeWithLength::serialize::<u16, W>(&self.proof, writer)?;
-                Ok(size)
-            }
-        }
-    }
-
-    fn serialized_size(&self) -> usize {
-        match self.format() {
-            TransactionFormat::Basic => {
-                let signature_proof = SignatureProof::deserialize_from_vec(&self.proof).unwrap();
-                let mut size = 1;
-                size += Serialize::serialized_size(&signature_proof.public_key);
-                size += Serialize::serialized_size(&self.recipient);
-                size += Serialize::serialized_size(&self.value);
-                size += Serialize::serialized_size(&self.fee);
-                size += Serialize::serialized_size(&self.validity_start_height);
-                size += Serialize::serialized_size(&self.network_id);
-                size += Serialize::serialized_size(&signature_proof.signature);
-                size
-            }
-            TransactionFormat::Extended => {
-                let mut size = 1;
-                size += SerializeWithLength::serialized_size::<u16>(&self.data);
-                size += Serialize::serialized_size(&self.sender);
-                size += Serialize::serialized_size(&self.sender_type);
-                size += Serialize::serialized_size(&self.recipient);
-                size += Serialize::serialized_size(&self.recipient_type);
-                size += Serialize::serialized_size(&self.value);
-                size += Serialize::serialized_size(&self.fee);
-                size += Serialize::serialized_size(&self.validity_start_height);
-                size += Serialize::serialized_size(&self.network_id);
-                size += Serialize::serialized_size(&self.flags);
-                size += SerializeWithLength::serialized_size::<u16>(&self.proof);
-                size
-            }
-        }
-    }
-}
-
-impl Deserialize for Transaction {
-    fn deserialize<R: ReadBytesExt>(reader: &mut R) -> Result<Self, SerializingError> {
-        let transaction_type: TransactionFormat = Deserialize::deserialize(reader)?;
-        match transaction_type {
-            TransactionFormat::Basic => {
-                let sender_public_key: PublicKey = Deserialize::deserialize(reader)?;
-                Ok(Transaction {
-                    data: vec![],
-                    sender: Address::from(&sender_public_key),
-                    sender_type: AccountType::Basic,
-                    recipient: Deserialize::deserialize(reader)?,
-                    recipient_type: AccountType::Basic,
-                    value: Deserialize::deserialize(reader)?,
-                    fee: Deserialize::deserialize(reader)?,
-                    validity_start_height: Deserialize::deserialize(reader)?,
-                    network_id: Deserialize::deserialize(reader)?,
-                    flags: TransactionFlags::empty(),
-                    proof: SignatureProof::from(
-                        sender_public_key,
-                        Deserialize::deserialize(reader)?,
-                    )
-                    .serialize_to_vec(),
-                    valid: false,
-                })
-            }
-            TransactionFormat::Extended => Ok(Transaction {
-                data: DeserializeWithLength::deserialize::<u16, R>(reader)?,
-                sender: Deserialize::deserialize(reader)?,
-                sender_type: Deserialize::deserialize(reader)?,
-                recipient: Deserialize::deserialize(reader)?,
-                recipient_type: Deserialize::deserialize(reader)?,
-                value: Deserialize::deserialize(reader)?,
-                fee: Deserialize::deserialize(reader)?,
-                validity_start_height: Deserialize::deserialize(reader)?,
-                network_id: Deserialize::deserialize(reader)?,
-                flags: Deserialize::deserialize(reader)?,
-                proof: DeserializeWithLength::deserialize::<u16, R>(reader)?,
-                valid: false,
-            }),
-        }
-    }
-}
-
 impl SerializeContent for Transaction {
     fn serialize_content<W: io::Write>(&self, writer: &mut W) -> io::Result<usize> {
         let mut size = 0;
-        size += SerializeWithLength::serialize::<u16, W>(&self.data, writer)?;
-        size += Serialize::serialize(&self.sender, writer)?;
-        size += Serialize::serialize(&self.sender_type, writer)?;
-        size += Serialize::serialize(&self.recipient, writer)?;
-        size += Serialize::serialize(&self.recipient_type, writer)?;
-        size += Serialize::serialize(&self.value, writer)?;
-        size += Serialize::serialize(&self.fee, writer)?;
-        size += Serialize::serialize(&self.validity_start_height, writer)?;
-        size += Serialize::serialize(&self.network_id, writer)?;
-        size += Serialize::serialize(&self.flags, writer)?;
+        let ser_data = postcard::to_allocvec(&self.data)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_data.len();
+        writer.write_all(&ser_data)?;
+        let ser_sender = postcard::to_allocvec(&self.sender)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_sender.len();
+        writer.write_all(&ser_sender)?;
+        let ser_sender_type = postcard::to_allocvec(&self.sender_type)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_sender_type.len();
+        writer.write_all(&ser_sender_type)?;
+        let ser_recipient = postcard::to_allocvec(&self.recipient)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_recipient.len();
+        writer.write_all(&ser_recipient)?;
+        let ser_recipient_type = postcard::to_allocvec(&self.recipient_type)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_recipient_type.len();
+        writer.write_all(&ser_recipient_type)?;
+        let ser_value = postcard::to_allocvec(&self.value)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_value.len();
+        writer.write_all(&ser_value)?;
+        let ser_fee = postcard::to_allocvec(&self.fee)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_fee.len();
+        writer.write_all(&ser_fee)?;
+        let ser_validity_start_height = postcard::to_allocvec(&self.validity_start_height)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_validity_start_height.len();
+        writer.write_all(&ser_validity_start_height)?;
+        let ser_network_id = postcard::to_allocvec(&self.network_id)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_network_id.len();
+        writer.write_all(&ser_network_id)?;
+        let ser_flags = postcard::to_allocvec(&self.flags)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        size += ser_flags.len();
+        writer.write_all(&ser_flags)?;
         Ok(size)
     }
 }
@@ -620,5 +538,237 @@ impl Ord for Transaction {
             .then_with(|| self.flags.cmp(&other.flags))
             .then_with(|| self.data.len().cmp(&other.data.len()))
             .then_with(|| self.data.cmp(&other.data))
+    }
+}
+
+mod serde_derive {
+    use std::fmt;
+
+    use serde::{
+        de::{EnumAccess, Error, SeqAccess, VariantAccess, Visitor},
+        ser::{Error as SerError, SerializeStructVariant},
+    };
+
+    use super::*;
+
+    const ENUM_NAME: &'static str = "Transaction";
+    const VARIANTS: &'static [&'static str] = &["Basic", "Extended"];
+    const BASIC_FIELDS: &'static [&'static str] = &[
+        "public_key",
+        "recipient",
+        "value",
+        "fee",
+        "validity_start_height",
+        "network_id",
+        "signature",
+    ];
+    const EXTENDED_FIELDS: &'static [&'static str] = &[
+        "data",
+        "sender",
+        "sender_type",
+        "recipient",
+        "recipient_type",
+        "value",
+        "fee",
+        "validity_start_height",
+        "network_id",
+        "flags",
+        "proof",
+    ];
+
+    struct TransactionVisitor;
+    struct BasicTransactionVisitor;
+    struct ExtendedTransactionVisitor;
+
+    impl Serialize for Transaction {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            match self.format() {
+                TransactionFormat::Basic => {
+                    let mut sv = serializer.serialize_struct_variant(
+                        ENUM_NAME,
+                        0,
+                        VARIANTS[0],
+                        BASIC_FIELDS.len(),
+                    )?;
+                    let signature_proof: SignatureProof = postcard::from_bytes(&self.proof)
+                        .map_err(|_| S::Error::custom("Could not serialize signature proof"))?;
+                    sv.serialize_field(BASIC_FIELDS[0], &signature_proof.public_key)?;
+                    sv.serialize_field(BASIC_FIELDS[1], &self.recipient)?;
+                    sv.serialize_field(BASIC_FIELDS[2], &self.value)?;
+                    sv.serialize_field(BASIC_FIELDS[3], &self.fee)?;
+                    sv.serialize_field(BASIC_FIELDS[4], &self.validity_start_height)?;
+                    sv.serialize_field(BASIC_FIELDS[5], &self.network_id)?;
+                    sv.serialize_field(BASIC_FIELDS[6], &signature_proof.signature)?;
+                    sv.end()
+                }
+                TransactionFormat::Extended => {
+                    let mut sv = serializer.serialize_struct_variant(
+                        ENUM_NAME,
+                        1,
+                        VARIANTS[1],
+                        EXTENDED_FIELDS.len(),
+                    )?;
+                    sv.serialize_field(EXTENDED_FIELDS[0], &self.data)?;
+                    sv.serialize_field(EXTENDED_FIELDS[1], &self.sender)?;
+                    sv.serialize_field(EXTENDED_FIELDS[2], &self.sender_type)?;
+                    sv.serialize_field(EXTENDED_FIELDS[3], &self.recipient)?;
+                    sv.serialize_field(EXTENDED_FIELDS[4], &self.recipient_type)?;
+                    sv.serialize_field(EXTENDED_FIELDS[5], &self.value)?;
+                    sv.serialize_field(EXTENDED_FIELDS[6], &self.fee)?;
+                    sv.serialize_field(EXTENDED_FIELDS[7], &self.validity_start_height)?;
+                    sv.serialize_field(EXTENDED_FIELDS[8], &self.network_id)?;
+                    sv.serialize_field(EXTENDED_FIELDS[9], &self.flags)?;
+                    sv.serialize_field(EXTENDED_FIELDS[10], &self.proof)?;
+                    sv.end()
+                }
+            }
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Transaction {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            deserializer.deserialize_enum(ENUM_NAME, VARIANTS, TransactionVisitor)
+        }
+    }
+
+    impl<'de> Visitor<'de> for TransactionVisitor {
+        type Value = Transaction;
+
+        fn expecting(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(f, "a Transaction")
+        }
+
+        fn visit_enum<A>(self, value: A) -> Result<Transaction, A::Error>
+        where
+            A: EnumAccess<'de>,
+        {
+            let (index, tx_variant) = value.variant()?;
+            match index {
+                0 => tx_variant.struct_variant(BASIC_FIELDS, BasicTransactionVisitor),
+                1 => tx_variant.struct_variant(EXTENDED_FIELDS, ExtendedTransactionVisitor),
+                _ => Err(A::Error::custom("Undefined transaction type")),
+            }
+        }
+    }
+
+    impl<'de> Visitor<'de> for BasicTransactionVisitor {
+        type Value = Transaction;
+
+        fn expecting(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(f, "a BasicTransaction")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Transaction, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let public_key: PublicKey = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+            let recipient: Address = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+            let value: Coin = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
+            let fee: Coin = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(3, &self))?;
+            let validity_start_height: u32 = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(4, &self))?;
+            let network_id: NetworkId = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(5, &self))?;
+            let signature: Signature = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(6, &self))?;
+            Ok(Transaction {
+                data: vec![],
+                sender: Address::from(&public_key),
+                sender_type: AccountType::Basic,
+                recipient,
+                recipient_type: AccountType::Basic,
+                value,
+                fee,
+                validity_start_height,
+                network_id,
+                flags: TransactionFlags::empty(),
+                proof: postcard::to_allocvec(&SignatureProof::from(public_key, signature))
+                    .map_err(|_| {
+                        A::Error::custom(
+                            "Could not build signature from provided public key and signature",
+                        )
+                    })?,
+                valid: false,
+            })
+        }
+    }
+
+    impl<'de> Visitor<'de> for ExtendedTransactionVisitor {
+        type Value = Transaction;
+
+        fn expecting(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+            write!(f, "an ExtendedTransaction")
+        }
+
+        fn visit_seq<A>(self, mut seq: A) -> Result<Transaction, A::Error>
+        where
+            A: SeqAccess<'de>,
+        {
+            let data: Vec<u8> = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(0, &self))?;
+            let sender: Address = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(1, &self))?;
+            let sender_type: AccountType = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(2, &self))?;
+            let recipient: Address = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(3, &self))?;
+            let recipient_type: AccountType = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(4, &self))?;
+            let value: Coin = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(5, &self))?;
+            let fee: Coin = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(6, &self))?;
+            let validity_start_height: u32 = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(7, &self))?;
+            let network_id: NetworkId = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(8, &self))?;
+            let flags: TransactionFlags = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(9, &self))?;
+            let proof: Vec<u8> = seq
+                .next_element()?
+                .ok_or_else(|| serde::de::Error::invalid_length(10, &self))?;
+            Ok(Transaction {
+                data,
+                sender,
+                sender_type,
+                recipient,
+                recipient_type,
+                value,
+                fee,
+                validity_start_height,
+                network_id,
+                flags,
+                proof,
+                valid: false,
+            })
+        }
     }
 }

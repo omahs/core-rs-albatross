@@ -1,7 +1,5 @@
 use std::str::FromStr;
 
-#[cfg(feature = "primitives")]
-use serde::Serialize;
 use wasm_bindgen::prelude::*;
 #[cfg(feature = "primitives")]
 use wasm_bindgen_derive::TryFromJsValue;
@@ -77,7 +75,7 @@ impl Address {
 
     #[cfg(feature = "primitives")]
     pub fn serialize(&self) -> Vec<u8> {
-        self.inner.serialize_to_vec()
+        postcard::to_allocvec(&self.inner).unwrap()
     }
 }
 

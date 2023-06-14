@@ -2,8 +2,6 @@ use std::str::FromStr;
 
 use wasm_bindgen::prelude::*;
 
-use serde::{Deserialize, Serialize};
-
 use crate::address::Address;
 use crate::private_key::PrivateKey;
 use crate::signature::Signature;
@@ -30,7 +28,7 @@ impl PublicKey {
     ///
     /// Throws when the byte array contains less than 32 bytes.
     pub fn unserialize(bytes: &[u8]) -> Result<PublicKey, JsError> {
-        let key = nimiq_keys::PublicKey::deserialize(&mut &*bytes)?;
+        let key = postcard::from_bytes::<nimiq_keys::PublicKey>(&mut &*bytes)?;
         Ok(PublicKey::from_native(key))
     }
 
@@ -47,7 +45,7 @@ impl PublicKey {
 
     /// Serializes the public key to a byte array.
     pub fn serialize(&self) -> Vec<u8> {
-        self.inner.serialize_to_vec()
+        postcard::to_allocvec(&self.inner).unwrap()
     }
 
     /// Parses a public key from its hex representation.

@@ -1,3 +1,4 @@
+use std::ops::RangeFrom;
 use std::slice;
 use std::{io, io::Write};
 
@@ -6,6 +7,7 @@ use log::error;
 
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Blake2bHash, Hash, HashOutput, Hasher};
+use nimiq_serde_ext::SerRangeFrom;
 
 use crate::{key_nibbles::KeyNibbles, trie::error::MerkleRadixTrieError};
 
@@ -26,7 +28,7 @@ pub struct TrieNode {
 #[derive(Clone, Debug)]
 #[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 pub struct RootData {
-    pub incomplete_from: Option<KeyNibbles>,
+    pub incomplete: Option<SerRangeFrom<KeyNibbles>>,
     pub num_branches: u64,
     pub num_hybrids: u64,
     pub num_leaves: u64,
@@ -44,10 +46,14 @@ pub struct TrieNodeChild {
 }
 
 impl TrieNodeChild {
-    pub fn is_stump(&self, parent_key: &KeyNibbles, missing_from: &Option<KeyNibbles>) -> bool {
-        missing_from
+    pub fn is_stump(
+        &self,
+        parent_key: &KeyNibbles,
+        missing_range: &Option<RangeFrom<KeyNibbles>>,
+    ) -> bool {
+        missing_range
             .as_ref()
-            .map(|start| (start..).contains(&&(parent_key + &self.suffix)))
+            .map(|range| range.contains(&&(parent_key + &self.suffix)))
             .unwrap_or(false)
     }
 
@@ -58,9 +64,9 @@ impl TrieNodeChild {
     pub fn key(
         &self,
         parent_key: &KeyNibbles,
-        missing_from: &Option<KeyNibbles>,
+        missing_range: &Option<RangeFrom<KeyNibbles>>,
     ) -> Result<KeyNibbles, MerkleRadixTrieError> {
-        if self.is_stump(parent_key, missing_from) {
+        if self.is_stump(parent_key, missing_range) {
             return Err(MerkleRadixTrieError::ChildIsStump);
         }
         Ok(parent_key + &self.suffix)
@@ -105,8 +111,8 @@ impl TrieNode {
         TrieNode {
             key: KeyNibbles::ROOT,
             root_data: Some(RootData {
-                incomplete_from: if incomplete {
-                    Some(KeyNibbles::ROOT)
+                incomplete: if incomplete {
+                    Some(SerRangeFrom(KeyNibbles::ROOT..))
                 } else {
                     None
                 },
@@ -197,9 +203,9 @@ impl TrieNode {
     pub fn child_key(
         &self,
         child_prefix: &KeyNibbles,
-        missing_from: &Option<KeyNibbles>,
+        missing_range: &Option<RangeFrom<KeyNibbles>>,
     ) -> Result<KeyNibbles, MerkleRadixTrieError> {
-        self.child(child_prefix)?.key(&self.key, missing_from)
+        self.child(child_prefix)?.key(&self.key, missing_range)
     }
 
     /// Sets the current node's child with the given prefix.

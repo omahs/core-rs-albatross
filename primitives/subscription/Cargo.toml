@@ -15,6 +15,7 @@ travis-ci = { repository = "nimiq/core-rs", branch = "master" }
 bitflags = "1.0"
 hex = "0.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
+postcard = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 
 nimiq-bls = { path = "../../bls", features = ["serde-derive"] }

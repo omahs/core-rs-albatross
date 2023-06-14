@@ -4,7 +4,6 @@ use nimiq_hash::SerializeContent;
 use nimiq_keys::KeyPair;
 use nimiq_primitives::account::AccountType;
 use nimiq_transaction::{SignatureProof, Transaction};
-use serde::Serialize;
 
 use crate::proof::htlc_contract::HtlcProofBuilder;
 use crate::proof::staking_contract::{StakingDataBuilder, StakingProofBuilder};
@@ -363,7 +362,7 @@ impl BasicProofBuilder {
     /// Otherwise, it returns `None`.
     pub fn generate(self) -> Option<Transaction> {
         let mut tx = self.transaction;
-        tx.proof = self.signature?.serialize_to_vec();
+        tx.proof = postcard::to_allocvec(&self.signature?).ok()?;
         Some(tx)
     }
 }

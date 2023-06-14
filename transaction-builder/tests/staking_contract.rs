@@ -13,7 +13,6 @@ use nimiq_transaction::account::staking_contract::{
 };
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_transaction_builder::{TransactionBuilder, TransactionBuilderError};
-use serde::{Deserialize, Serialize};
 
 const ADDRESS: &str = "9cd82948650d902d95d52ea2ec91eae6deb0c9fe";
 const PRIVATE_KEY: &str = "b410a7a583cbc13ef4f1cbddace30928bcb4f9c13722414bc4a2faaba3f4e187";
@@ -309,7 +308,7 @@ fn make_incoming_transaction(data: IncomingStakingTransactionData, value: u64) -
             AccountType::Staking,
             value.try_into().unwrap(),
             100.try_into().unwrap(),
-            data.serialize_to_vec(),
+            postcard::to_allocvec(&data).unwrap(),
             1,
             NetworkId::Dummy,
         ),
@@ -319,7 +318,7 @@ fn make_incoming_transaction(data: IncomingStakingTransactionData, value: u64) -
             Policy::STAKING_CONTRACT_ADDRESS,
             AccountType::Staking,
             100.try_into().unwrap(),
-            data.serialize_to_vec(),
+            postcard::to_allocvec(&data).unwrap(),
             1,
             NetworkId::Dummy,
         ),
@@ -338,8 +337,11 @@ fn make_signed_incoming_transaction(
     )
     .unwrap();
 
-    tx.proof = SignatureProof::from(key_pair.public, key_pair.sign(&tx.serialize_content()))
-        .serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&SignatureProof::from(
+        key_pair.public,
+        key_pair.sign(&tx.serialize_content()),
+    ))
+    .unwrap();
     tx
 }
 
@@ -358,7 +360,7 @@ fn make_unstake_transaction(key_pair: &KeyPair, value: u64) -> Transaction {
     let proof = OutgoingStakingTransactionProof::RemoveStake {
         proof: SignatureProof::from(key_pair.public, key_pair.sign(&tx.serialize_content())),
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
     tx
 }
 
@@ -378,7 +380,7 @@ fn make_delete_transaction(key_pair: &KeyPair, value: u64) -> Transaction {
     let proof = OutgoingStakingTransactionProof::DeleteValidator {
         proof: SignatureProof::from(key_pair.public, key_pair.sign(&tx.serialize_content())),
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
     tx
 }
 
@@ -389,7 +391,7 @@ fn make_self_transaction(data: IncomingStakingTransactionData, key_pair: &KeyPai
         Policy::STAKING_CONTRACT_ADDRESS,
         AccountType::Staking,
         100.try_into().unwrap(),
-        data.serialize_to_vec(),
+        postcard::to_allocvec(&data).unwrap(),
         1,
         NetworkId::Dummy,
     );
@@ -401,18 +403,18 @@ fn make_self_transaction(data: IncomingStakingTransactionData, key_pair: &KeyPai
     let proof = OutgoingStakingTransactionProof::RemoveStake {
         proof: SignatureProof::from(key_pair.public, key_pair.sign(&tx.serialize_content())),
     };
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
     tx
 }
 
 fn bls_key_pair() -> BlsKeyPair {
     BlsKeyPair::from_secret(
-        &Deserialize::deserialize(&mut &hex::decode(BLS_PRIVKEY).unwrap()[..]).unwrap(),
+        &postcard::from_bytes(&mut &hex::decode(BLS_PRIVKEY).unwrap()[..]).unwrap(),
     )
 }
 
 fn ed25519_key_pair() -> KeyPair {
     let priv_key: PrivateKey =
-        Deserialize::deserialize(&mut &hex::decode(PRIVATE_KEY).unwrap()[..]).unwrap();
+        postcard::from_bytes(&mut &hex::decode(PRIVATE_KEY).unwrap()[..]).unwrap();
     priv_key.into()
 }

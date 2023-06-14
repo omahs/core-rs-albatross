@@ -21,9 +21,11 @@ name = "pk_tree"
 
 [dependencies]
 bitflags = "1.0"
+byteorder = "1.4"
 hex = "0.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
-serde = { version = "1.0", features = ["derive"], optional = true }
+postcard = "1.0"
+serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 
 nimiq-bls = { path = "../../bls", features = ["cache", "serde-derive"]}
@@ -38,7 +40,7 @@ nimiq-network-interface = { path = "../../network-interface" }
 nimiq-primitives = { path = "..", features = ["coin", "networks", "policy", "slots"] }
 nimiq-transaction = { path = "../transaction" }
 nimiq-utils = { path = "../../utils", features = ["merkle"] }
-nimiq-vrf = { path = "../../vrf" }
+nimiq-vrf = { path = "../../vrf", features = ["serde-derive"] }
 nimiq-zkp-primitives = { path = "../../zkp-primitives" }
 
 [dev-dependencies]
@@ -47,5 +49,3 @@ nimiq-test-log = { path = "../../test-log" }
 nimiq-test-utils = { path = "../../test-utils" }
 num-traits = "0.2"
 
-[features]
-serde-derive = ["serde", "nimiq-bls/serde-derive"]

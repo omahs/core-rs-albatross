@@ -1,7 +1,6 @@
 use log::metadata::LevelFilter;
 use nimiq_zkp::ZKP_VERIFYING_KEY;
 use parking_lot::RwLock;
-use serde::Serialize;
 use std::{io, path::Path, sync::Arc, time::Instant};
 use tracing_subscriber::{filter::Targets, prelude::*};
 
@@ -122,7 +121,10 @@ async fn produce_two_consecutive_valid_zk_proofs() {
         "Proof validation: {:?}",
         validate_proof(&BlockchainProxy::from(&blockchain), &proof, None)
     );
-    log::info!("Proof 1: {:?}", hex::encode(proof.serialize_to_vec()));
+    log::info!(
+        "Proof 1: {:?}",
+        hex::encode(postcard::to_allocvec(&proof).unwrap())
+    );
 
     produce_macro_blocks_with_rng(
         &producer,
@@ -150,5 +152,8 @@ async fn produce_two_consecutive_valid_zk_proofs() {
         "Proof validation: {:?}",
         validate_proof(&BlockchainProxy::from(&blockchain), &proof, None)
     );
-    log::info!("Proof 2: {:?}", hex::encode(proof.serialize_to_vec()));
+    log::info!(
+        "Proof 2: {:?}",
+        hex::encode(postcard::to_allocvec(&proof).unwrap())
+    );
 }

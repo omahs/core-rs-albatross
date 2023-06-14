@@ -79,14 +79,13 @@ impl AccountTransactionVerification for HashedTimeLockedContractVerifier {
     Hash,
 )]
 #[repr(u8)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 pub enum HashAlgorithm {
     #[default]
     Blake2b = 1,
     Sha256 = 3,
 }
 
-create_typed_array!(AnyHash, u8, 32);
+create_typed_array!(AnyHash, u8, 32, Serialize, Deserialize);
 add_hex_io_fns_typed_arr!(AnyHash, AnyHash::SIZE);
 
 impl AnyHash {
@@ -96,7 +95,6 @@ impl AnyHash {
 }
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 pub struct CreationTransactionData {
     pub sender: Address,
     pub recipient: Address,
@@ -108,7 +106,7 @@ pub struct CreationTransactionData {
 
 impl CreationTransactionData {
     pub fn parse(transaction: &Transaction) -> Result<Self, TransactionError> {
-        Ok(Deserialize::deserialize(&mut &transaction.data[..])?)
+        Ok(postcard::from_bytes(&transaction.data[..])?)
     }
 
     pub fn verify(&self) -> Result<(), TransactionError> {
@@ -156,10 +154,10 @@ pub enum OutgoingHTLCTransactionProof {
 impl OutgoingHTLCTransactionProof {
     pub fn parse(transaction: &Transaction) -> Result<Self, TransactionError> {
         let reader = &mut &transaction.proof[..];
-        let data = Deserialize::deserialize(reader)?;
+        let (data, left_over) = postcard::take_from_bytes(reader)?;
 
         // Ensure that transaction data has been fully read.
-        if reader.read_u8().is_ok() {
+        if !left_over.is_empty() {
             warn!("Over-long proof for the transaction");
             return Err(TransactionError::InvalidProof);
         }

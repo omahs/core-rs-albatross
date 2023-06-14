@@ -3,10 +3,10 @@ use std::io;
 
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_primitives::account::FailReason;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-pub struct AccountReceipt(#[beserial(len_type(u16))] pub Vec<u8>);
+pub struct AccountReceipt(pub Vec<u8>);
 
 impl From<Vec<u8>> for AccountReceipt {
     fn from(val: Vec<u8>) -> Self {
@@ -29,14 +29,14 @@ macro_rules! convert_receipt {
             type Error = AccountError;
 
             fn try_from(value: &AccountReceipt) -> Result<Self, Self::Error> {
-                Self::deserialize(&mut &value.0[..])
+                postcard::from_bytes(&value.0[..])
                     .map_err(|e| AccountError::InvalidSerialization(e))
             }
         }
 
         impl From<$t> for AccountReceipt {
             fn from(value: $t) -> Self {
-                AccountReceipt::from(value.serialize_to_vec())
+                AccountReceipt::from(postcard::to_allocvec(&value).unwrap())
             }
         }
     };
@@ -52,8 +52,9 @@ pub struct TransactionReceipt {
 pub type InherentReceipt = Option<AccountReceipt>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(bound = "T: Clone + Debug + Serialize + DeserializeOwned")]
 #[repr(u8)]
-pub enum OperationReceipt<T: Clone + Debug + Serialize + Deserialize> {
+pub enum OperationReceipt<T: Clone + Debug + Serialize + DeserializeOwned> {
     Ok(T),
     Err(T, FailReason),
 }
@@ -63,9 +64,7 @@ pub type InherentOperationReceipt = OperationReceipt<InherentReceipt>;
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Receipts {
-    #[beserial(len_type(u16))]
     pub transactions: Vec<TransactionOperationReceipt>,
-    #[beserial(len_type(u16))]
     pub inherents: Vec<InherentOperationReceipt>,
 }
 
@@ -73,11 +72,11 @@ pub struct Receipts {
 
 impl IntoDatabaseValue for Receipts {
     fn database_byte_size(&self) -> usize {
-        self.serialized_size()
+        postcard::to_allocvec(self).unwrap().len()
     }
 
-    fn copy_into_database(&self, mut bytes: &mut [u8]) {
-        Serialize::serialize(&self, &mut bytes).unwrap();
+    fn copy_into_database(&self, bytes: &mut [u8]) {
+        postcard::to_slice(self, bytes).unwrap();
     }
 }
 
@@ -86,7 +85,6 @@ impl FromDatabaseValue for Receipts {
     where
         Self: Sized,
     {
-        let mut cursor = io::Cursor::new(bytes);
-        Ok(Deserialize::deserialize(&mut cursor)?)
+        postcard::from_bytes(&bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }

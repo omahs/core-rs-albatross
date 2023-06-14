@@ -20,6 +20,7 @@ maintenance = { status = "experimental" }
 hex = "0.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
 parking_lot = "0.12"
+rand = "0.8"
 serde = "1.0"
 
 nimiq-account = { path = "../primitives/account" }
@@ -37,9 +38,12 @@ nimiq-tendermint = { path = "../tendermint" }
 nimiq-transaction = { path = "../primitives/transaction" }
 nimiq-vrf = { path = "../vrf" }
 nimiq-utils = { path = "../utils"}
-rand = "0.8"
 
 [dev-dependencies]
+postcard = "1.0"
+rand = "0.8"
+tempfile = "3.3"
+
 nimiq-test-log = { path = "../test-log" }
 # This adds a circular dev-dependency which is fine but breaks VS code rust-analyzer.
 # See https://github.com/rust-analyzer/rust-analyzer/issues/14167
@@ -47,8 +51,6 @@ nimiq-genesis-builder = { path = "../genesis-builder" }
 nimiq-test-utils = { path = "../test-utils" }
 nimiq-trie = { path = "../primitives/trie" }
 nimiq-transaction-builder = { path = "../transaction-builder" }
-tempfile = "3.3"
-rand = "0.8"
 
 [features]
 default = []

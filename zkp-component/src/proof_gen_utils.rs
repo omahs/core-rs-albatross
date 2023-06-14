@@ -13,7 +13,6 @@ use tokio::{
 use nimiq_block::MacroBlock;
 use nimiq_zkp::prove::prove;
 use nimiq_zkp_primitives::MacroBlock as ZKPMacroBlock;
-use serde::{Deserialize, Serialize};
 
 use super::types::ZKPState;
 use crate::types::*;
@@ -89,7 +88,7 @@ pub async fn launch_generate_new_proof(
         .stdin
         .take()
         .unwrap()
-        .write_all(&proof_input.serialize_to_vec())
+        .write_all(&postcard::to_allocvec(&proof_input).unwrap())
         .await?;
 
     let mut output = child.stdout.take().unwrap();
@@ -126,5 +125,5 @@ async fn parse_proof_generation_output(
         }
     }
 
-    Deserialize::deserialize_from_vec(&output[mid..])?
+    postcard::from_bytes(&output[mid..])?
 }

@@ -157,7 +157,7 @@ pub trait RequestCommon:
     /// A serialized request is composed of:
     /// - A 2 bytes (u16) for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn deserialize_request(buffer: &mut [u8]) -> Result<Self, postcard::Error> {
+    fn deserialize_request(buffer: &[u8]) -> Result<Self, postcard::Error> {
         // Check for correct type.
         let (ty, message_buf) = postcard::take_from_bytes::<u16>(buffer)?;
         if ty != RequestType::from_request::<Self>().0 {

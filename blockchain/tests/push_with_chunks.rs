@@ -1,5 +1,3 @@
-use serde::Deserialize;
-
 use nimiq_blockchain_interface::{ChunksPushError, ChunksPushResult, PushResult};
 use nimiq_genesis::NetworkId;
 use nimiq_keys::{Address, KeyPair, PrivateKey, SecureGenerate};
@@ -28,7 +26,7 @@ macro_rules! check_invalid_chunk {
 }
 
 fn key_pair_with_funds() -> KeyPair {
-    let priv_key: PrivateKey = Deserialize::deserialize(
+    let priv_key: PrivateKey = postcard::from_bytes(
         &mut &hex::decode("6c9320ac201caf1f8eaa5b05f5d67a9e77826f3f6be266a0ecccc20416dc6587")
             .unwrap()[..],
     )

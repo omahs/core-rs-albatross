@@ -13,7 +13,6 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Clone)]
 pub struct TendermintContribution {
-    #[beserial(len_type(u16))]
     pub contributions: BTreeMap<Option<Blake2sHash>, MultiSignature>,
 }
 
@@ -114,7 +113,7 @@ impl Aggregation<Blake2sHash> for TendermintContribution {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AggregateMessage(pub(crate) LevelUpdate<TendermintContribution>);
 
 impl Aggregation<Blake2sHash> for AggregateMessage {

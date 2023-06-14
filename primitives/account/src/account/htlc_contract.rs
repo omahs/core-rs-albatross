@@ -48,7 +48,7 @@ impl HashedTimeLockedContract {
         tx_logger: &mut TransactionLog,
     ) -> Result<(), AccountError> {
         let proof_buf = &mut &transaction.proof[..];
-        let proof: OutgoingHTLCTransactionProof = Deserialize::deserialize(proof_buf)?;
+        let proof: OutgoingHTLCTransactionProof = postcard::from_bytes(proof_buf)?;
 
         match proof {
             OutgoingHTLCTransactionProof::RegularTransfer {
@@ -245,7 +245,7 @@ impl AccountTransactionInteraction for HashedTimeLockedContract {
         self.balance += transaction.total_value();
 
         let proof_buf = &mut &transaction.proof[..];
-        let proof: OutgoingHTLCTransactionProof = Deserialize::deserialize(proof_buf)?;
+        let proof: OutgoingHTLCTransactionProof = postcard::from_bytes(proof_buf)?;
 
         match proof {
             OutgoingHTLCTransactionProof::RegularTransfer {

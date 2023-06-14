@@ -2,7 +2,7 @@ use nimiq_database::{Transaction, WriteTransaction};
 use nimiq_keys::Address;
 use nimiq_primitives::key_nibbles::KeyNibbles;
 use nimiq_trie::trie::TrieNodeIter;
-use serde::{Deserialize, Serialize};
+use serde::{de::DeserializeOwned, Serialize};
 
 use crate::{
     data_store_ops::{DataStoreIterOps, DataStoreReadOps},
@@ -22,7 +22,7 @@ impl<'tree> DataStore<'tree> {
         }
     }
 
-    pub fn get<T: Deserialize>(&self, txn: &Transaction, key: &KeyNibbles) -> Option<T> {
+    pub fn get<T: DeserializeOwned>(&self, txn: &Transaction, key: &KeyNibbles) -> Option<T> {
         self.tree
             .get(txn, &(&self.prefix + key))
             .expect("Tree must be complete")
@@ -59,15 +59,19 @@ pub struct DataStoreRead<'store, 'tree, 'txn, 'env> {
 }
 
 impl<'store, 'tree, 'txn, 'env> DataStoreReadOps for DataStoreRead<'store, 'tree, 'txn, 'env> {
-    fn get<T: Deserialize>(&self, key: &KeyNibbles) -> Option<T> {
+    fn get<T: DeserializeOwned>(&self, key: &KeyNibbles) -> Option<T> {
         self.store.get(self.txn, key)
     }
 }
 
 impl<'store, 'tree, 'txn, 'env> DataStoreIterOps for DataStoreRead<'store, 'tree, 'txn, 'env> {
-    type Iter<T: Deserialize> = TrieNodeIter<'txn, T>;
+    type Iter<T: DeserializeOwned> = TrieNodeIter<'txn, T>;
 
-    fn iter<T: Deserialize>(&self, start_key: &KeyNibbles, end_key: &KeyNibbles) -> Self::Iter<T> {
+    fn iter<T: DeserializeOwned>(
+        &self,
+        start_key: &KeyNibbles,
+        end_key: &KeyNibbles,
+    ) -> Self::Iter<T> {
         self.store.tree.iter_nodes(
             self.txn,
             &(&self.store.prefix + start_key),
@@ -82,7 +86,7 @@ pub struct DataStoreWrite<'store, 'tree, 'txn, 'env> {
 }
 
 impl<'store, 'tree, 'txn, 'env> DataStoreWrite<'store, 'tree, 'txn, 'env> {
-    pub fn get<T: Deserialize>(&self, key: &KeyNibbles) -> Option<T> {
+    pub fn get<T: DeserializeOwned>(&self, key: &KeyNibbles) -> Option<T> {
         self.store.get(self.txn, key)
     }
 

@@ -40,6 +40,9 @@ pub enum VrfUseCase {
     RewardDistribution = 4,
 }
 
+#[cfg(feature = "serde-derive")]
+create_typed_array!(VrfEntropy, u8, 32, serde::Serialize, serde::Deserialize);
+#[cfg(not(feature = "serde-derive"))]
 create_typed_array!(VrfEntropy, u8, 32);
 
 impl VrfEntropy {

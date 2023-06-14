@@ -5,7 +5,6 @@ use nimiq_primitives::coin::Coin;
 use nimiq_primitives::networks::NetworkId;
 use nimiq_test_log::test;
 use nimiq_wallet::WalletAccount;
-use serde::{Deserialize, Serialize};
 
 lazy_static! {
     /// This is an example for using doc comment attributes
@@ -16,7 +15,7 @@ lazy_static! {
     /// Private Key:   b410a7a583cbc13ef4f1cbddace30928bcb4f9c13722414bc4a2faaba3f4e187
     static ref WALLET: WalletAccount = {
         let raw_private_key = hex::decode("b410a7a583cbc13ef4f1cbddace30928bcb4f9c13722414bc4a2faaba3f4e187").unwrap();
-        let private_key: PrivateKey = Deserialize::deserialize_from_vec(&raw_private_key).unwrap();
+        let private_key: PrivateKey = postcard::from_bytes(&raw_private_key).unwrap();
         WalletAccount::from(KeyPair::from(private_key))
     };
 }
@@ -38,8 +37,8 @@ fn test_create_transaction() {
 #[test]
 fn test_serialize_deserialize() {
     let wallet = WALLET.clone();
-    let serialized = wallet.serialize_to_vec();
-    match WalletAccount::deserialize_from_vec(&serialized) {
+    let serialized = postcard::to_allocvec(&wallet).unwrap();
+    match postcard::from_bytes::<WalletAccount>(&serialized) {
         Ok(deserialized) => {
             assert_eq!(wallet, deserialized);
         }

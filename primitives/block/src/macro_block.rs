@@ -278,7 +278,7 @@ impl MacroHeader {
 
     /// Appends the pk_tree_root if existent to this headers Blake2b hash. Afterwards hashes to Blake2s.
     pub fn nano_zkp_hash_with_root(&self, pk_tree_root: Option<Vec<u8>>) -> Blake2sHash {
-        let mut msg = self.hash::<Blake2bHash>().serialize_to_vec();
+        let mut msg = postcard::to_allocvec(&self.hash::<Blake2bHash>()).unwrap();
         if let Some(mut root) = pk_tree_root {
             msg.append(&mut root);
         }

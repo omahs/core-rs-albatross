@@ -3,7 +3,7 @@ extern crate log;
 
 use std::convert::TryFrom;
 use std::fs::{read_to_string, OpenOptions};
-use std::io::Error as IoError;
+use std::io::{Error as IoError, Write};
 use std::path::Path;
 
 use thiserror::Error;
@@ -23,7 +23,6 @@ use nimiq_primitives::{
     account::AccountError, coin::Coin, key_nibbles::KeyNibbles, policy::Policy,
 };
 use nimiq_vrf::VrfSeed;
-use serde::{Serialize, SerializeWithLength, SerializingError};
 
 mod config;
 
@@ -34,7 +33,7 @@ pub enum GenesisBuilderError {
     #[error("Invalid timestamp: {0}")]
     InvalidTimestamp(OffsetDateTime),
     #[error("Serialization failed")]
-    SerializingError(#[from] SerializingError),
+    SerializingError(#[from] postcard::Error),
     #[error("I/O error")]
     IoError(#[from] IoError),
     #[error("Failed to parse TOML file")]
@@ -333,7 +332,7 @@ impl GenesisBuilder {
             .create(true)
             .write(true)
             .open(&block_path)?;
-        block.serialize(&mut file)?;
+        file.write_all(&postcard::to_allocvec(&block)?)?;
 
         let accounts_path = directory.as_ref().join("accounts.dat");
         info!("Writing accounts to {}", accounts_path.display());
@@ -341,7 +340,7 @@ impl GenesisBuilder {
             .create(true)
             .write(true)
             .open(&accounts_path)?;
-        accounts.serialize::<u32, _>(&mut file)?;
+        file.write_all(&postcard::to_allocvec(&accounts)?)?;
 
         Ok(hash)
     }

@@ -7,15 +7,14 @@ use nimiq_primitives::networks::NetworkId;
 use nimiq_test_log::test;
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_transaction_builder::{Recipient, TransactionBuilder};
-use serde::{Deserialize, Serialize};
 
 #[test]
 #[allow(unused_must_use)]
 fn it_can_create_creation_transaction() {
     let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 8);
     let owner = Address::from([0u8; 20]);
-    Serialize::serialize(&owner, &mut data);
-    Serialize::serialize(&100u64, &mut data);
+    postcard::to_slice(&owner, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
 
     let mut transaction = Transaction::new_contract_creation(
         data,
@@ -48,10 +47,10 @@ fn it_can_create_creation_transaction() {
     // Valid
     let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 24);
     let sender = Address::from([0u8; 20]);
-    Serialize::serialize(&sender, &mut data);
-    Serialize::serialize(&100u64, &mut data);
-    Serialize::serialize(&100u64, &mut data);
-    Serialize::serialize(&Coin::try_from(100).unwrap(), &mut data);
+    postcard::to_slice(&sender, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&Coin::try_from(100).unwrap(), &mut data).unwrap();
     transaction.data = data;
     transaction.recipient = transaction.contract_creation_address();
 
@@ -78,11 +77,11 @@ fn it_can_create_creation_transaction() {
     // Valid
     let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 32);
     let sender = Address::from([0u8; 20]);
-    Serialize::serialize(&sender, &mut data);
-    Serialize::serialize(&100u64, &mut data);
-    Serialize::serialize(&100u64, &mut data);
-    Serialize::serialize(&Coin::try_from(100).unwrap(), &mut data);
-    Serialize::serialize(&Coin::try_from(101).unwrap(), &mut data);
+    postcard::to_slice(&sender, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&Coin::try_from(100).unwrap(), &mut data).unwrap();
+    postcard::to_slice(&Coin::try_from(101).unwrap(), &mut data).unwrap();
     transaction.data = data;
     transaction.recipient = transaction.contract_creation_address();
 
@@ -109,7 +108,7 @@ fn it_can_create_creation_transaction() {
 
 #[test]
 fn it_can_create_outgoing_transactions() {
-    let sender_priv_key: PrivateKey = Deserialize::deserialize_from_vec(
+    let sender_priv_key: PrivateKey = postcard::from_bytes(
         &hex::decode("9d5bd02379e7e45cf515c788048f5cf3c454ffabd3e83bd1d7667716c325c3c0").unwrap(),
     )
     .unwrap();
@@ -127,7 +126,7 @@ fn it_can_create_outgoing_transactions() {
 
     let signature = key_pair.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair.public, signature);
-    tx.proof = signature_proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
 
     let mut builder = TransactionBuilder::new();
     builder

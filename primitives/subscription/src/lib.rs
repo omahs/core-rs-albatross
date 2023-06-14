@@ -8,14 +8,10 @@ use serde::{Deserialize, Serialize};
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[repr(u8)]
 pub enum Subscription {
-    #[beserial(discriminant = 0)]
     #[default]
     None,
-    #[beserial(discriminant = 1)]
     Any,
-    #[beserial(discriminant = 2)]
-    Addresses(#[beserial(len_type(u16))] HashSet<Address>),
-    #[beserial(discriminant = 3)]
+    Addresses(HashSet<Address>),
     MinFee(Coin), // Fee per byte
 }
 
@@ -31,8 +27,9 @@ impl Subscription {
             Subscription::Addresses(addresses) => addresses.contains(&transaction.sender),
             Subscription::MinFee(min_fee) => {
                 // TODO: Potential overflow for u64
+                let tx_size = postcard::to_allocvec(&transaction).unwrap().len();
                 min_fee
-                    .checked_mul(transaction.serialized_size() as u64)
+                    .checked_mul(tx_size as u64)
                     .map(|block_fee| transaction.fee >= block_fee)
                     .unwrap_or(true)
             }

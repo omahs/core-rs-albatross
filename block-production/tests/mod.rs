@@ -2,7 +2,6 @@ use std::convert::TryInto;
 use std::sync::Arc;
 
 use parking_lot::RwLock;
-use serde::Deserialize;
 use tempfile::tempdir;
 
 use nimiq_block::{Block, ForkProof, MicroJustification};
@@ -1343,6 +1342,6 @@ fn it_can_revert_basic_and_create_contracts_txns() {
 
 fn ed25519_key_pair(secret_key: &str) -> SchnorrKeyPair {
     let priv_key: SchnorrPrivateKey =
-        Deserialize::deserialize(&mut &hex::decode(secret_key).unwrap()[..]).unwrap();
+        postcard::from_bytes(&mut &hex::decode(secret_key).unwrap()[..]).unwrap();
     priv_key.into()
 }

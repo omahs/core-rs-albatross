@@ -4,7 +4,6 @@ use nimiq_transaction::account::htlc_contract::{
     AnyHash, HashAlgorithm, OutgoingHTLCTransactionProof,
 };
 use nimiq_transaction::{SignatureProof, Transaction};
-use serde::Serialize;
 
 /// The `HtlcProofBuilder` can be used to build proofs for transactions
 /// that originate in a HTLC contract.
@@ -370,7 +369,7 @@ impl HtlcProofBuilder {
     /// Otherwise, it returns `None`.
     pub fn generate(self) -> Option<Transaction> {
         let mut tx = self.transaction;
-        tx.proof = self.proof?.serialize_to_vec();
+        tx.proof = postcard::to_allocvec(&self.proof?).ok()?;
         Some(tx)
     }
 }

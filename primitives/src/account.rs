@@ -80,8 +80,8 @@ pub enum AccountError {
     InvalidForTarget,
     #[error("Invalid receipt")]
     InvalidReceipt,
-    #[error("Invalid serialization")]
-    InvalidSerialization,
+    #[error("Invalid serialization {0}")]
+    InvalidSerialization(#[from] postcard::Error),
     #[error("Invalid transaction")]
     InvalidTransaction(#[from] TransactionError),
     #[error("Invalid coin value")]
@@ -159,7 +159,7 @@ impl From<AccountError> for FailReason {
             AccountError::InvalidForRecipient => FailReason::InvalidForRecipient,
             AccountError::InvalidForTarget => FailReason::InvalidForTarget,
             AccountError::InvalidReceipt => FailReason::InvalidReceipt,
-            AccountError::InvalidSerialization => FailReason::InvalidSerialization,
+            AccountError::InvalidSerialization(_) => FailReason::InvalidSerialization,
             AccountError::InvalidTransaction(_) => FailReason::InvalidTransaction,
             AccountError::InvalidCoinValue => FailReason::InvalidCoinValue,
             AccountError::CoinParse(_) => FailReason::CoinParse,

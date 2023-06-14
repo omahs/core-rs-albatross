@@ -24,7 +24,6 @@ use nimiq_transaction::account::staking_contract::{
 use nimiq_transaction::inherent::Inherent;
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_utils::key_rng::SecureGenerate;
-use serde::{Deserialize, Serialize};
 
 const CONTRACT_1: &str = "00000000000000000000000000000000000000000000";
 const CONTRACT_2: &str =
@@ -93,7 +92,7 @@ fn generate_contract_2() {
         previous_disabled_slots,
     };
 
-    assert_eq!(&hex::encode(contract.serialize_to_vec()), "");
+    assert_eq!(&hex::encode(postcard::to_allocvec(&contract).unwrap()), "");
 }
 
 #[test]
@@ -115,7 +114,7 @@ fn can_iter_stakers() {
 #[test]
 fn it_can_de_serialize_a_staking_contract() {
     let bytes_1: Vec<u8> = hex::decode(CONTRACT_1).unwrap();
-    let contract_1: StakingContract = Deserialize::deserialize(&mut &bytes_1[..]).unwrap();
+    let contract_1: StakingContract = postcard::from_bytes(&mut &bytes_1[..]).unwrap();
 
     assert_eq!(contract_1.balance, 0.try_into().unwrap());
     assert_eq!(contract_1.active_validators.len(), 0);
@@ -125,14 +124,12 @@ fn it_can_de_serialize_a_staking_contract() {
     assert_eq!(contract_1.current_disabled_slots.len(), 0);
     assert_eq!(contract_1.previous_disabled_slots.len(), 0);
 
-    let mut bytes_1_out = Vec::<u8>::with_capacity(contract_1.serialized_size());
-    let size_1_out = contract_1.serialize(&mut bytes_1_out).unwrap();
+    let bytes_1_out = postcard::to_allocvec(&contract_1).unwrap();
 
-    assert_eq!(size_1_out, contract_1.serialized_size());
     assert_eq!(hex::encode(bytes_1_out), CONTRACT_1);
 
     let bytes_2: Vec<u8> = hex::decode(CONTRACT_2).unwrap();
-    let contract_2: StakingContract = Deserialize::deserialize(&mut &bytes_2[..]).unwrap();
+    let contract_2: StakingContract = postcard::from_bytes(&mut &bytes_2[..]).unwrap();
 
     assert_eq!(contract_2.balance, 300_000_000.try_into().unwrap());
     assert_eq!(contract_2.active_validators.len(), 1);
@@ -142,10 +139,8 @@ fn it_can_de_serialize_a_staking_contract() {
     assert_eq!(contract_2.current_disabled_slots.len(), 1);
     assert_eq!(contract_2.previous_disabled_slots.len(), 1);
 
-    let mut bytes_2_out = Vec::<u8>::with_capacity(contract_2.serialized_size());
-    let size_2_out = contract_2.serialize(&mut bytes_2_out).unwrap();
+    let bytes_2_out = postcard::to_allocvec(&contract_2).unwrap();
 
-    assert_eq!(size_2_out, contract_2.serialized_size());
     assert_eq!(hex::encode(bytes_2_out), CONTRACT_2);
 }
 
@@ -204,7 +199,7 @@ fn create_validator_works() {
             signing_key,
             voting_key: voting_key.clone(),
             proof_of_knowledge: voting_keypair
-                .sign(&voting_key.serialize_to_vec())
+                .sign(&postcard::to_allocvec(&voting_key).unwrap())
                 .compress(),
             reward_address: reward_address.clone(),
             signal_data: None,
@@ -330,7 +325,7 @@ fn update_validator_works() {
             new_signal_data: Some(Some(Blake2bHash::default())),
             new_proof_of_knowledge: Some(
                 new_voting_keypair
-                    .sign(&new_voting_keypair.public_key.serialize_to_vec())
+                    .sign(&postcard::to_allocvec(&new_voting_keypair.public_key).unwrap())
                     .compress(),
             ),
             proof: SignatureProof::default(),
@@ -437,7 +432,7 @@ fn update_validator_works() {
             new_signal_data: Some(Some(Blake2bHash::default())),
             new_proof_of_knowledge: Some(
                 new_voting_keypair
-                    .sign(&new_voting_keypair.public_key.serialize_to_vec())
+                    .sign(&postcard::to_allocvec(&new_voting_keypair.public_key).unwrap())
                     .compress(),
             ),
             proof: SignatureProof::default(),
@@ -2497,10 +2492,10 @@ fn make_sample_contract(mut data_store: DataStoreWrite, with_staker: bool) -> St
     let cold_address = validator_address();
 
     let signing_key =
-        PublicKey::deserialize_from_vec(&hex::decode(VALIDATOR_SIGNING_KEY).unwrap()).unwrap();
+        postcard::from_bytes::<PublicKey>(&hex::decode(VALIDATOR_SIGNING_KEY).unwrap()).unwrap();
 
     let voting_key =
-        BlsPublicKey::deserialize_from_vec(&hex::decode(VALIDATOR_VOTING_KEY).unwrap()).unwrap();
+        postcard::from_bytes::<BlsPublicKey>(&hex::decode(VALIDATOR_VOTING_KEY).unwrap()).unwrap();
 
     let mut contract = make_empty_contract();
 
@@ -2545,7 +2540,7 @@ fn make_incoming_transaction(data: IncomingStakingTransactionData, value: u64) -
             AccountType::Staking,
             value.try_into().unwrap(),
             100.try_into().unwrap(),
-            data.serialize_to_vec(),
+            postcard::to_allocvec(&data).unwrap(),
             1,
             NetworkId::Dummy,
         ),
@@ -2555,7 +2550,7 @@ fn make_incoming_transaction(data: IncomingStakingTransactionData, value: u64) -
             Policy::STAKING_CONTRACT_ADDRESS,
             AccountType::Staking,
             100.try_into().unwrap(),
-            data.serialize_to_vec(),
+            postcard::to_allocvec(&data).unwrap(),
             1,
             NetworkId::Dummy,
         ),
@@ -2576,16 +2571,16 @@ fn make_signed_incoming_transaction(
 
     tx.data = IncomingStakingTransactionData::set_signature_on_data(&tx.data, in_proof).unwrap();
 
-    let out_private_key =
-        PrivateKey::deserialize_from_vec(&hex::decode(STAKER_PRIVATE_KEY).unwrap()).unwrap();
+    let out_private_key: PrivateKey =
+        postcard::from_bytes(&hex::decode(STAKER_PRIVATE_KEY).unwrap()).unwrap();
 
     let out_key_pair = KeyPair::from(out_private_key);
 
-    let out_proof = SignatureProof::from(
+    let out_proof = postcard::to_allocvec(&SignatureProof::from(
         out_key_pair.public,
         out_key_pair.sign(&tx.serialize_content()),
-    )
-    .serialize_to_vec();
+    ))
+    .unwrap();
 
     tx.proof = out_proof;
 
@@ -2605,8 +2600,8 @@ fn make_delete_validator_transaction() -> Transaction {
         NetworkId::Dummy,
     );
 
-    let private_key =
-        PrivateKey::deserialize_from_vec(&hex::decode(VALIDATOR_PRIVATE_KEY).unwrap()).unwrap();
+    let private_key: PrivateKey =
+        postcard::from_bytes(&hex::decode(VALIDATOR_PRIVATE_KEY).unwrap()).unwrap();
 
     let key_pair = KeyPair::from(private_key);
 
@@ -2614,7 +2609,7 @@ fn make_delete_validator_transaction() -> Transaction {
 
     let proof = OutgoingStakingTransactionProof::DeleteValidator { proof: sig };
 
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     tx
 }
@@ -2632,8 +2627,8 @@ fn make_unstake_transaction(value: u64) -> Transaction {
         NetworkId::Dummy,
     );
 
-    let private_key =
-        PrivateKey::deserialize_from_vec(&hex::decode(STAKER_PRIVATE_KEY).unwrap()).unwrap();
+    let private_key: PrivateKey =
+        postcard::from_bytes(&hex::decode(STAKER_PRIVATE_KEY).unwrap()).unwrap();
 
     let key_pair = KeyPair::from(private_key);
 
@@ -2641,7 +2636,7 @@ fn make_unstake_transaction(value: u64) -> Transaction {
 
     let proof = OutgoingStakingTransactionProof::RemoveStake { proof: sig };
 
-    tx.proof = proof.serialize_to_vec();
+    tx.proof = postcard::to_allocvec(&proof).unwrap();
 
     tx
 }
@@ -2706,19 +2701,19 @@ fn revert_slash_inherent(
 }
 
 fn bls_key_pair(sk: &str) -> BlsKeyPair {
-    BlsKeyPair::from(BlsSecretKey::deserialize_from_vec(&hex::decode(sk).unwrap()).unwrap())
+    BlsKeyPair::from(postcard::from_bytes::<BlsSecretKey>(&hex::decode(sk).unwrap()).unwrap())
 }
 
 fn bls_public_key(pk: &str) -> BlsPublicKey {
-    BlsPublicKey::deserialize_from_vec(&hex::decode(pk).unwrap()).unwrap()
+    postcard::from_bytes::<BlsPublicKey>(&hex::decode(pk).unwrap()).unwrap()
 }
 
 fn ed25519_key_pair(sk: &str) -> KeyPair {
-    KeyPair::from(PrivateKey::deserialize_from_vec(&hex::decode(sk).unwrap()).unwrap())
+    KeyPair::from(postcard::from_bytes::<PrivateKey>(&hex::decode(sk).unwrap()).unwrap())
 }
 
 fn ed25519_public_key(pk: &str) -> PublicKey {
-    PublicKey::deserialize_from_vec(&hex::decode(pk).unwrap()).unwrap()
+    postcard::from_bytes::<PublicKey>(&hex::decode(pk).unwrap()).unwrap()
 }
 
 fn validator_address() -> Address {

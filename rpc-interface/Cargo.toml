@@ -24,12 +24,13 @@ clap = { version = "4.2", features = ["derive"] }
 futures = { package = "futures-util", version = "0.3" }
 hex = "0.4"
 parking_lot = "0.12"
+postcard = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_with = "3.0"
 thiserror = "1.0"
 
-nimiq-account = { path = "../primitives/account", features = ["serde-derive"] }
-nimiq-block = { path = "../primitives/block", features = ["serde-derive"] }
+nimiq-account = { path = "../primitives/account" }
+nimiq-block = { path = "../primitives/block" }
 nimiq-blockchain = { path = "../blockchain" }
 nimiq-blockchain-interface = { path = "../blockchain-interface" }
 nimiq-blockchain-proxy = { path = "../blockchain-proxy" }
@@ -41,7 +42,7 @@ nimiq-jsonrpc-core = { git = "https://github.com/nimiq/jsonrpc.git" }
 nimiq-jsonrpc-derive = { git = "https://github.com/nimiq/jsonrpc.git" }
 nimiq-keys = { path = "../keys", features = ["serde-derive"] }
 nimiq-primitives = { path = "../primitives", features = ["coin", "account", "serde-derive"] }
-nimiq-transaction = { path = "../primitives/transaction", features = ["serde-derive"] }
+nimiq-transaction = { path = "../primitives/transaction" }
 nimiq-vrf = { path = "../vrf", features = ["serde-derive"] }
 nimiq-zkp-component = { path = "../zkp-component" }
 

@@ -20,6 +20,6 @@ pub enum TransactionError {
     InvalidForRecipient,
     #[error("Invalid transaction data")]
     InvalidData,
-    #[error("Invalid serialization")]
-    InvalidSerialization,
+    #[error("Invalid serialization: {0}")]
+    InvalidSerialization(#[from] postcard::Error),
 }
