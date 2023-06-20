@@ -33,6 +33,7 @@ pub struct HashedTimeLockedContract {
     pub hash_algorithm: HashAlgorithm,
     pub hash_root: AnyHash,
     pub hash_count: u8,
+    #[serde(with = "postcard::fixint::be")]
     pub timeout: u64,
     pub total_amount: Coin,
 }

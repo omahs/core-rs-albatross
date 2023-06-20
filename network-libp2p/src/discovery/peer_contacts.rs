@@ -116,7 +116,6 @@ impl TaggedSignable for PeerContact {
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq, Eq)]
 pub struct SignedPeerContact {
     /// The wrapped peer contact.
-    #[serde(flatten)]
     pub inner: PeerContact,
 
     /// The signature over the serialized peer contact.

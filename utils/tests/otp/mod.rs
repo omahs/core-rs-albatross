@@ -57,7 +57,7 @@ fn create_unlocked_checked() {
 
 #[test]
 fn create_locked_unchecked() {
-    let secret: u32 = 12345;
+    let secret = 12345u32.to_be_bytes();
     let password = "password";
     let wrong_password = "wrong_password";
 

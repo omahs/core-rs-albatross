@@ -5,6 +5,7 @@ use nimiq_bls::AggregatePublicKey;
 use nimiq_hash::{Blake2sHash, SerializeContent};
 use nimiq_primitives::{policy::Policy, slots::Validators};
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use crate::{
     signed::{PREFIX_TENDERMINT_COMMIT, PREFIX_TENDERMINT_PREPARE, PREFIX_TENDERMINT_PROPOSAL},
@@ -75,7 +76,9 @@ impl TendermintProof {
 
 /// Internal representation of nimiq_tendermint::Step struct. It needs to be Serializable and must not contain Proposal
 /// thus the additional type.
-#[derive(Serialize, Deserialize, Debug, Clone, Ord, PartialOrd, PartialEq, Eq, Hash, Copy)]
+#[derive(
+    Serialize_repr, Deserialize_repr, Debug, Clone, Ord, PartialOrd, PartialEq, Eq, Hash, Copy,
+)]
 #[repr(u8)]
 pub enum TendermintStep {
     PreVote = PREFIX_TENDERMINT_PREPARE,
@@ -136,13 +139,13 @@ impl SerializeContent for TendermintVote {
         let mut size = ser_step.len();
 
         // serialize the round number
-        let ser_round_number = postcard::to_allocvec(&self.id.round_number)
+        let ser_round_number = postcard::to_allocvec(&self.id.round_number.to_be_bytes())
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         writer.write_all(&ser_round_number)?;
         size += ser_round_number.len();
 
         // serialize the block number
-        let ser_block_number = postcard::to_allocvec(&self.id.block_number)
+        let ser_block_number = postcard::to_allocvec(&self.id.block_number.to_be_bytes())
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         writer.write_all(&ser_block_number)?;
         size += ser_block_number.len();

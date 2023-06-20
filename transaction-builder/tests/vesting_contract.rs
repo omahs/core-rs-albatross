@@ -9,13 +9,13 @@ use nimiq_transaction_builder::{Recipient, TransactionBuilder};
 #[test]
 #[allow(unused_must_use)]
 fn it_can_create_creation_transaction() {
-    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 8);
+    let mut data = [0u8; Address::SIZE + 8];
     let owner = Address::from([0u8; 20]);
     postcard::to_slice(&owner, &mut data).unwrap();
-    postcard::to_slice(&100u64, &mut data).unwrap();
+    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
 
     let mut transaction = Transaction::new_contract_creation(
-        data,
+        data.to_vec(),
         owner.clone(),
         AccountType::Basic,
         AccountType::Vesting,
@@ -43,13 +43,17 @@ fn it_can_create_creation_transaction() {
     assert_eq!(proof_builder.transaction, transaction);
 
     // Valid
-    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 24);
+    let mut data = [0u8; Address::SIZE + 24];
     let sender = Address::from([0u8; 20]);
     postcard::to_slice(&sender, &mut data).unwrap();
-    postcard::to_slice(&100u64, &mut data).unwrap();
-    postcard::to_slice(&100u64, &mut data).unwrap();
-    postcard::to_slice(&Coin::try_from(100).unwrap(), &mut data).unwrap();
-    transaction.data = data;
+    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
+    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE + 8..]).unwrap();
+    postcard::to_slice(
+        &Coin::try_from(100).unwrap(),
+        &mut data[Address::SIZE + 16..],
+    )
+    .unwrap();
+    transaction.data = data.to_vec();
     transaction.recipient = transaction.contract_creation_address();
 
     let mut recipient = Recipient::new_vesting_builder(owner.clone());
@@ -73,14 +77,22 @@ fn it_can_create_creation_transaction() {
     assert_eq!(proof_builder.transaction, transaction);
 
     // Valid
-    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 32);
+    let mut data = [0u8; Address::SIZE + 32];
     let sender = Address::from([0u8; 20]);
     postcard::to_slice(&sender, &mut data).unwrap();
-    postcard::to_slice(&100u64, &mut data).unwrap();
-    postcard::to_slice(&100u64, &mut data).unwrap();
-    postcard::to_slice(&Coin::try_from(100).unwrap(), &mut data).unwrap();
-    postcard::to_slice(&Coin::try_from(101).unwrap(), &mut data).unwrap();
-    transaction.data = data;
+    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
+    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE + 8..]).unwrap();
+    postcard::to_slice(
+        &Coin::try_from(100).unwrap(),
+        &mut data[Address::SIZE + 16..],
+    )
+    .unwrap();
+    postcard::to_slice(
+        &Coin::try_from(101).unwrap(),
+        &mut data[Address::SIZE + 24..],
+    )
+    .unwrap();
+    transaction.data = data.to_vec();
     transaction.recipient = transaction.contract_creation_address();
 
     let mut recipient = Recipient::new_vesting_builder(owner.clone());

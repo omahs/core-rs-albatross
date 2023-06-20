@@ -1,7 +1,7 @@
 use std::{
     fs,
     fs::{DirBuilder, File},
-    io::Write,
+    io::{Read, Write},
     path::Path,
 };
 
@@ -45,8 +45,10 @@ pub fn update_proof_cache(
 
     if metadata_file.exists() {
         let file = File::open(&metadata_file)?;
-        let reader = std::io::BufReader::new(file);
-        let meta_data_hash: [u8; 32] = postcard::from_bytes(reader.buffer())?;
+        let mut buf = vec![];
+        let mut reader = std::io::BufReader::new(file);
+        reader.read_to_end(&mut buf)?;
+        let meta_data_hash: [u8; 32] = postcard::from_bytes(&buf)?;
 
         // If the hash in the meta data matches, return.
         if &meta_data_hash == current_header_hash {

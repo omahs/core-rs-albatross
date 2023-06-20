@@ -15,9 +15,9 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 nimiq-account = { path = "../primitives/account" }
 nimiq-block = { path = "../primitives/block" }
-nimiq-bls = { path = "../bls" }
+nimiq-bls = { path = "../bls", features = ["serde-derive"] }
 nimiq-database = { path = "../database" }
 nimiq-hash = { path = "../hash" }
-nimiq-keys = { path = "../keys" }
+nimiq-keys = { path = "../keys", features = ["serde-derive"] }
 nimiq-primitives = { path = "../primitives" }
-nimiq-vrf = { path = "../vrf" }
+nimiq-vrf = { path = "../vrf", features = ["serde-derive"] }

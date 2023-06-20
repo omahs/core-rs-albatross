@@ -321,7 +321,7 @@ mod serde_derive {
         where
             A: SeqAccess<'de>,
         {
-            let block_number: u32 = seq
+            let block_number: [u8; 4] = seq
                 .next_element()?
                 .ok_or_else(|| A::Error::invalid_length(0, &self))?;
             let latest_ser_proof: Option<Vec<u8>> = seq
@@ -329,15 +329,17 @@ mod serde_derive {
                 .ok_or_else(|| A::Error::invalid_length(1, &self))?;
 
             let latest_proof = if let Some(ser_proof) = latest_ser_proof {
-                CanonicalDeserialize::deserialize_compressed(&*ser_proof).map_err(|_| {
-                    A::Error::invalid_value(Unexpected::Other("Invalid proof"), &self)
-                })?
+                Some(
+                    CanonicalDeserialize::deserialize_compressed(&*ser_proof).map_err(|_| {
+                        A::Error::invalid_value(Unexpected::Other("Invalid proof"), &self)
+                    })?,
+                )
             } else {
                 None
             };
 
             Ok(ZKProof {
-                block_number,
+                block_number: u32::from_be_bytes(block_number),
                 proof: latest_proof,
             })
         }
@@ -360,7 +362,7 @@ mod serde_derive {
             } else {
                 None
             };
-            state.serialize_field(ZK_PROOF_FIELDS[0], &self.block_number)?;
+            state.serialize_field(ZK_PROOF_FIELDS[0], &self.block_number.to_be_bytes())?;
             state.serialize_field(ZK_PROOF_FIELDS[1], &ser_latest_proof)?;
             state.end()
         }
@@ -397,9 +399,11 @@ mod serde_derive {
                 .ok_or_else(|| A::Error::invalid_length(1, &self))?;
 
             let latest_proof = if let Some(ser_proof) = ser_latest_proof {
-                CanonicalDeserialize::deserialize_uncompressed_unchecked(&*ser_proof).map_err(
-                    |_| A::Error::invalid_value(Unexpected::Other("Invalid proof"), &self),
-                )?
+                Some(
+                    CanonicalDeserialize::deserialize_uncompressed_unchecked(&*ser_proof).map_err(
+                        |_| A::Error::invalid_value(Unexpected::Other("Invalid proof"), &self),
+                    )?,
+                )
             } else {
                 None
             };

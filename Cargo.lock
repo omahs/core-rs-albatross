@@ -3468,6 +3468,7 @@ dependencies = [
  "num-traits",
  "postcard",
  "serde",
+ "serde_repr",
  "thiserror",
  "tracing",
 ]
@@ -3602,6 +3603,7 @@ dependencies = [
  "postcard",
  "rand 0.8.5",
  "serde",
+ "serde-big-array 0.5.1",
  "thiserror",
  "tracing",
 ]
@@ -3759,6 +3761,7 @@ dependencies = [
  "nimiq-test-log",
  "nimiq-utils",
  "parking_lot 0.12.1",
+ "postcard",
  "rand 0.8.5",
  "serde",
  "thiserror",
@@ -4195,6 +4198,7 @@ dependencies = [
  "postcard",
  "regex",
  "serde",
+ "serde_repr",
  "strum_macros",
  "thiserror",
  "tracing",
@@ -4488,6 +4492,7 @@ dependencies = [
  "num-traits",
  "postcard",
  "serde",
+ "serde_repr",
  "strum_macros",
  "thiserror",
  "tracing",
@@ -4630,6 +4635,7 @@ dependencies = [
  "nimiq-hash",
  "nimiq-keys",
  "nimiq-macros",
+ "nimiq-serde-ext",
  "nimiq-test-log",
  "nimiq-test-utils",
  "num-traits",
@@ -6116,6 +6122,17 @@ dependencies = [
  "itoa",
  "ryu",
  "serde",
+]
+
+[[package]]
+name = "serde_repr"
+version = "0.1.12"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcec881020c684085e55a25f7fd888954d56609ef363479dc5a1305eb0d40cab"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.18",
 ]
 
 [[package]]

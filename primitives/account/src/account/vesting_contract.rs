@@ -26,7 +26,9 @@ use crate::{
 pub struct VestingContract {
     pub balance: Coin,
     pub owner: Address,
+    #[serde(with = "postcard::fixint::be")]
     pub start_time: u64,
+    #[serde(with = "postcard::fixint::be")]
     pub time_step: u64,
     pub step_amount: Coin,
     pub total_amount: Coin,

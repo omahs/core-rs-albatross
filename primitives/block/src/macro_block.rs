@@ -213,20 +213,20 @@ impl SerializeContent for MacroHeader {
         writer: &mut W,
     ) -> std::io::Result<usize> {
         let mut size = 0;
-        let ser_version = postcard::to_allocvec(&self.version)
+        let ser_version = postcard::to_allocvec(&self.version.to_be_bytes())
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         writer.write_all(&ser_version)?;
         size += ser_version.len();
-        let ser_block_number = postcard::to_allocvec(&self.block_number)
+        let ser_block_number = postcard::to_allocvec(&self.block_number.to_be_bytes())
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         writer.write_all(&ser_block_number)?;
         size += ser_block_number.len();
-        let ser_round = postcard::to_allocvec(&self.round)
+        let ser_round = postcard::to_allocvec(&self.round.to_be_bytes())
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         writer.write_all(&ser_round)?;
         size += ser_round.len();
 
-        let ser_timestamp = postcard::to_allocvec(&self.timestamp)
+        let ser_timestamp = postcard::to_allocvec(&self.timestamp.to_be_bytes())
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         writer.write_all(&ser_timestamp)?;
         size += ser_timestamp.len();

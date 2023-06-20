@@ -40,7 +40,6 @@ pub enum IncomingStakingTransactionData {
         signal_data: Option<Blake2bHash>,
         proof_of_knowledge: BlsSignature,
         // This proof is signed with the validator cold key, which will become the validator address.
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         proof: SignatureProof,
     },
     UpdateValidator {
@@ -50,29 +49,24 @@ pub enum IncomingStakingTransactionData {
         new_signal_data: Option<Option<Blake2bHash>>,
         new_proof_of_knowledge: Option<BlsSignature>,
         // This proof is signed with the validator cold key.
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         proof: SignatureProof,
     },
     DeactivateValidator {
         validator_address: Address,
         // This proof is signed with the validator warm key.
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         proof: SignatureProof,
     },
     ReactivateValidator {
         validator_address: Address,
         // This proof is signed with the validator warm key.
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         proof: SignatureProof,
     },
     RetireValidator {
         // This proof is signed with the validator cold key.
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         proof: SignatureProof,
     },
     CreateStaker {
         delegation: Option<Address>,
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         proof: SignatureProof,
     },
     AddStake {
@@ -80,7 +74,6 @@ pub enum IncomingStakingTransactionData {
     },
     UpdateStaker {
         new_delegation: Option<Address>,
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         proof: SignatureProof,
     },
 }
@@ -224,12 +217,10 @@ impl IncomingStakingTransactionData {
 #[repr(u8)]
 pub enum OutgoingStakingTransactionProof {
     DeleteValidator {
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         // This proof is signed with the validator cold key.
         proof: SignatureProof,
     },
     RemoveStake {
-        #[cfg_attr(feature = "serde-derive", serde(skip))]
         proof: SignatureProof,
     },
 }

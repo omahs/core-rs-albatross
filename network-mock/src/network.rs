@@ -225,10 +225,9 @@ impl MockNetwork {
             (sender, request_id)
         };
 
-        let mut data = Vec::with_capacity(10);
-        request.serialize_request(&mut data).unwrap();
+        let data = request.serialize_request().unwrap();
 
-        let request = (data, request_id, sender_id);
+        let request = (data.to_vec(), request_id, sender_id);
         if let Err(e) = sender.send(request).await {
             log::warn!(
                 "Cannot send request {} from {} to {} - {:?}",

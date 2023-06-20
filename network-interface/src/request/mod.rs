@@ -143,10 +143,10 @@ pub trait RequestCommon:
     /// A serialized request is composed of:
     /// - A 2 bytes (u16) for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn serialize_request(&self, buffer: &mut [u8]) -> Result<(), postcard::Error> {
-        postcard::to_slice(&RequestType::from_request::<Self>().0, buffer)?;
-        postcard::to_slice(self, buffer)?;
-        Ok(())
+    fn serialize_request(&self) -> Result<Vec<u8>, postcard::Error> {
+        let mut data = postcard::to_allocvec(&RequestType::from_request::<Self>().0)?;
+        data.append(&mut postcard::to_allocvec(&self)?);
+        Ok(data)
     }
 
     /// Deserializes a request

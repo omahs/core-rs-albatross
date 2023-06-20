@@ -4,6 +4,7 @@ use nimiq_keys::Address;
 use nimiq_macros::{add_hex_io_fns_typed_arr, create_typed_array};
 use nimiq_primitives::account::AccountType;
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum_macros::Display;
 
 use crate::{
@@ -69,13 +70,13 @@ impl AccountTransactionVerification for HashedTimeLockedContractVerifier {
     Copy,
     Debug,
     Default,
-    Deserialize,
+    Deserialize_repr,
     Display,
     Eq,
     Ord,
     PartialEq,
     PartialOrd,
-    Serialize,
+    Serialize_repr,
     Hash,
 )]
 #[repr(u8)]
@@ -101,6 +102,7 @@ pub struct CreationTransactionData {
     pub hash_algorithm: HashAlgorithm,
     pub hash_root: AnyHash,
     pub hash_count: u8,
+    #[serde(with = "postcard::fixint::be")]
     pub timeout: u64,
 }
 

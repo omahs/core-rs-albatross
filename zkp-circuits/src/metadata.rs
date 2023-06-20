@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
 pub struct VerifyingKeyMetadata {
     genesis_hash: Blake2bHash,
+    #[serde(with = "postcard::fixint::be")]
     blocks_per_epoch: u32,
 }
 

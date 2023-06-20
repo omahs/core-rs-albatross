@@ -16,6 +16,7 @@ use crate::PublicKey;
 /// and one bit indicating if it is the "point-at-infinity".
 #[derive(Clone)]
 #[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-derive", serde(transparent))]
 pub struct CompressedPublicKey {
     #[cfg_attr(feature = "serde-derive", serde(with = "nimiq_serde_ext::HexArray"))]
     pub public_key: [u8; 285],

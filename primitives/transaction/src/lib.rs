@@ -429,7 +429,7 @@ impl Transaction {
         res.append(&mut postcard::to_allocvec(&self.recipient_type).unwrap());
         res.append(&mut postcard::to_allocvec(&self.value).unwrap());
         res.append(&mut postcard::to_allocvec(&self.fee).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.validity_start_height).unwrap());
+        res.append(&mut postcard::to_allocvec(&self.validity_start_height.to_be_bytes()).unwrap());
         res.append(&mut postcard::to_allocvec(&self.network_id).unwrap());
         res.append(&mut postcard::to_allocvec(&self.flags).unwrap());
         res
@@ -480,8 +480,9 @@ impl SerializeContent for Transaction {
             .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         size += ser_fee.len();
         writer.write_all(&ser_fee)?;
-        let ser_validity_start_height = postcard::to_allocvec(&self.validity_start_height)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
+        let ser_validity_start_height =
+            postcard::to_allocvec(&self.validity_start_height.to_be_bytes())
+                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
         size += ser_validity_start_height.len();
         writer.write_all(&ser_validity_start_height)?;
         let ser_network_id = postcard::to_allocvec(&self.network_id)
@@ -597,7 +598,7 @@ mod serde_derive {
                     sv.serialize_field(BASIC_FIELDS[1], &self.recipient)?;
                     sv.serialize_field(BASIC_FIELDS[2], &self.value)?;
                     sv.serialize_field(BASIC_FIELDS[3], &self.fee)?;
-                    sv.serialize_field(BASIC_FIELDS[4], &self.validity_start_height)?;
+                    sv.serialize_field(BASIC_FIELDS[4], &self.validity_start_height.to_be_bytes())?;
                     sv.serialize_field(BASIC_FIELDS[5], &self.network_id)?;
                     sv.serialize_field(BASIC_FIELDS[6], &signature_proof.signature)?;
                     sv.end()
@@ -616,7 +617,10 @@ mod serde_derive {
                     sv.serialize_field(EXTENDED_FIELDS[4], &self.recipient_type)?;
                     sv.serialize_field(EXTENDED_FIELDS[5], &self.value)?;
                     sv.serialize_field(EXTENDED_FIELDS[6], &self.fee)?;
-                    sv.serialize_field(EXTENDED_FIELDS[7], &self.validity_start_height)?;
+                    sv.serialize_field(
+                        EXTENDED_FIELDS[7],
+                        &self.validity_start_height.to_be_bytes(),
+                    )?;
                     sv.serialize_field(EXTENDED_FIELDS[8], &self.network_id)?;
                     sv.serialize_field(EXTENDED_FIELDS[9], &self.flags)?;
                     sv.serialize_field(EXTENDED_FIELDS[10], &self.proof)?;
@@ -678,7 +682,7 @@ mod serde_derive {
             let fee: Coin = seq
                 .next_element()?
                 .ok_or_else(|| serde::de::Error::invalid_length(3, &self))?;
-            let validity_start_height: u32 = seq
+            let validity_start_height: [u8; 4] = seq
                 .next_element()?
                 .ok_or_else(|| serde::de::Error::invalid_length(4, &self))?;
             let network_id: NetworkId = seq
@@ -695,7 +699,7 @@ mod serde_derive {
                 recipient_type: AccountType::Basic,
                 value,
                 fee,
-                validity_start_height,
+                validity_start_height: u32::from_be_bytes(validity_start_height),
                 network_id,
                 flags: TransactionFlags::empty(),
                 proof: postcard::to_allocvec(&SignatureProof::from(public_key, signature))
@@ -741,7 +745,7 @@ mod serde_derive {
             let fee: Coin = seq
                 .next_element()?
                 .ok_or_else(|| serde::de::Error::invalid_length(6, &self))?;
-            let validity_start_height: u32 = seq
+            let validity_start_height: [u8; 4] = seq
                 .next_element()?
                 .ok_or_else(|| serde::de::Error::invalid_length(7, &self))?;
             let network_id: NetworkId = seq
@@ -761,7 +765,7 @@ mod serde_derive {
                 recipient_type,
                 value,
                 fee,
-                validity_start_height,
+                validity_start_height: u32::from_be_bytes(validity_start_height),
                 network_id,
                 flags,
                 proof,
