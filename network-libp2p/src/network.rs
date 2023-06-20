@@ -1482,12 +1482,9 @@ impl Network {
         let (output_tx, output_rx) = oneshot::channel();
         let (response_tx, response_rx) = oneshot::channel();
 
-        let mut buf = vec![];
-        if request.serialize_request(&mut buf).is_err() {
-            return Err(RequestError::OutboundRequest(
-                OutboundRequestError::SerializationError,
-            ));
-        }
+        let buf = request
+            .serialize_request()
+            .map_err(|_| RequestError::OutboundRequest(OutboundRequestError::SerializationError))?;
 
         if self
             .action_tx
@@ -1515,9 +1512,22 @@ impl Network {
                 )),
                 Ok(result) => {
                     let data = result?;
-                    if let Ok(message) =
-                        postcard::from_bytes::<Result<Req::Response, InboundRequestError>>(&data)
+                    if let Ok((message, left_over)) = postcard::take_from_bytes::<
+                        Result<Req::Response, InboundRequestError>,
+                    >(&data)
                     {
+                        if left_over.len() != 0 {
+                            error!(
+                            %request_id,
+                            %peer_id,
+                            type_id = std::any::type_name::<Req::Response>(),
+                            unread_data_len = left_over.len(),
+                            "Unexpected serialize content size",
+                            );
+                            return Err(RequestError::InboundRequest(
+                                InboundRequestError::DeSerializationError,
+                            ));
+                        }
                         // Check if there was an actual response from the application or a default response from
                         // the network. If the network replied with the default response, it was because there wasn't a
                         // receiver for the request

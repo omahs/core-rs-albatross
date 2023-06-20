@@ -49,13 +49,12 @@ impl RequestCommon for TestRequest {
 
     const MAX_REQUESTS: u32 = MAX_REQUEST_RESPONSE_TEST_REQUEST;
 
-    fn serialize_request(&self, buffer: &mut [u8]) -> Result<(), postcard::Error> {
-        postcard::to_slice(
+    fn serialize_request(&self) -> Result<Vec<u8>, postcard::Error> {
+        let mut data = postcard::to_allocvec(
             &nimiq_network_interface::request::RequestType::from_request::<Self>().0,
-            buffer,
         )?;
-        postcard::to_slice(self, buffer)?;
-        Ok(())
+        data.append(&mut postcard::to_allocvec(self)?);
+        Ok(data)
     }
 
     fn deserialize_request(buffer: &[u8]) -> Result<Self, postcard::Error> {
@@ -106,7 +105,7 @@ impl RequestCommon for TestRequest3 {
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
 struct TestResponse3 {
-    response: u32,
+    response: [u8; 8],
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize)]
@@ -455,7 +454,9 @@ async fn test_valid_request_incorrect_response() {
     let (net1, net2) = TestNetwork::create_connected_networks().await;
 
     let test_request = TestRequest { request: 42 };
-    let incorrect_response = TestResponse3 { response: 43 };
+    let incorrect_response = TestResponse3 {
+        response: 43u64.to_be_bytes(),
+    };
 
     let net1 = Arc::new(net1);
 

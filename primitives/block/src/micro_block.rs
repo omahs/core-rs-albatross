@@ -175,7 +175,6 @@ pub struct MicroHeader {
     /// block (either micro or macro) using the validator key of the block producer.
     pub seed: VrfSeed,
     /// The extra data of the block. It is simply 32 raw bytes. No planned use.
-    #[beserial(len_type(u8, limit = 32))]
     pub extra_data: Vec<u8>,
     /// The root of the Merkle tree of the blockchain state. It just acts as a commitment to the
     /// state.
@@ -214,10 +213,8 @@ impl fmt::Display for MicroHeader {
 #[derive(Clone, Debug, Eq, PartialEq, Serialize, Deserialize, SerializeContent)]
 pub struct MicroBody {
     /// A vector containing the fork proofs for this block. It might be empty.
-    #[beserial(len_type(u16))]
     pub fork_proofs: Vec<ForkProof>,
     /// A vector containing the transactions for this block. It might be empty.
-    #[beserial(len_type(u16))]
     pub transactions: Vec<ExecutedTransaction>,
 }
 

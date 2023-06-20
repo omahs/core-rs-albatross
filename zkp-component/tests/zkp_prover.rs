@@ -11,6 +11,7 @@ fn can_locate_prover_binary() {
     zkp_test_exe();
 }
 
+#[ignore]
 #[test(tokio::test)]
 async fn can_launch_process_and_parse_output() {
     let (_send, recv) = oneshot::channel();

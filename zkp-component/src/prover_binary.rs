@@ -2,14 +2,17 @@ use std::io::{self, BufReader, BufWriter, Error, ErrorKind};
 
 use crate::proof_gen_utils::generate_new_proof;
 use crate::types::{ProofInput, PROOF_GENERATION_OUTPUT_DELIMITER};
-use ark_serialize::Write;
+use ark_serialize::{Read, Write};
 
 use crate::types::ZKProofGenerationError;
 
 pub async fn prover_main() -> Result<(), Error> {
     // Read proof input from stdin.
-    let stdin = BufReader::new(io::stdin());
-    let proof_input: Result<ProofInput, _> = postcard::from_bytes(&stdin.buffer());
+    let mut stdin_buf = vec![];
+    let mut stdin = BufReader::new(io::stdin());
+    stdin.read_to_end(&mut stdin_buf)?;
+
+    let proof_input: Result<ProofInput, _> = postcard::from_bytes(&stdin_buf);
 
     log::info!(
         "Starting proof generation for block {:?}",

@@ -4,7 +4,10 @@ use std::fmt::{Debug, Error, Formatter};
 use std::io;
 use std::str;
 
-use ::serde::{de::DeserializeOwned, Deserialize, Serialize};
+use ::serde::{
+    de::{DeserializeOwned, Error as deError},
+    Deserialize, Deserializer, Serialize, Serializer,
+};
 use blake2_rfc::blake2b::Blake2b;
 use blake2_rfc::blake2s::Blake2s;
 use hex::FromHex;
@@ -111,8 +114,37 @@ where
 // Blake2b
 
 const BLAKE2B_LENGTH: usize = 32;
-create_typed_array!(Blake2bHash, u8, BLAKE2B_LENGTH, Serialize, Deserialize);
+create_typed_array!(Blake2bHash, u8, BLAKE2B_LENGTH);
 add_hex_io_fns_typed_arr!(Blake2bHash, BLAKE2B_LENGTH);
+
+impl Serialize for Blake2bHash {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        if serializer.is_human_readable() {
+            Serialize::serialize(&self.to_hex(), serializer)
+        } else {
+            Serialize::serialize(&self.0, serializer)
+        }
+    }
+}
+
+impl<'de> Deserialize<'de> for Blake2bHash {
+    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        if deserializer.is_human_readable() {
+            let s: Cow<'de, str> = Deserialize::deserialize(deserializer)?;
+            s.parse()
+                .map_err(|_| D::Error::custom("Could not parse hash"))
+        } else {
+            let data: [u8; Self::SIZE] = Deserialize::deserialize(deserializer)?;
+            Ok(Blake2bHash(data))
+        }
+    }
+}
 
 pub struct Blake2bHasher(Blake2b);
 impl HashOutput for Blake2bHash {

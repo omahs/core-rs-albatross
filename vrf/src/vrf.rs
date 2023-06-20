@@ -11,8 +11,6 @@ use curve25519_dalek::scalar::Scalar;
 use curve25519_dalek::traits::IsIdentity;
 use log::debug;
 use rand::{CryptoRng, RngCore};
-#[cfg(feature = "serde-derive")]
-use serde_big_array::BigArray;
 use sha2::{Digest, Sha256, Sha512};
 
 use nimiq_hash::{Blake2bHash, Blake2bHasher, HashOutput, Hasher};
@@ -61,6 +59,7 @@ impl std::fmt::Debug for VrfEntropy {
 
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd)]
 #[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-derive", serde(transparent))]
 /// A struct containing a VRF Seed. It is simply the serialized output of the VXEdDSA algorithm.
 ///
 /// <https://www.signal.org/docs/specifications/xeddsa/#vxeddsa>
@@ -73,7 +72,7 @@ impl std::fmt::Debug for VrfEntropy {
 /// However, the entropy that we extract from the random seed is unique for a given message and
 /// public key.
 pub struct VrfSeed {
-    #[cfg_attr(feature = "serde-derive", serde(with = "BigArray"))]
+    #[cfg_attr(feature = "serde-derive", serde(with = "nimiq_serde_ext::HexArray"))]
     pub(crate) signature: [u8; VrfSeed::SIZE],
 }
 

@@ -107,7 +107,7 @@ fn it_can_verify_creation_transaction() {
     assert_eq!(
         AccountType::verify_incoming_transaction(&transaction),
         Err(TransactionError::InvalidSerialization(
-            postcard::Error::DeserializeUnexpectedEnd
+            postcard::Error::SerdeDeCustom
         ))
     );
     transaction.data[40] = 1;

@@ -1,5 +1,6 @@
 use log::error;
 use serde::{Deserialize, Serialize};
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum_macros::Display;
 
 use nimiq_hash::{Blake2bHasher, Hasher, Sha256Hasher};
@@ -69,13 +70,13 @@ impl AccountTransactionVerification for HashedTimeLockedContractVerifier {
     Copy,
     Debug,
     Default,
-    Deserialize,
+    Deserialize_repr,
     Display,
     Eq,
     Ord,
     PartialEq,
     PartialOrd,
-    Serialize,
+    Serialize_repr,
     Hash,
 )]
 #[repr(u8)]
@@ -101,6 +102,7 @@ pub struct CreationTransactionData {
     pub hash_algorithm: HashAlgorithm,
     pub hash_root: AnyHash,
     pub hash_count: u8,
+    #[serde(with = "postcard::fixint::be")]
     pub timeout: u64,
 }
 

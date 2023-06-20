@@ -106,13 +106,13 @@ fn it_can_create_contract_from_transaction() {
     let block_state = BlockState::new(1, 1);
 
     // Transaction 1
-    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 8);
+    let mut data = [0u8; Address::SIZE + 8];
     let owner = Address::from(&key_1);
     postcard::to_slice(&owner, &mut data).unwrap();
-    postcard::to_slice(&1000u64, &mut data).unwrap();
+    postcard::to_slice(&1000u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
 
     let mut tx = Transaction::new_contract_creation(
-        data,
+        data.to_vec(),
         owner.clone(),
         AccountType::Basic,
         AccountType::Vesting,
@@ -159,13 +159,17 @@ fn it_can_create_contract_from_transaction() {
     assert_eq!(contract.total_amount, 100.try_into().unwrap());
 
     // Transaction 2
-    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 24);
+    let mut data = [0u8; Address::SIZE + 24];
     let owner = Address::from([0u8; 20]);
     postcard::to_slice(&owner, &mut data).unwrap();
-    postcard::to_slice(&0u64, &mut data).unwrap();
-    postcard::to_slice(&100u64, &mut data).unwrap();
-    postcard::to_slice(&Coin::try_from(50).unwrap(), &mut data).unwrap();
-    tx.data = data;
+    postcard::to_slice(&0u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
+    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE + 8..]).unwrap();
+    postcard::to_slice(
+        &Coin::try_from(50).unwrap(),
+        &mut data[Address::SIZE + 16..],
+    )
+    .unwrap();
+    tx.data = data.to_vec();
     tx.recipient = tx.contract_creation_address();
 
     let mut tx_logger = TransactionLog::empty();
@@ -193,14 +197,22 @@ fn it_can_create_contract_from_transaction() {
     assert_eq!(contract.total_amount, 100.try_into().unwrap());
 
     // Transaction 3
-    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 32);
+    let mut data = [0u8; Address::SIZE + 32];
     let owner = Address::from([0u8; 20]);
     postcard::to_slice(&owner, &mut data).unwrap();
-    postcard::to_slice(&0u64, &mut data).unwrap();
-    postcard::to_slice(&100u64, &mut data).unwrap();
-    postcard::to_slice(&Coin::try_from(50).unwrap(), &mut data).unwrap();
-    postcard::to_slice(&Coin::try_from(150).unwrap(), &mut data).unwrap();
-    tx.data = data;
+    postcard::to_slice(&0u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
+    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE + 8..]).unwrap();
+    postcard::to_slice(
+        &Coin::try_from(50).unwrap(),
+        &mut data[Address::SIZE + 16..],
+    )
+    .unwrap();
+    postcard::to_slice(
+        &Coin::try_from(150).unwrap(),
+        &mut data[Address::SIZE + 24..],
+    )
+    .unwrap();
+    tx.data = data.to_vec();
     tx.recipient = tx.contract_creation_address();
 
     let mut tx_logger = TransactionLog::empty();
@@ -227,9 +239,9 @@ fn it_can_create_contract_from_transaction() {
     assert_eq!(contract.total_amount, 150.try_into().unwrap());
 
     // Transaction 4: invalid data
-    tx.data = Vec::with_capacity(Address::SIZE + 2);
+    tx.data = vec![0u8; Address::SIZE + 2];
     postcard::to_slice(&owner, &mut tx.data).unwrap();
-    postcard::to_slice(&0u16, &mut tx.data).unwrap();
+    postcard::to_slice(&0u16.to_be_bytes(), &mut tx.data[Address::SIZE..]).unwrap();
     tx.recipient = tx.contract_creation_address();
 
     let mut tx_logger = TransactionLog::empty();

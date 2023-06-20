@@ -368,7 +368,7 @@ mod serde_derive {
         where
             A: SeqAccess<'de>,
         {
-            let block_number: u32 = seq
+            let block_number: [u8; 4] = seq
                 .next_element()?
                 .ok_or_else(|| A::Error::invalid_length(0, &self))?;
             let latest_ser_proof: Option<Vec<u8>> = seq
@@ -376,15 +376,17 @@ mod serde_derive {
                 .ok_or_else(|| A::Error::invalid_length(1, &self))?;
 
             let latest_proof = if let Some(ser_proof) = latest_ser_proof {
-                CanonicalDeserialize::deserialize_compressed(&*ser_proof).map_err(|_| {
-                    A::Error::invalid_value(Unexpected::Other("Invalid proof"), &self)
-                })?
+                Some(
+                    CanonicalDeserialize::deserialize_compressed(&*ser_proof).map_err(|_| {
+                        A::Error::invalid_value(Unexpected::Other("Invalid proof"), &self)
+                    })?,
+                )
             } else {
                 None
             };
 
             Ok(ZKProof {
-                block_number,
+                block_number: u32::from_be_bytes(block_number),
                 proof: latest_proof,
             })
         }
@@ -407,7 +409,7 @@ mod serde_derive {
             } else {
                 None
             };
-            state.serialize_field(ZK_PROOF_FIELDS[0], &self.block_number)?;
+            state.serialize_field(ZK_PROOF_FIELDS[0], &self.block_number.to_be_bytes())?;
             state.serialize_field(ZK_PROOF_FIELDS[1], &ser_latest_proof)?;
             state.end()
         }
@@ -445,7 +447,7 @@ mod serde_derive {
             let latest_header_hash: Blake2bHash = seq
                 .next_element()?
                 .ok_or_else(|| A::Error::invalid_length(2, &self))?;
-            let latest_block_number: u32 = seq
+            let latest_block_number: [u8; 4] = seq
                 .next_element()?
                 .ok_or_else(|| A::Error::invalid_length(3, &self))?;
             let ser_latest_proof: Option<Vec<u8>> = seq
@@ -466,9 +468,11 @@ mod serde_derive {
             }
 
             let latest_proof = if let Some(ser_proof) = ser_latest_proof {
-                CanonicalDeserialize::deserialize_uncompressed_unchecked(&*ser_proof).map_err(
-                    |_| A::Error::invalid_value(Unexpected::Other("Invalid proof"), &self),
-                )?
+                Some(
+                    CanonicalDeserialize::deserialize_uncompressed_unchecked(&*ser_proof).map_err(
+                        |_| A::Error::invalid_value(Unexpected::Other("Invalid proof"), &self),
+                    )?,
+                )
             } else {
                 None
             };
@@ -476,7 +480,7 @@ mod serde_derive {
             Ok(ZKPState {
                 latest_pks,
                 latest_header_hash,
-                latest_block_number,
+                latest_block_number: u32::from_be_bytes(latest_block_number),
                 latest_proof,
             })
         }
@@ -513,7 +517,7 @@ mod serde_derive {
             state.serialize_field(ZKP_STATE_FIELDS[0], &self.latest_pks.len())?;
             state.serialize_field(ZKP_STATE_FIELDS[1], &ser_latest_pks)?;
             state.serialize_field(ZKP_STATE_FIELDS[2], &self.latest_header_hash)?;
-            state.serialize_field(ZKP_STATE_FIELDS[3], &self.latest_block_number)?;
+            state.serialize_field(ZKP_STATE_FIELDS[3], &self.latest_block_number.to_be_bytes())?;
             state.serialize_field(ZKP_STATE_FIELDS[4], &ser_latest_proof)?;
             state.end()
         }

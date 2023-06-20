@@ -21,6 +21,7 @@ pub struct LevelUpdate<C: AggregatableContribution> {
     ///
     /// NOTE: It's safe to just send your own validator ID, since everything critical is authenticated
     /// by signatures anyway.
+    #[serde(with = "postcard::fixint::be")]
     pub(crate) origin: u16,
 }
 

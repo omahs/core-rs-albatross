@@ -207,7 +207,6 @@ pub struct MacroHeader {
     /// The hash of the header of the preceding election macro block.
     pub parent_election_hash: Blake2bHash,
     /// Hashes of the last blocks dividable by 2^x
-    #[beserial(len_type(u8))]
     pub interlink: Option<Vec<Blake2bHash>>,
     /// The seed of the block. This is the BLS signature of the seed of the immediately preceding
     /// block (either micro or macro) using the validator key of the block proposer.
@@ -217,7 +216,6 @@ pub struct MacroHeader {
     /// It encodes the initial supply in the genesis block, as a big-endian `u64`.
     ///
     /// No planned use otherwise.
-    #[beserial(len_type(u8, limit = 32))]
     pub extra_data: Vec<u8>,
     /// The root of the Merkle tree of the blockchain state. It just acts as a commitment to the
     /// state.
@@ -314,7 +312,6 @@ pub struct MacroBody {
     /// verify the zero-knowledge proofs used in the light macro sync.
     /// Is only Some when the macro block is an election block.
     /// TODO: Change to fixed size array [u8; 95]
-    #[beserial(len_type(u8, limit = 96))]
     pub pk_tree_root: Option<Vec<u8>>,
     /// A bitset representing which validator slots had their reward slashed at the time when this
     /// block was produced. It is used later on for reward distribution.
@@ -324,7 +321,6 @@ pub struct MacroBody {
     /// reward distribution.
     pub disabled_set: BitSet,
     /// The reward related transactions of this block.
-    #[beserial(len_type(u16))]
     pub transactions: Vec<RewardTransaction>,
 }
 

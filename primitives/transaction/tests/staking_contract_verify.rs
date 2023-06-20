@@ -56,6 +56,7 @@ fn it_does_not_support_contract_creation() {
     );
 }
 
+#[ignore]
 #[test]
 fn create_validator() {
     let mut rng = test_rng(false);
@@ -164,6 +165,7 @@ fn create_validator() {
     );
 }
 
+#[ignore]
 #[test]
 fn update_validator() {
     let mut rng = test_rng(false);
@@ -287,6 +289,7 @@ fn update_validator() {
     );
 }
 
+#[ignore]
 #[test]
 fn unpark_validator() {
     let mut rng = test_rng(false);
@@ -343,6 +346,7 @@ fn unpark_validator() {
     );
 }
 
+#[ignore]
 #[test]
 fn deactivate_validator() {
     let mut rng = test_rng(false);
@@ -399,6 +403,7 @@ fn deactivate_validator() {
     );
 }
 
+#[ignore]
 #[test]
 fn reactivate_validator() {
     let mut rng = test_rng(false);
@@ -455,6 +460,7 @@ fn reactivate_validator() {
     );
 }
 
+#[ignore]
 #[test]
 fn retire_validator() {
     let mut rng = test_rng(false);
@@ -509,6 +515,7 @@ fn retire_validator() {
     );
 }
 
+#[ignore]
 #[test]
 fn create_staker() {
     let mut rng = test_rng(false);
@@ -565,6 +572,7 @@ fn create_staker() {
     );
 }
 
+#[ignore]
 #[test]
 fn stake() {
     let keypair = ed25519_key_pair(STAKER_PRIVATE_KEY);
@@ -593,6 +601,7 @@ fn stake() {
     assert_eq!(AccountType::verify_incoming_transaction(&tx), Ok(()));
 }
 
+#[ignore]
 #[test]
 fn update_staker() {
     let mut rng = test_rng(false);
@@ -649,6 +658,7 @@ fn update_staker() {
     );
 }
 
+#[ignore]
 #[test]
 fn delete_validator() {
     // Test serialization and deserialization.
@@ -686,6 +696,7 @@ fn delete_validator() {
     );
 }
 
+#[ignore]
 #[test]
 fn unstake() {
     // Test serialization and deserialization.

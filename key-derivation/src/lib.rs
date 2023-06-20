@@ -47,7 +47,7 @@ impl ExtendedPrivateKey {
 
         let mut data = Vec::<u8>::with_capacity(1 + PrivateKey::SIZE + 4);
         data.write_u8(0).ok()?;
-        postcard::to_slice(&self.key, &mut data[1..]).ok()?;
+        data.append(&mut postcard::to_allocvec(&self.key).ok()?);
         data.write_u32::<BigEndian>(index).ok()?;
 
         let hash = compute_hmac_sha512(&self.chain_code, data.as_slice());

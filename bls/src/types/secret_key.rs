@@ -15,7 +15,7 @@ pub struct SecretKey {
 }
 
 impl SecretKey {
-    pub const SIZE: usize = 96;
+    pub const SIZE: usize = 95;
 
     /// Creates a signature given a message.
     pub fn sign<M: Hash>(&self, msg: &M) -> Signature {
@@ -70,6 +70,7 @@ mod serde_derive {
         de::{Deserialize, Deserializer, Error as SerializationError},
         ser::{Error as DeSerializationError, Serialize, Serializer},
     };
+    use serde_big_array::BigArray;
 
     use super::SecretKey;
 
@@ -98,11 +99,11 @@ mod serde_derive {
         where
             S: Serializer,
         {
-            let mut compressed = Vec::new();
+            let mut compressed = [0u8; Self::SIZE];
             self.secret_key
-                .serialize_uncompressed(&mut compressed)
+                .serialize_uncompressed(&mut compressed[..])
                 .map_err(|_| S::Error::custom("Couldn't compress secret key"))?;
-            Serialize::serialize(&compressed, serializer)
+            BigArray::serialize(&compressed, serializer)
         }
     }
 
@@ -111,9 +112,9 @@ mod serde_derive {
         where
             D: Deserializer<'de>,
         {
-            let compressed: Vec<u8> = Deserialize::deserialize(deserializer)?;
+            let compressed: [u8; Self::SIZE] = BigArray::deserialize(deserializer)?;
             Ok(SecretKey {
-                secret_key: Fr::deserialize_uncompressed(&*compressed)
+                secret_key: Fr::deserialize_uncompressed(&*compressed.to_vec())
                     .map_err(|_| D::Error::custom("Couldn't uncompress secret key"))?,
             })
         }

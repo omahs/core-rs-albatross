@@ -22,13 +22,13 @@ impl NonFailingTest {
 
 lazy_static! {
     static ref NON_FAILING_TESTS: Vec<NonFailingTest> = vec![
-        NonFailingTest::new("00", 0u64),
-        NonFailingTest::new("01", 1u64),
-        NonFailingTest::new("05", 5u64),
-        NonFailingTest::new("8580808010", 4294967301),
-        NonFailingTest::new("c0c407", 123456u64),
-        NonFailingTest::new("b4a4d8a2a302", 78187467316u64),
-        NonFailingTest::new("ffffffffffffff0f", Coin::MAX_SAFE_VALUE),
+        NonFailingTest::new("0000000000000000", 0u64),
+        NonFailingTest::new("0000000000000001", 1u64),
+        NonFailingTest::new("0000000000000005", 5u64),
+        NonFailingTest::new("0000000100000005", 4294967301),
+        NonFailingTest::new("000000000001e240", 123456u64),
+        NonFailingTest::new("0000001234561234", 78187467316u64),
+        NonFailingTest::new("001fffffffffffff", Coin::MAX_SAFE_VALUE),
     ];
 }
 
@@ -45,12 +45,12 @@ fn test_non_failing() {
 #[test]
 #[cfg(feature = "serde-derive")]
 fn test_deserialize_out_of_bounds() {
-    let vec = hex::decode("ffffffffffffffffff").unwrap();
+    let vec = hex::decode("0020000000000000").unwrap();
     let res: Result<Coin, postcard::Error> = postcard::from_bytes(&vec[..]);
     match res {
         Ok(coin) => assert!(false, "Instead of failing, got {}", coin),
         Err(err) => match err {
-            postcard::Error::DeserializeUnexpectedEnd => (),
+            postcard::Error::SerdeDeCustom => (),
             _ => assert!(false, "Expected to fail with IoError, but got {}", err),
         },
     }

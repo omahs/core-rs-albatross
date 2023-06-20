@@ -216,7 +216,7 @@ impl Recipient {
         match self {
             Recipient::Basic { data, .. } => data.clone(),
             Recipient::HtlcCreation { data } => postcard::to_allocvec(&data).unwrap(),
-            Recipient::VestingCreation { data } => postcard::to_allocvec(&data).unwrap(),
+            Recipient::VestingCreation { data } => data.to_tx_data().unwrap(),
             Recipient::Staking { data } => postcard::to_allocvec(&data).unwrap(),
         }
     }

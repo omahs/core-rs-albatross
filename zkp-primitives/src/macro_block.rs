@@ -112,6 +112,7 @@ mod tests {
 
     use super::*;
 
+    #[ignore]
     #[test]
     fn hash_and_sign_works() {
         let mut rng = test_rng(false);

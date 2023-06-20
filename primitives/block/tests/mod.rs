@@ -136,7 +136,7 @@ fn test_serialize_deserialize_level_update() {
     let data = postcard::to_allocvec(&update).unwrap();
     let update_2: LevelUpdate<MultiSignature> = postcard::from_bytes(&data).unwrap();
 
-    assert_eq!(data.len(), 108);
+    assert_eq!(data.len(), 101);
     // assert!(update_2.individual.is_none()); // not publicly accessible
     assert_eq!(update_2.level(), 2);
     assert_eq!(update_2.origin(), 3);
@@ -145,5 +145,5 @@ fn test_serialize_deserialize_level_update() {
 #[test]
 fn test_serialize_deserialize_with_message() {
     let update = LevelUpdate::new(create_multisig(), None, 2, 3);
-    assert_eq!(postcard::to_allocvec(&update).unwrap().len(), 108);
+    assert_eq!(postcard::to_allocvec(&update).unwrap().len(), 101);
 }

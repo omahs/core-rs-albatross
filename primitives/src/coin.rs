@@ -11,11 +11,6 @@ use regex::Regex;
 use thiserror::Error;
 
 #[derive(Debug, Clone, Copy, PartialEq, PartialOrd, Eq, Ord, Default, Hash)]
-#[cfg_attr(
-    feature = "serde-derive",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(transparent)
-)]
 pub struct Coin(u64);
 
 impl Coin {
@@ -244,5 +239,39 @@ impl FromStr for Coin {
         let coin = Coin::try_from(int_part * Coin::LUNAS_PER_COIN + frac_part).map_err(|_| e())?;
 
         Ok(coin)
+    }
+}
+
+#[cfg(feature = "serde-derive")]
+mod serialization {
+    use serde::{
+        de::{Error, Unexpected},
+        Deserialize, Deserializer, Serialize, Serializer,
+    };
+
+    use super::*;
+
+    impl Serialize for Coin {
+        fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+        where
+            S: Serializer,
+        {
+            postcard::fixint::be::serialize(&self.0, serializer)
+        }
+    }
+
+    impl<'de> Deserialize<'de> for Coin {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+        where
+            D: Deserializer<'de>,
+        {
+            let value: u64 = postcard::fixint::be::deserialize(deserializer)?;
+            Coin::try_from(value).map_err(|_| {
+                D::Error::invalid_value(
+                    Unexpected::Unsigned(value),
+                    &"An u64 below the Coin maximum value",
+                )
+            })
+        }
     }
 }
