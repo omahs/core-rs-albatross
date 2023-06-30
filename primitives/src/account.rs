@@ -14,7 +14,7 @@ use crate::{
 #[repr(u8)]
 #[cfg_attr(
     any(feature = "serde-derive", feature = "ts-types"),
-    derive(serde::Serialize, serde::Deserialize)
+    derive(nimiq_serde::Serialize, nimiq_serde::Deserialize)
 )]
 #[cfg_attr(feature = "serde-derive", serde(try_from = "u8", into = "u8"))]
 #[cfg_attr(
@@ -79,7 +79,7 @@ pub enum AccountError {
     #[error("Invalid receipt")]
     InvalidReceipt,
     #[error("Invalid serialization {0}")]
-    InvalidSerialization(#[from] postcard::Error),
+    InvalidSerialization(#[from] nimiq_serde::DeserializeError),
     #[error("Invalid transaction")]
     InvalidTransaction(#[from] TransactionError),
     #[error("Invalid coin value")]
@@ -108,7 +108,7 @@ impl From<CoinUnderflowError> for AccountError {
 }
 
 #[derive(Debug, Clone, Copy, Error, PartialEq, Eq, Hash)]
-#[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde-derive", derive(nimiq_serde::Serialize, nimiq_serde::Deserialize))]
 #[repr(u8)]
 pub enum FailReason {
     #[error("Insufficient funds")]

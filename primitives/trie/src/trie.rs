@@ -23,7 +23,7 @@ use nimiq_primitives::{
         trie_proof_node::TrieProofNode,
     },
 };
-use nimiq_serde_ext::SerRangeFrom;
+use nimiq_serde::SerRangeFrom;
 use serde::{de::DeserializeOwned, Serialize};
 
 /// A Merkle Radix Trie is a hybrid between a Merkle tree and a Radix trie. Like a Merkle tree each

@@ -23,5 +23,5 @@ serde = { version = "1.0", features = ["derive"] }
 [dev-dependencies]
 hex = "0.4"
 nimiq-test-log = { path = "../test-log" }
-postcard = { version = "1.0", features = ["alloc"] }
+nimiq-serde = { path = "../serde" }
 rand = "0.8"

@@ -71,7 +71,7 @@ impl std::fmt::Debug for VrfEntropy {
 /// However, the entropy that we extract from the random seed is unique for a given message and
 /// public key.
 pub struct VrfSeed {
-    #[cfg_attr(feature = "serde-derive", serde(with = "nimiq_serde_ext::HexArray"))]
+    #[cfg_attr(feature = "serde-derive", serde(with = "nimiq_serde::HexArray"))]
     pub(crate) signature: [u8; VrfSeed::SIZE],
 }
 

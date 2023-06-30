@@ -27,7 +27,6 @@ anyhow = "1.0"
 clap = { version = "4.3", features = ["cargo"] }
 hex = "0.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
-postcard = "1.0"
 rand = "0.8"
 thiserror = "1.0"
 
@@ -36,4 +35,5 @@ nimiq-hash = { path = "../hash" }
 nimiq-keys = { path = "../keys" }
 nimiq-primitives = { path = "../primitives" }
 nimiq-transaction = { path = "../primitives/transaction" }
+nimiq-serde = { path = "../serde" }
 nimiq-utils = { path = "../utils" }

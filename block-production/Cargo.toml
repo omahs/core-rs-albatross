@@ -40,7 +40,6 @@ nimiq-vrf = { path = "../vrf" }
 nimiq-utils = { path = "../utils"}
 
 [dev-dependencies]
-postcard = "1.0"
 rand = "0.8"
 tempfile = "3.3"
 

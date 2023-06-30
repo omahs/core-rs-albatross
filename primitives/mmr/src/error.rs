@@ -6,5 +6,4 @@ pub enum Error {
     InvalidProof,
     IncompleteProof,
     ProofOutOfOrder,
-    HashMergeFailure,
 }

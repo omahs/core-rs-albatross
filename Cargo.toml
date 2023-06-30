@@ -40,7 +40,7 @@ members = [
   "rpc-client",
   "rpc-interface",
   "rpc-server",
-  "serde-ext",
+  "serde",
   "spammer",
   "tendermint",
   "test-log",

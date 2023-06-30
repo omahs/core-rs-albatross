@@ -286,12 +286,9 @@ impl<H: Merge + PartialEq + Clone, S: Store<H>> PartialMerkleMountainRange<H, S>
 
             let parent_pos = position.parent();
             let parent_hash = if position.right_node {
-                sibling_hash
-                    .merge(&hash, parent_pos.num_leaves() as u64)
-                    .ok_or(Error::HashMergeFailure)?
+                sibling_hash.merge(&hash, parent_pos.num_leaves() as u64)
             } else {
                 hash.merge(&sibling_hash, parent_pos.num_leaves() as u64)
-                    .ok_or(Error::HashMergeFailure)?
             };
 
             // Add the parent to the queue.

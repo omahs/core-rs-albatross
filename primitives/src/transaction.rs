@@ -21,5 +21,5 @@ pub enum TransactionError {
     #[error("Invalid transaction data")]
     InvalidData,
     #[error("Invalid serialization: {0}")]
-    InvalidSerialization(#[from] postcard::Error),
+    InvalidSerialization(#[from] nimiq_serde::DeserializeError),
 }

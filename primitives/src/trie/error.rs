@@ -26,5 +26,5 @@ pub enum MerkleRadixTrieError {
     #[error("Trie is not complete")]
     IncompleteTrie,
     #[error("Serialization error")]
-    Serialization(#[from] postcard::Error),
+    Serialization(#[from] nimiq_serde::DeserializeError),
 }

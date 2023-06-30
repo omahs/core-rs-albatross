@@ -22,7 +22,6 @@ derive_more = "0.99"
 futures = { package = "futures-util", version = "0.3" }
 log = { package = "tracing", version = "0.1", features = ["log"] }
 parking_lot = "0.12"
-postcard = { version = "1.0", features = ["alloc"] }
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 tokio = { version = "1.28", features = [
@@ -32,6 +31,7 @@ tokio = { version = "1.28", features = [
 tokio-stream = "0.1"
 
 nimiq-network-interface = { path = "../network-interface" }
+nimiq-serde = { path = "../serde" }
 
 [dev-dependencies]
 nimiq-test-log = { path = "../test-log" }

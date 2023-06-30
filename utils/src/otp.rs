@@ -8,7 +8,7 @@ use clear_on_drop::clear::Clear;
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::argon2kdf::{compute_argon2_kdf, Argon2Error};
 use rand::{rngs::OsRng, RngCore};
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 pub trait Verify {
     fn verify(&self) -> bool;
@@ -69,18 +69,12 @@ impl<T: Clear> AsRef<T> for ClearOnDrop<T> {
 }
 
 // Unlocked container
-pub struct Unlocked<T>
-where
-    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
-{
+pub struct Unlocked<T: Clear + Deserialize + Serialize> {
     data: ClearOnDrop<T>,
     lock: Locked<T>,
 }
 
-impl<T> Unlocked<T>
-where
-    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
-{
+impl<T: Clear + Deserialize + Serialize> Unlocked<T> {
     /// Calling code should make sure to clear the password from memory after use.
     pub fn new(
         secret: T,
@@ -127,10 +121,7 @@ where
     }
 }
 
-impl<T> Deref for Unlocked<T>
-where
-    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
-{
+impl<T: Clear + Deserialize + Serialize> Deref for Unlocked<T> {
     type Target = T;
 
     #[inline]
@@ -141,21 +132,14 @@ where
 
 // Locked container
 #[derive(Serialize, Deserialize)]
-pub struct Locked<T>
-where
-    for<'a> T: 'a + Clear + Deserialize<'a> + Serialize,
-{
+pub struct Locked<T: Clear + Deserialize + Serialize> {
     lock: Vec<u8>,
     salt: Vec<u8>,
     iterations: u32,
-    #[serde(skip)]
     phantom: PhantomData<T>,
 }
 
-impl<T> Locked<T>
-where
-    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
-{
+impl<T: Clear + Deserialize + Serialize> Locked<T> {
     /// Calling code should make sure to clear the password from memory after use.
     pub fn new(
         mut secret: T,
@@ -191,7 +175,7 @@ where
             return Err(self);
         };
 
-        let result = postcard::from_bytes(&key).ok();
+        let result = Deserialize::deserialize_from_vec(&key).ok();
 
         // Always overwrite unencrypted vector.
         for byte in key.iter_mut() {
@@ -230,7 +214,7 @@ where
         iterations: u32,
         salt: Vec<u8>,
     ) -> Result<Self, Argon2Error> {
-        let mut data = postcard::to_allocvec(&secret).map_err(|_| Argon2Error::MemoryTooLittle)?;
+        let mut data = secret.serialize_to_vec();
         let lock = Self::otp(&data, password, iterations, &salt)?;
 
         // Always overwrite unencrypted vector.
@@ -262,10 +246,7 @@ where
     }
 }
 
-impl<T> Locked<T>
-where
-    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize + Verify,
-{
+impl<T: Clear + Deserialize + Serialize + Verify> Locked<T> {
     /// Verifies integrity of data upon unlock.
     pub fn unlock(self, password: &[u8]) -> Result<Unlocked<T>, Locked<T>> {
         let unlocked = self.unlock_unchecked(password);
@@ -282,44 +263,32 @@ where
     }
 }
 
-impl<T> IntoDatabaseValue for Locked<T>
-where
-    for<'de> T: 'de + Default + Deserialize<'de> + Serialize,
-{
+impl<T: Default + Deserialize + Serialize> IntoDatabaseValue for Locked<T> {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        Serialize::serialize(&self, &mut bytes).unwrap();
     }
 }
 
-impl<T> FromDatabaseValue for Locked<T>
-where
-    for<'de> T: 'de + Default + Deserialize<'de> + Serialize,
-{
+impl<T: Default + Deserialize + Serialize> FromDatabaseValue for Locked<T> {
     fn copy_from_database(bytes: &[u8]) -> io::Result<Self>
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }
 
 // Generic container
-pub enum OtpLock<T>
-where
-    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
-{
+pub enum OtpLock<T: Clear + Deserialize + Serialize> {
     Unlocked(Unlocked<T>),
     Locked(Locked<T>),
 }
 
-impl<T> OtpLock<T>
-where
-    for<'de> T: 'de + Clear + Deserialize<'de> + Serialize,
-{
+impl<T: Clear + Deserialize + Serialize> OtpLock<T> {
     // Taken from Nimiq's JS implementation.
     // TODO: Adjust.
     pub const DEFAULT_ITERATIONS: u32 = 256;

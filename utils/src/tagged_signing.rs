@@ -10,8 +10,7 @@ use std::{
     marker::PhantomData,
 };
 
-#[cfg(feature = "serde-derive")]
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 /// A trait for objects that can be signed. You have to choose an unique `TAG` that is used as prefix for
 /// the message that will be signed. This is used to avoid replay attacks.
@@ -30,13 +29,15 @@ pub trait TaggedSignable: Serialize {
     const TAG: u8;
 
     fn message_data(&self) -> Vec<u8> {
-        let ser_content = postcard::to_allocvec(&self).expect("Failed to serialize message");
-        let mut buf = Cursor::new(Vec::with_capacity(ser_content.len() + 1));
+        let n = self.serialized_size();
+
+        let mut buf = Cursor::new(Vec::with_capacity(n + 1));
 
         let tag = [Self::TAG; 1];
         buf.write_all(&tag).expect("Failed to write tag");
-        buf.write_all(&ser_content)
-            .expect("Failed to write content");
+        self.serialize_to_writer(&mut buf)
+            .expect("Failed to serialize message");
+
         buf.into_inner()
     }
 }
@@ -49,9 +50,7 @@ where
 {
     data: Vec<u8>,
 
-    #[cfg_attr(feature = "serde-derive", serde(skip))]
     _tagged: PhantomData<TSignable>,
-    #[cfg_attr(feature = "serde-derive", serde(skip))]
     _scheme: PhantomData<TScheme>,
 }
 
@@ -135,10 +134,10 @@ pub trait TaggedPublicKey {
 
 #[cfg(test)]
 mod tests {
+    use nimiq_serde::{Deserialize, Serialize};
     use nimiq_keys::{KeyPair, PublicKey, SecureGenerate, Signature};
     use nimiq_test_log::test;
     use nimiq_test_utils::test_rng::test_rng;
-    use serde::{Deserialize, Serialize};
 
     use super::{TaggedKeypair, TaggedPublicKey, TaggedSignable, TaggedSignature};
 
@@ -199,10 +198,7 @@ mod tests {
         let msg1 = Message(42);
         let msg2 = AnotherMessage(42);
 
-        assert_eq!(
-            postcard::to_allocvec(&msg1).unwrap(),
-            postcard::to_allocvec(&msg2).unwrap()
-        );
+        assert_eq!(msg1.serialize_to_vec(), msg2.serialize_to_vec());
         assert_ne!(msg1.message_data(), msg2.message_data());
     }
 
@@ -212,10 +208,7 @@ mod tests {
         let msg2 = AnotherMessage(42);
 
         // The messages serialize to the same data and could be used for replay attacks in an untagged signature scheme.
-        assert_eq!(
-            postcard::to_allocvec(&msg1).unwrap(),
-            postcard::to_allocvec(&msg2).unwrap()
-        );
+        assert_eq!(msg1.serialize_to_vec(), msg2.serialize_to_vec());
 
         let keypair = TestKeypair::generate();
 

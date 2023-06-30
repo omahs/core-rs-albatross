@@ -257,7 +257,7 @@ mod serialization {
         where
             S: Serializer,
         {
-            postcard::fixint::be::serialize(&self.0, serializer)
+            nimiq_serde::fixint::be::serialize(&self.0, serializer)
         }
     }
 
@@ -266,7 +266,7 @@ mod serialization {
         where
             D: Deserializer<'de>,
         {
-            let value: u64 = postcard::fixint::be::deserialize(deserializer)?;
+            let value: u64 = nimiq_serde::fixint::be::deserialize(deserializer)?;
             Coin::try_from(value).map_err(|_| {
                 D::Error::invalid_value(
                     Unexpected::Unsigned(value),

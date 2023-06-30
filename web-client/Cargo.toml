@@ -24,7 +24,6 @@ futures-util = "0.3"
 hex = "0.4"
 js-sys = "0.3"
 log = { package = "tracing", version = "0.1", features = ["log"] }
-postcard = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 serde-wasm-bindgen = "0.5"
 tsify = { version = "0.4", features= ["js"] }
@@ -43,6 +42,7 @@ nimiq-hash = { path = "../hash" }
 nimiq-keys = { path = "../keys" }
 nimiq-network-interface = { path = "../network-interface" }
 nimiq-primitives = {path = "../primitives", features = ["coin", "networks", "ts-types"]}
+nimiq-serde = { path = "../serde" }
 nimiq-transaction = { path = "../primitives/transaction", features = ["ts-types"] }
 nimiq-transaction-builder = { path = "../transaction-builder" }
 

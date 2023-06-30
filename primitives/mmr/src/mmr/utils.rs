@@ -25,12 +25,7 @@ pub(crate) fn bagging<H: Merge, I: Iterator<Item = Result<(H, usize), Error>>>(
             None => Some((peak_hash, peak_leaves)),
             Some((root_hash, root_leaves)) => {
                 let sum_leaves = root_leaves + peak_leaves;
-                Some((
-                    peak_hash
-                        .merge(&root_hash, sum_leaves as u64)
-                        .ok_or(Error::HashMergeFailure)?,
-                    sum_leaves,
-                ))
+                Some((peak_hash.merge(&root_hash, sum_leaves as u64), sum_leaves))
             }
         };
     }
@@ -63,9 +58,7 @@ pub fn prove_num_leaves<
                     sum_leaves,
                     Some(peak_hash.clone()),
                     Some(root_hash.clone()),
-                    peak_hash
-                        .merge(&root_hash, sum_leaves as u64)
-                        .ok_or(Error::HashMergeFailure)?,
+                    peak_hash.merge(&root_hash, sum_leaves as u64),
                 ))
             }
         };
@@ -104,11 +97,11 @@ pub(crate) mod test_utils {
         }
 
         let mid = len >> 1;
-        H::merge(
+        Some(H::merge(
             &hash_perfect_tree(&values[..mid])?,
             &hash_perfect_tree(&values[mid..])?,
             len as u64,
-        )
+        ))
     }
 
     pub(crate) fn hash_mmr<H: Merge, T: Hash<H>>(values: &[T]) -> H {
@@ -136,8 +129,8 @@ pub(crate) mod test_utils {
             TestHash(prefix as usize)
         }
 
-        fn merge(&self, other: &Self, prefix: u64) -> Option<Self> {
-            Some(TestHash(self.0 * 2 + other.0 * 3 + prefix as usize))
+        fn merge(&self, other: &Self, prefix: u64) -> Self {
+            TestHash(self.0 * 2 + other.0 * 3 + prefix as usize)
         }
     }
 

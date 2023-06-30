@@ -17,7 +17,7 @@ use crate::Signature;
 #[derive(Clone, Copy)]
 #[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 pub struct CompressedSignature {
-    #[cfg_attr(feature = "serde-derive", serde(with = "nimiq_serde_ext::HexArray"))]
+    #[cfg_attr(feature = "serde-derive", serde(with = "nimiq_serde::HexArray"))]
     pub signature: [u8; 95],
 }
 

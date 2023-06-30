@@ -18,7 +18,7 @@ use crate::PublicKey;
 #[cfg_attr(feature = "serde-derive", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "serde-derive", serde(transparent))]
 pub struct CompressedPublicKey {
-    #[cfg_attr(feature = "serde-derive", serde(with = "nimiq_serde_ext::HexArray"))]
+    #[cfg_attr(feature = "serde-derive", serde(with = "nimiq_serde::HexArray"))]
     pub public_key: [u8; 285],
 }
 

@@ -5,14 +5,11 @@ use std::{
     io, str,
 };
 
-use ::serde::{
-    de::{DeserializeOwned, Error as deError},
-    Deserialize, Deserializer, Serialize, Serializer,
-};
+use nimiq_serde::{Deserialize, Serialize};
 use blake2_rfc::{blake2b::Blake2b, blake2s::Blake2s};
 use hex::FromHex;
 use nimiq_database_value::{AsDatabaseBytes, FromDatabaseValue};
-use nimiq_macros::{add_hex_io_fns_typed_arr, create_typed_array};
+use nimiq_macros::{add_serialization_fns_typed_arr, add_hex_io_fns_typed_arr, create_typed_array};
 use nimiq_mmr::hash::Merge;
 use sha2::{Digest, Sha256, Sha512};
 
@@ -91,7 +88,7 @@ pub trait HashOutput:
     + Eq
     + Clone
     + Serialize
-    + DeserializeOwned
+    + Deserialize
     + Sized
     + SerializeContent
     + Debug
@@ -118,35 +115,7 @@ where
 const BLAKE2B_LENGTH: usize = 32;
 create_typed_array!(Blake2bHash, u8, BLAKE2B_LENGTH);
 add_hex_io_fns_typed_arr!(Blake2bHash, BLAKE2B_LENGTH);
-
-impl Serialize for Blake2bHash {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        if serializer.is_human_readable() {
-            Serialize::serialize(&self.to_hex(), serializer)
-        } else {
-            Serialize::serialize(&self.0, serializer)
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Blake2bHash {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        if deserializer.is_human_readable() {
-            let s: Cow<'de, str> = Deserialize::deserialize(deserializer)?;
-            s.parse()
-                .map_err(|_| D::Error::custom("Could not parse hash"))
-        } else {
-            let data: [u8; Self::SIZE] = Deserialize::deserialize(deserializer)?;
-            Ok(Blake2bHash(data))
-        }
-    }
-}
+add_serialization_fns_typed_arr!(Blake2bHash, BLAKE2B_LENGTH);
 
 pub struct Blake2bHasher(Blake2b);
 impl HashOutput for Blake2bHash {
@@ -215,11 +184,11 @@ impl Merge for Blake2bHash {
     }
 
     /// Hashes a prefix and two Blake2b hashes together.
-    fn merge(&self, other: &Self, prefix: u64) -> Option<Self> {
+    fn merge(&self, other: &Self, prefix: u64) -> Self {
         let mut message = prefix.to_be_bytes().to_vec();
-        message.append(&mut postcard::to_allocvec(&self).ok()?);
-        message.append(&mut postcard::to_allocvec(&other).ok()?);
-        Some(message.hash())
+        message.append(&mut self.serialize_to_vec());
+        message.append(&mut other.serialize_to_vec());
+        message.hash()
     }
 }
 
@@ -228,36 +197,7 @@ impl Merge for Blake2bHash {
 const BLAKE2S_LENGTH: usize = 32;
 create_typed_array!(Blake2sHash, u8, BLAKE2S_LENGTH);
 add_hex_io_fns_typed_arr!(Blake2sHash, BLAKE2S_LENGTH);
-
-impl Serialize for Blake2sHash {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        if serializer.is_human_readable() {
-            Serialize::serialize(&self.to_hex(), serializer)
-        } else {
-            Serialize::serialize(&self.0, serializer)
-        }
-    }
-}
-
-impl<'de> Deserialize<'de> for Blake2sHash {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        if deserializer.is_human_readable() {
-            let s: Cow<'de, str> = Deserialize::deserialize(deserializer)?;
-            s.parse()
-                .map_err(|_| D::Error::custom("Could not parse hash"))
-        } else {
-            let data: [u8; Self::SIZE] = Deserialize::deserialize(deserializer)?;
-            Ok(Blake2sHash(data))
-        }
-    }
-}
-
+add_serialization_fns_typed_arr!(Blake2sHash, BLAKE2S_LENGTH);
 pub struct Blake2sHasher(Blake2s);
 impl HashOutput for Blake2sHash {
     type Builder = Blake2sHasher;
@@ -307,8 +247,9 @@ impl Hasher for Blake2sHasher {
 const ARGON2D_LENGTH: usize = 32;
 const NIMIQ_ARGON2_SALT: &str = "nimiqrocks!";
 const DEFAULT_ARGON2_COST: u32 = 512;
-create_typed_array!(Argon2dHash, u8, ARGON2D_LENGTH, Serialize, Deserialize);
+create_typed_array!(Argon2dHash, u8, ARGON2D_LENGTH);
 add_hex_io_fns_typed_arr!(Argon2dHash, ARGON2D_LENGTH);
+add_serialization_fns_typed_arr!(Argon2dHash, ARGON2D_LENGTH);
 pub struct Argon2dHasher {
     buf: Vec<u8>,
     config: argon2::Config<'static>,
@@ -376,8 +317,9 @@ impl Hasher for Argon2dHasher {
 // SHA256
 
 const SHA256_LENGTH: usize = 32;
-create_typed_array!(Sha256Hash, u8, SHA256_LENGTH, Serialize, Deserialize);
+create_typed_array!(Sha256Hash, u8, SHA256_LENGTH);
 add_hex_io_fns_typed_arr!(Sha256Hash, SHA256_LENGTH);
+add_serialization_fns_typed_arr!(Sha256Hash, SHA256_LENGTH);
 pub struct Sha256Hasher(Sha256);
 impl HashOutput for Sha256Hash {
     type Builder = Sha256Hasher;

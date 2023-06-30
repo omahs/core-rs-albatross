@@ -3,7 +3,7 @@ use std::io;
 use byteorder::WriteBytesExt;
 use log::error;
 use nimiq_hash::{Blake2bHash, Hash, SerializeContent};
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 use crate::{
     key_nibbles::KeyNibbles,
@@ -113,10 +113,7 @@ impl TrieProofNode {
 impl SerializeContent for TrieProofNode {
     fn serialize_content<W: io::Write, H>(&self, writer: &mut W) -> io::Result<usize> {
         let mut size = 0;
-        let ser_key = postcard::to_allocvec(&self.key)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-        size += ser_key.len();
-        writer.write_all(&ser_key)?;
+        size += self.key.serialize(writer).unwrap();
         size += 1;
         match &self.value {
             ProofValue::None => {
@@ -124,30 +121,18 @@ impl SerializeContent for TrieProofNode {
             }
             ProofValue::LeafValue(val) => {
                 writer.write_u8(1).unwrap();
-                let ser_val = postcard::to_allocvec(&val)
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                size += ser_val.len();
-                writer.write_all(&ser_val)?;
+                size += val.serialize(writer).unwrap();
             }
             ProofValue::HybridHash(val_hash) => {
                 writer.write_u8(2).unwrap();
-                let ser_val_hash = postcard::to_allocvec(&val_hash)
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                size += ser_val_hash.len();
-                writer.write_all(&ser_val_hash)?;
+                size += val_hash.serialize(writer).unwrap();
             }
             ProofValue::HybridValue(val) => {
                 writer.write_u8(2).unwrap();
-                let ser_val = postcard::to_allocvec(&val.hash::<Blake2bHash>())
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-                size += ser_val.len();
-                writer.write_all(&ser_val)?;
+                size += val.hash::<Blake2bHash>().serialize(writer).unwrap();
             }
         }
-        let ser_children = postcard::to_allocvec(&self.children)
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-        size += ser_children.len();
-        writer.write_all(&ser_children)?;
+        size += self.children.serialize(writer).unwrap();
         Ok(size)
     }
 }

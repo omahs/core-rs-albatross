@@ -21,7 +21,6 @@ maintenance = { status = "experimental" }
 bitflags = "1.0"
 hex = "0.4"
 lazy_static = "1.2"
-postcard = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 url = "2.3"
 
@@ -34,6 +33,7 @@ nimiq-hash_derive = { path = "../hash/hash_derive" }
 nimiq-keys = { path = "../keys" }
 nimiq-macros = { path = "../macros" }
 nimiq-primitives = { path = "../primitives", features = ["coin", "networks"] }
+nimiq-serde = { path = "../serde" }
 nimiq-transaction = { path = "../primitives/transaction" }
 nimiq-utils = { path = "../utils", features = ["time"] }
 

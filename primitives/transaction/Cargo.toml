@@ -15,7 +15,6 @@ travis-ci = { repository = "nimiq/core-rs", branch = "master" }
 bitflags = "1.0"
 log = { package = "tracing", version = "0.1", features = ["log"] }
 num-traits = "0.2"
-postcard = "1.0"
 serde = "1.0"
 serde_repr = "0.1"
 strum_macros = "0.24"
@@ -32,6 +31,7 @@ nimiq-macros = { path = "../../macros" }
 nimiq-mmr = { path = "../mmr", features = ["serde-derive"] }
 nimiq-network-interface = { path = "../../network-interface" }
 nimiq-primitives = { path = "..", features = ["account", "coin", "networks", "policy", "serde-derive", "slots"] }
+nimiq-serde = { path = "../../serde" }
 nimiq-utils = { path = "../../utils", features = ["merkle"] }
 
 [dev-dependencies]

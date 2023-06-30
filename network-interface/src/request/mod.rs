@@ -1,7 +1,7 @@
 use std::{fmt, sync::Arc, time::Duration};
 
+use nimiq_serde::{Deserialize, Serialize, DeserializeError};
 use futures::{stream::BoxStream, Future, StreamExt};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use thiserror::Error;
 
 // The max number of request to be processed per peerID and per request type.
@@ -11,7 +11,7 @@ pub const DEFAULT_MAX_REQUEST_RESPONSE_TIME_WINDOW: Duration = Duration::from_se
 
 use crate::network::Network;
 
-#[derive(Copy, Clone, Debug, Eq, Hash, Ord, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug, Deserialize, Eq, Hash, Ord, PartialEq, PartialOrd, Serialize)]
 pub struct RequestType(pub u16);
 
 impl fmt::Display for RequestType {
@@ -131,38 +131,36 @@ impl RequestKind for MessageMarker {
 }
 
 pub trait RequestCommon:
-    Serialize + DeserializeOwned + Send + Sync + Unpin + std::fmt::Debug + 'static
+    Serialize + Deserialize + Send + Sync + Unpin + std::fmt::Debug + 'static
 {
     type Kind: RequestKind;
     const TYPE_ID: u16;
-    type Response: DeserializeOwned + Serialize + Send;
+    type Response: Deserialize + Serialize + Send;
     const MAX_REQUESTS: u32;
     const TIME_WINDOW: Duration = DEFAULT_MAX_REQUEST_RESPONSE_TIME_WINDOW;
 
     /// Serializes a request.
     /// A serialized request is composed of:
-    /// - A 2 bytes (u16) for the Type ID of the request
+    /// - A varint for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn serialize_request(&self) -> Result<Vec<u8>, postcard::Error> {
-        let mut data = postcard::to_allocvec(&RequestType::from_request::<Self>().0)?;
-        data.append(&mut postcard::to_allocvec(&self)?);
-        Ok(data)
+    fn serialize_request(&self) -> Vec<u8> {
+        let mut result = Vec::new();
+        RequestType::from_request::<Self>().serialize(&mut result).unwrap();
+        Serialize::serialize(self, &mut result).unwrap();
+        result
     }
 
     /// Deserializes a request
     /// A serialized request is composed of:
-    /// - A 2 bytes (u16) for the Type ID of the request
+    /// - A varint for the Type ID of the request
     /// - Serialized content of the inner type.
-    fn deserialize_request(buffer: &[u8]) -> Result<Self, postcard::Error> {
+    fn deserialize_request(buffer: &[u8]) -> Result<Self, DeserializeError> {
         // Check for correct type.
-        let (ty, message_buf) = postcard::take_from_bytes::<u16>(buffer)?;
+        let (ty, message_buf) = u16::deserialize_take(buffer)?;
         if ty != RequestType::from_request::<Self>().0 {
-            return Err(postcard::Error::DeserializeBadVarint);
+            return Err(DeserializeError::bad_enum());
         }
-
-        let message: Self = postcard::from_bytes(message_buf)?;
-
-        Ok(message)
+        Self::deserialize_from_vec(message_buf)
     }
 }
 
@@ -172,8 +170,8 @@ pub trait Message: RequestCommon<Kind = MessageMarker, Response = ()> {}
 impl<T: RequestCommon<Kind = RequestMarker>> Request for T {}
 impl<T: RequestCommon<Kind = MessageMarker, Response = ()>> Message for T {}
 
-pub fn peek_type(buffer: &[u8]) -> Result<RequestType, postcard::Error> {
-    let ty: u16 = postcard::from_bytes(buffer)?;
+pub fn peek_type(buffer: &[u8]) -> Result<RequestType, DeserializeError> {
+    let ty = u16::deserialize_from_vec(buffer)?;
     Ok(RequestType(ty))
 }
 

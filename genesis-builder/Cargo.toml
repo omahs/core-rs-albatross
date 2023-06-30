@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 hex = "0.4"
 log = { package = "tracing", version = "0.1" }
-postcard = "1.0"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
 time = { version = "0.3", features = ["parsing"] }
@@ -18,6 +17,7 @@ nimiq-block = { path = "../primitives/block" }
 nimiq-bls = { path = "../bls", features = ["serde-derive"] }
 nimiq-database = { path = "../database" }
 nimiq-hash = { path = "../hash" }
+nimiq-serde = { path = "../serde" }
 nimiq-keys = { path = "../keys", features = ["serde-derive"] }
 nimiq-primitives = { path = "../primitives" }
 nimiq-vrf = { path = "../vrf", features = ["serde-derive"] }

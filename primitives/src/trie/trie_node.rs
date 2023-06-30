@@ -1,10 +1,10 @@
-use std::{io, io::Write, ops::RangeFrom, slice};
+use std::{io, ops::RangeFrom, slice};
 
 use byteorder::WriteBytesExt;
 use log::error;
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Blake2bHash, Hash, HashOutput, Hasher};
-use nimiq_serde_ext::SerRangeFrom;
+use nimiq_serde::{Deserialize, SerRangeFrom, Serialize};
 
 use crate::{key_nibbles::KeyNibbles, trie::error::MerkleRadixTrieError};
 
@@ -256,30 +256,22 @@ impl TrieNode {
     pub fn hash<H: HashOutput>(&self) -> Option<H> {
         self.can_hash().then(|| {
             let mut hasher = H::Builder::default();
-            hasher
-                .write_all(&postcard::to_allocvec(&self.key).unwrap())
-                .unwrap();
+            self.key.serialize(&mut hasher).unwrap();
             match (self.has_children(), &self.value) {
                 (_, None) => {
                     hasher.write_u8(0).unwrap();
                 }
                 (false, Some(val)) => {
                     hasher.write_u8(1).unwrap();
-                    hasher
-                        .write_all(&postcard::to_allocvec(&val).unwrap())
-                        .unwrap();
+                    val.serialize(&mut hasher).unwrap();
                 }
                 (true, Some(val)) => {
                     hasher.write_u8(2).unwrap();
                     let val_hash: Blake2bHash = val.hash();
-                    hasher
-                        .write_all(&postcard::to_allocvec(&val_hash).unwrap())
-                        .unwrap();
+                    val_hash.serialize(&mut hasher).unwrap();
                 }
             }
-            hasher
-                .write_all(&postcard::to_allocvec(&self.children).unwrap())
-                .unwrap();
+            self.children.serialize(&mut hasher).unwrap();
             hasher.finish()
         })
     }
@@ -292,11 +284,11 @@ impl TrieNode {
 
 impl IntoDatabaseValue for TrieNode {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        Serialize::serialize(&self, &mut bytes).unwrap();
     }
 }
 
@@ -305,7 +297,7 @@ impl FromDatabaseValue for TrieNode {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
     }
 }
 

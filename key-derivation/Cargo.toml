@@ -18,12 +18,12 @@ maintenance = { status = "experimental" }
 
 [dependencies]
 byteorder = "1.2"
-postcard = "1.0"
 regex = "1"
 serde = "1.0"
 
 nimiq-hash = { path = "../hash" }
 nimiq-keys = { path = "../keys" }
+nimiq-serde = { path = "../serde" }
 
 [dev-dependencies]
 hex = "0.4"

@@ -4,7 +4,7 @@ use nimiq_block::Block;
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::Blake2bHash;
 use nimiq_primitives::{coin::Coin, key_nibbles::KeyNibbles, policy::Policy};
-use nimiq_serde_ext::SerRangeFrom;
+use nimiq_serde::SerRangeFrom;
 use serde::{Deserialize, Serialize, Serializer};
 
 /// Struct that, for each block, keeps information relative to the chain the block is on.

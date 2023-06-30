@@ -4,6 +4,7 @@ use std::{
     fmt, io, ops, str, usize,
 };
 
+use nimiq_serde::{Deserialize, Serialize};
 use log::error;
 use nimiq_database_value::{AsDatabaseBytes, FromDatabaseValue};
 use nimiq_keys::Address;
@@ -356,8 +357,7 @@ impl ops::Add<&KeyNibbles> for &KeyNibbles {
 impl AsDatabaseBytes for KeyNibbles {
     fn as_database_bytes(&self) -> Cow<[u8]> {
         // TODO: Improve KeyNibbles, so that no serialization is needed.
-        let v = postcard::to_allocvec(&self).expect("Could not serialize KeyNibbles");
-        Cow::Owned(v)
+        Serialize::serialize_to_vec(self).into()
     }
 }
 
@@ -366,7 +366,7 @@ impl FromDatabaseValue for KeyNibbles {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+        KeyNibbles::deserialize_from_vec(bytes).map_err(|e| io::Error::new(io::ErrorKind::Other, e))
     }
 }
 

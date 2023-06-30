@@ -23,11 +23,11 @@ sha2 = "0.9"
 nimiq-hash = { path = "../hash" }
 nimiq-keys = { path = "../keys" }
 nimiq-macros = { path = "../macros" }
-nimiq-serde-ext = { path = "../serde-ext", optional = true }
+nimiq-serde = { path = "../serde", optional = true }
 
 [dev-dependencies]
 nimiq-test-log = { path = "../test-log" }
 nimiq-test-utils = { path = "../test-utils" }
 
 [features]
-serde-derive = ["nimiq-serde-ext", "serde", "serde-big-array"]
+serde-derive = ["nimiq-serde", "serde", "serde-big-array"]

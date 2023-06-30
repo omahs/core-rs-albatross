@@ -1,7 +1,7 @@
 use std::{io::Write, ops::Range};
 
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_hash::{Blake2bHash, HashOutput, Hasher, SerializeContent};
-use serde::{Deserialize, Serialize};
 
 use crate::math::CeilingDiv;
 

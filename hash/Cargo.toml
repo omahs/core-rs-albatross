@@ -20,15 +20,14 @@ maintenance = { status = "experimental" }
 blake2-rfc = "0.2"
 byteorder = "1.2"
 hex = "0.4"
-postcard = { version = "1.0", features = ["alloc"] }
 rust-argon2 = "1.0"
 serde = { version = "1.0", features = ["derive"] }
-serde-big-array = "0.5"
 sha2 = "0.9"
 
 nimiq-database-value = { path = "../database/database-value" }
 nimiq-macros = { path = "../macros" }
 nimiq-mmr = { path = "../primitives/mmr" }
+nimiq-serde = { path = "../serde" }
 
 [dev-dependencies]
 nimiq-test-log = { path = "../test-log" }

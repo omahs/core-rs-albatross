@@ -1,6 +1,6 @@
+use nimiq_serde::{Deserialize, Serialize};
 use bitflags::bitflags;
 use libp2p::Multiaddr;
-use serde::{Deserialize, Serialize};
 
 bitflags! {
     /// Bitmask of services

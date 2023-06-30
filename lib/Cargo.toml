@@ -28,7 +28,6 @@ hex = "0.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
 log-panics = { version = "2.1", features = ["with-backtrace"], optional = true }
 parking_lot = "0.12"
-postcard = "1.0"
 rand = "0.8"
 rand_chacha = "0.3.1"
 rustls-pemfile = "1.0"
@@ -65,6 +64,7 @@ nimiq-network-libp2p = { path = "../network-libp2p" }
 nimiq-network-interface = { path = "../network-interface" }
 nimiq-primitives = { path = "../primitives", features = ["networks"] }
 nimiq-rpc-server = { path = "../rpc-server", optional = true }
+nimiq-serde = { path = "../serde" }
 nimiq-utils = { path = "../utils", features = ["time", "key-store"] }
 nimiq-validator = { path = "../validator", optional = true, features = ["trusted_push"] }
 nimiq-validator-network = { path = "../validator-network", optional = true }

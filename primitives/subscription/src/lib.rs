@@ -3,7 +3,7 @@ use std::collections::HashSet;
 use nimiq_keys::Address;
 use nimiq_primitives::coin::Coin;
 use nimiq_transaction::Transaction;
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 #[repr(u8)]
@@ -27,9 +27,8 @@ impl Subscription {
             Subscription::Addresses(addresses) => addresses.contains(&transaction.sender),
             Subscription::MinFee(min_fee) => {
                 // TODO: Potential overflow for u64
-                let tx_size = postcard::to_allocvec(&transaction).unwrap().len();
                 min_fee
-                    .checked_mul(tx_size as u64)
+                    .checked_mul(transaction.serialized_size() as u64)
                     .map(|block_fee| transaction.fee >= block_fee)
                     .unwrap_or(true)
             }

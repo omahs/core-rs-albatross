@@ -26,7 +26,6 @@ lazy_static = "1.4.0"
 log = { package = "tracing", version = "0.1", features = ["log"] }
 parking_lot = "0.12"
 pin-project = "1.0"
-postcard = "1.0"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 thiserror = "1.0"
@@ -45,6 +44,7 @@ nimiq-light-blockchain = { path = "../light-blockchain" }
 nimiq-macros = { path = "../macros" }
 nimiq-network-interface = { path = "../network-interface" }
 nimiq-primitives = { path = "../primitives", features = ["policy"] }
+nimiq-serde = { path = "../serde" }
 nimiq-transaction = { path = "../primitives/transaction" }
 nimiq-utils = { path = "../utils", features = [
     "math",

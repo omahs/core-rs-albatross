@@ -1,8 +1,8 @@
 use std::mem;
 
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_collections::BitSet;
 use nimiq_hash::{Blake2bHash, HashOutput, Hasher, SerializeContent};
-use serde::{Deserialize, Serialize};
 
 use crate::math::CeilingDiv;
 

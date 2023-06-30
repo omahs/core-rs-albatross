@@ -23,7 +23,6 @@ hex = "0.4"
 lazy_static = "1.4"
 log = { package = "tracing", version = "0.1", features = ["log"] }
 num-traits = "0.2"
-postcard = "1.0"
 rand = { version = "0.8", features = ["small_rng"] }
 rayon = { version = "^1.7", optional = true }
 serde = { version = "1.0" }
@@ -33,6 +32,7 @@ nimiq-bls = { path = "../bls" }
 nimiq-hash = { path = "../hash" }
 nimiq-pedersen-generators = { path = "pedersen-generators" }
 nimiq-primitives = { path = "../primitives", features = ["policy"] }
+nimiq-serde = { path = "../serde" }
 
 [dev-dependencies]
 nimiq-block = { path = "../primitives/block" }

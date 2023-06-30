@@ -31,7 +31,6 @@ hex = "0.4"
 lazy_static = "1.4.0"
 log = { package = "tracing", version = "0.1", features = ["log"] }
 parking_lot = "0.12"
-postcard = "1.0"
 rand = "0.8"
 serde = { version = "1.0", features = ["derive"] }
 serde-big-array = "0.5"
@@ -53,6 +52,7 @@ nimiq-log = { path = "../log", optional = true }
 nimiq-macros = { path = "../macros" }
 nimiq-network-interface = { path = "../network-interface" }
 nimiq-primitives = { path = "../primitives", features = ["policy"] }
+nimiq-serde = { path = "../serde" }
 nimiq-transaction = { path = "../primitives/transaction" }
 nimiq-utils = { path = "../utils", features = [
     "math",
