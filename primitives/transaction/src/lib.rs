@@ -16,9 +16,9 @@ use nimiq_primitives::{
     account::AccountType, coin::Coin, networks::NetworkId, policy::Policy,
     transaction::TransactionError,
 };
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_utils::merkle::{Blake2bMerklePath, Blake2bMerkleProof};
 use num_traits::SaturatingAdd;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use thiserror::Error;
 
 use crate::account::AccountTransactionVerification;
@@ -317,7 +317,7 @@ impl Transaction {
             && self.data.is_empty()
             && self.flags.is_empty()
         {
-            if let Ok(signature_proof) = postcard::from_bytes::<SignatureProof>(&self.proof) {
+            if let Ok(signature_proof) = SignatureProof::deserialize_from_vec(&self.proof) {
                 if self.sender == Address::from(&signature_proof.public_key)
                     && signature_proof.merkle_path.is_empty()
                 {
@@ -418,20 +418,20 @@ impl Transaction {
     }
 
     pub fn fee_per_byte(&self) -> f64 {
-        u64::from(self.fee) as f64 / postcard::to_allocvec(self).unwrap().len() as f64
+        u64::from(self.fee) as f64 / self.serialized_size() as f64
     }
 
     pub fn serialize_content(&self) -> Vec<u8> {
-        let mut res = postcard::to_allocvec(&self.data).unwrap();
-        res.append(&mut postcard::to_allocvec(&self.sender).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.sender_type).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.recipient).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.recipient_type).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.value).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.fee).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.validity_start_height.to_be_bytes()).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.network_id).unwrap());
-        res.append(&mut postcard::to_allocvec(&self.flags).unwrap());
+        let mut res: Vec<u8> = self.data.serialize_to_vec();
+        res.append(&mut self.sender.serialize_to_vec());
+        res.append(&mut self.sender_type.serialize_to_vec());
+        res.append(&mut self.recipient.serialize_to_vec());
+        res.append(&mut self.recipient_type.serialize_to_vec());
+        res.append(&mut self.value.serialize_to_vec());
+        res.append(&mut self.fee.serialize_to_vec());
+        res.append(&mut self.validity_start_height.to_be_bytes().serialize_to_vec());
+        res.append(&mut self.network_id.serialize_to_vec());
+        res.append(&mut self.flags.serialize_to_vec());
         res
     }
 
@@ -452,47 +452,16 @@ impl Transaction {
 impl SerializeContent for Transaction {
     fn serialize_content<W: io::Write, H>(&self, writer: &mut W) -> io::Result<usize> {
         let mut size = 0;
-        let ser_data = postcard::to_allocvec(&self.data)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_data.len();
-        writer.write_all(&ser_data)?;
-        let ser_sender = postcard::to_allocvec(&self.sender)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_sender.len();
-        writer.write_all(&ser_sender)?;
-        let ser_sender_type = postcard::to_allocvec(&self.sender_type)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_sender_type.len();
-        writer.write_all(&ser_sender_type)?;
-        let ser_recipient = postcard::to_allocvec(&self.recipient)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_recipient.len();
-        writer.write_all(&ser_recipient)?;
-        let ser_recipient_type = postcard::to_allocvec(&self.recipient_type)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_recipient_type.len();
-        writer.write_all(&ser_recipient_type)?;
-        let ser_value = postcard::to_allocvec(&self.value)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_value.len();
-        writer.write_all(&ser_value)?;
-        let ser_fee = postcard::to_allocvec(&self.fee)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_fee.len();
-        writer.write_all(&ser_fee)?;
-        let ser_validity_start_height =
-            postcard::to_allocvec(&self.validity_start_height.to_be_bytes())
-                .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_validity_start_height.len();
-        writer.write_all(&ser_validity_start_height)?;
-        let ser_network_id = postcard::to_allocvec(&self.network_id)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_network_id.len();
-        writer.write_all(&ser_network_id)?;
-        let ser_flags = postcard::to_allocvec(&self.flags)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        size += ser_flags.len();
-        writer.write_all(&ser_flags)?;
+        size += Serialize::serialize_to_writer(&self.data, writer)?;
+        size += Serialize::serialize_to_writer(&self.sender, writer)?;
+        size += Serialize::serialize_to_writer(&self.sender_type, writer)?;
+        size += Serialize::serialize_to_writer(&self.recipient, writer)?;
+        size += Serialize::serialize_to_writer(&self.recipient_type, writer)?;
+        size += Serialize::serialize_to_writer(&self.value, writer)?;
+        size += Serialize::serialize_to_writer(&self.fee, writer)?;
+        size += Serialize::serialize_to_writer(&self.validity_start_height, writer)?;
+        size += Serialize::serialize_to_writer(&self.network_id, writer)?;
+        size += Serialize::serialize_to_writer(&self.flags, writer)?;
         Ok(size)
     }
 }
@@ -579,10 +548,10 @@ mod serde_derive {
     struct BasicTransactionVisitor;
     struct ExtendedTransactionVisitor;
 
-    impl Serialize for Transaction {
+    impl serde::Serialize for Transaction {
         fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
         where
-            S: Serializer,
+            S: serde::Serializer,
         {
             match self.format() {
                 TransactionFormat::Basic => {
@@ -592,8 +561,9 @@ mod serde_derive {
                         VARIANTS[0],
                         BASIC_FIELDS.len(),
                     )?;
-                    let signature_proof: SignatureProof = postcard::from_bytes(&self.proof)
-                        .map_err(|_| S::Error::custom("Could not serialize signature proof"))?;
+                    let signature_proof: SignatureProof =
+                        Deserialize::deserialize_from_vec(&self.proof)
+                            .map_err(|_| S::Error::custom("Could not serialize signature proof"))?;
                     sv.serialize_field(BASIC_FIELDS[0], &signature_proof.public_key)?;
                     sv.serialize_field(BASIC_FIELDS[1], &self.recipient)?;
                     sv.serialize_field(BASIC_FIELDS[2], &self.value)?;
@@ -630,10 +600,10 @@ mod serde_derive {
         }
     }
 
-    impl<'de> Deserialize<'de> for Transaction {
+    impl<'de> serde::Deserialize<'de> for Transaction {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
         where
-            D: Deserializer<'de>,
+            D: serde::Deserializer<'de>,
         {
             deserializer.deserialize_enum(ENUM_NAME, VARIANTS, TransactionVisitor)
         }
@@ -702,12 +672,7 @@ mod serde_derive {
                 validity_start_height: u32::from_be_bytes(validity_start_height),
                 network_id,
                 flags: TransactionFlags::empty(),
-                proof: postcard::to_allocvec(&SignatureProof::from(public_key, signature))
-                    .map_err(|_| {
-                        A::Error::custom(
-                            "Could not build signature from provided public key and signature",
-                        )
-                    })?,
+                proof: SignatureProof::from(public_key, signature).serialize_to_vec(),
                 valid: false,
             })
         }

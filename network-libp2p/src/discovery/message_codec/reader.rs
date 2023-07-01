@@ -6,8 +6,8 @@ use std::{
 
 use bytes::BytesMut;
 use futures::{AsyncRead, Stream};
+use nimiq_serde::{Deserialize, DeserializeError};
 use pin_project::pin_project;
-use serde::de::DeserializeOwned;
 
 use super::header::Header;
 
@@ -100,7 +100,7 @@ impl<R, M> MessageReader<R, M> {
 
     pub fn into_other<N>(self) -> MessageReader<R, N>
     where
-        N: DeserializeOwned,
+        N: Deserialize,
     {
         if let ReaderState::Data { .. } = &ReaderState::Head {
             panic!("MessageReader can't be converted while data is being read.");
@@ -115,16 +115,16 @@ impl<R, M> MessageReader<R, M> {
     }
 }
 
-fn unexpected_eof<T>() -> Poll<Option<Result<T, postcard::Error>>> {
-    Poll::Ready(Some(Err(postcard::Error::DeserializeUnexpectedEnd)))
+fn unexpected_eof<T>() -> Poll<Option<Result<T, DeserializeError>>> {
+    Poll::Ready(Some(Err(DeserializeError::unexpected_end())))
 }
 
 impl<R, M> Stream for MessageReader<R, M>
 where
     R: AsyncRead,
-    M: DeserializeOwned + std::fmt::Debug,
+    M: Deserialize + std::fmt::Debug,
 {
-    type Item = Result<M, postcard::Error>;
+    type Item = Result<M, DeserializeError>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let self_projected = self.project();
@@ -145,7 +145,7 @@ where
                     Poll::Ready(Err(e)) => {
                         return {
                             error!(error = %e, "Inner AsyncRead returned an error");
-                            Poll::Ready(Some(Err(postcard::Error::DeserializeUnexpectedEnd)))
+                            Poll::Ready(Some(Err(DeserializeError::unexpected_end())))
                         }
                     }
 
@@ -165,7 +165,7 @@ where
 
                 // Decode the header: 16 bit length big-endian
                 // This will also advance the read position after the header.
-                let header = match postcard::from_bytes(self_projected.buffer) {
+                let header = match Deserialize::deserialize_from_vec(self_projected.buffer) {
                     Ok(header) => header,
                     Err(e) => return Poll::Ready(Some(Err(e))),
                 };
@@ -188,7 +188,7 @@ where
 
                     // An error occurred.
                     Poll::Ready(Err(_)) => {
-                        return Poll::Ready(Some(Err(postcard::Error::DeserializeUnexpectedEnd)))
+                        return Poll::Ready(Some(Err(DeserializeError::unexpected_end())))
                     }
 
                     // EOF while reading the data.
@@ -199,7 +199,7 @@ where
                 }
 
                 // Decode the message, the read position of the buffer is already at the start of the message.
-                let message: M = match postcard::from_bytes(self_projected.buffer) {
+                let message: M = match Deserialize::deserialize_from_vec(self_projected.buffer) {
                     Ok(message) => message,
                     Err(e) => return Poll::Ready(Some(Err(e))),
                 };
@@ -227,12 +227,11 @@ where
 
 #[cfg(test)]
 mod tests {
-    use std::io::Write;
 
     use bytes::{BufMut, BytesMut};
     use futures::{io::Cursor, StreamExt};
+    use nimiq_serde::{Deserialize, Serialize};
     use nimiq_test_log::test;
-    use serde::{Deserialize, Serialize};
 
     use super::{Header, MessageReader};
 
@@ -243,15 +242,13 @@ mod tests {
     }
 
     fn put_message<M: Serialize>(buf: &mut BytesMut, message: &M) {
-        let ser_message = postcard::to_allocvec(&message).unwrap();
-        buf.reserve(ser_message.len() + Header::SIZE);
-        let mut ser_header = [0u8; Header::SIZE];
-        let header = Header::new(ser_message.len() as u32);
-        postcard::to_slice(&header, &mut ser_header).unwrap();
+        let n = message.serialized_size();
+        buf.reserve(n + Header::SIZE);
+        let header = Header::new(n as u32);
 
         let mut w = buf.writer();
-        w.write_all(&ser_header).unwrap();
-        w.write_all(&ser_message).unwrap();
+        header.serialize_to_writer(&mut w).unwrap();
+        message.serialize_to_writer(&mut w).unwrap();
     }
 
     #[test(tokio::test)]

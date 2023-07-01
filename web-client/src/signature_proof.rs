@@ -1,3 +1,4 @@
+use nimiq_serde::Serialize;
 use wasm_bindgen::prelude::*;
 
 use crate::{address::Address, public_key::PublicKey, signature::Signature};
@@ -45,7 +46,7 @@ impl SignatureProof {
 
     /// Serializes the proof to a byte array, e.g. for assigning it to a `transaction.proof` field.
     pub fn serialize(&self) -> Vec<u8> {
-        postcard::to_allocvec(&self.inner).unwrap()
+        self.inner.serialize_to_vec()
     }
 }
 

@@ -51,7 +51,7 @@ merkle = [
     "serde-derive"
 ]
 otp = ["clear_on_drop", "nimiq-hash", "nimiq-serde", "rand", "serde-derive"]
-serde-derive = ["serde"]
+serde-derive = ["nimiq-serde", "serde"]
 tagged-signing = ["hex", "nimiq-serde", "serde-derive"]
 time = []
 

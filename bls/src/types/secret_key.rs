@@ -64,6 +64,7 @@ mod serde_derive {
 
     use ark_mnt6_753::Fr;
     use ark_serialize::{CanonicalDeserialize, CanonicalSerialize};
+    use nimiq_serde::Serialize as NimiqSerialize;
     use serde::{
         de::{Deserialize, Deserializer, Error as SerializationError},
         ser::{Error as DeSerializationError, Serialize, Serializer},
@@ -74,21 +75,13 @@ mod serde_derive {
 
     impl fmt::Display for SecretKey {
         fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-            write!(
-                f,
-                "{}",
-                hex::encode(postcard::to_allocvec(self).map_err(|_| fmt::Error)?)
-            )
+            write!(f, "{}", hex::encode(self.serialize_to_vec()))
         }
     }
 
     impl fmt::Debug for SecretKey {
         fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-            write!(
-                f,
-                "SecretKey({})",
-                hex::encode(postcard::to_allocvec(self).map_err(|_| fmt::Error)?)
-            )
+            write!(f, "SecretKey({})", hex::encode(self.serialize_to_vec()))
         }
     }
 

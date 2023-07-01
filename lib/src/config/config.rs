@@ -19,6 +19,7 @@ use nimiq_mempool::{config::MempoolConfig, filter::MempoolRules};
 use nimiq_network_interface::Multiaddr;
 use nimiq_network_libp2p::{Keypair as IdentityKeypair, Libp2pKeyPair};
 use nimiq_primitives::{networks::NetworkId, policy::Policy};
+use nimiq_serde::Deserialize;
 use nimiq_utils::file_store::FileStore;
 #[cfg(feature = "validator")]
 use nimiq_utils::key_rng::SecureGenerate;
@@ -359,8 +360,8 @@ impl StorageConfig {
                 FileStore::new(key_path).load_or_store(|| {
                     if let Some(key) = file_storage.voting_key.as_ref() {
                         // TODO: handle errors
-                        let secret_key: BlsSecretKey =
-                            postcard::from_bytes(&hex::decode(key).unwrap()).unwrap();
+                        let secret_key =
+                            BlsSecretKey::deserialize_from_vec(&hex::decode(key).unwrap()).unwrap();
                         secret_key.into()
                     } else {
                         BlsKeyPair::generate_default_csprng()
@@ -393,7 +394,7 @@ impl StorageConfig {
                     if let Some(key) = file_storage.fee_key.as_ref() {
                         // TODO: handle errors
                         KeyPair::from(
-                            postcard::from_bytes::<PrivateKey>(&hex::decode(key).unwrap()).unwrap(),
+                            PrivateKey::deserialize_from_vec(&hex::decode(key).unwrap()).unwrap(),
                         )
                     } else {
                         KeyPair::generate_default_csprng()
@@ -426,7 +427,7 @@ impl StorageConfig {
                     if let Some(key) = file_storage.signing_key.as_ref() {
                         // TODO: handle errors
                         KeyPair::from(
-                            postcard::from_bytes::<PrivateKey>(&hex::decode(key).unwrap()).unwrap(),
+                            PrivateKey::deserialize_from_vec(&hex::decode(key).unwrap()).unwrap(),
                         )
                     } else {
                         KeyPair::generate_default_csprng()
@@ -444,8 +445,7 @@ impl StorageConfig {
                     .load_or_store(|| {
                         if let Some(key) = file_storage.peer_key.as_ref() {
                             // TODO: handle errors
-                            postcard::from_bytes::<Libp2pKeyPair>(&hex::decode(key).unwrap())
-                                .unwrap()
+                            Libp2pKeyPair::deserialize_from_vec(&hex::decode(key).unwrap()).unwrap()
                         } else {
                             Libp2pKeyPair(IdentityKeypair::generate_ed25519())
                         }

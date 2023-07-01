@@ -12,6 +12,7 @@ use nimiq_primitives::{
     networks::NetworkId,
     policy::{Policy, TEST_POLICY},
 };
+use nimiq_serde::Serialize;
 use nimiq_test_utils::{
     blockchain::{signing_key, voting_key},
     blockchain_with_rng::produce_macro_blocks_with_rng,
@@ -116,10 +117,7 @@ async fn produce_two_consecutive_valid_zk_proofs() {
         "Proof validation: {:?}",
         validate_proof(&BlockchainProxy::from(&blockchain), &proof, None)
     );
-    log::info!(
-        "Proof 1: {:?}",
-        hex::encode(postcard::to_allocvec(&proof).unwrap())
-    );
+    log::info!("Proof 1: {:?}", hex::encode(proof.serialize_to_vec()));
 
     produce_macro_blocks_with_rng(
         &producer,
@@ -146,8 +144,5 @@ async fn produce_two_consecutive_valid_zk_proofs() {
         "Proof validation: {:?}",
         validate_proof(&BlockchainProxy::from(&blockchain), &proof, None)
     );
-    log::info!(
-        "Proof 2: {:?}",
-        hex::encode(postcard::to_allocvec(&proof).unwrap())
-    );
+    log::info!("Proof 2: {:?}", hex::encode(proof.serialize_to_vec()));
 }

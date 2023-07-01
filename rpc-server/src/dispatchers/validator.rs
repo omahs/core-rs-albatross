@@ -3,6 +3,7 @@ use std::sync::atomic::Ordering;
 use async_trait::async_trait;
 use nimiq_keys::Address;
 use nimiq_rpc_interface::{types::RPCResult, validator::ValidatorInterface};
+use nimiq_serde::Serialize;
 use nimiq_validator::validator::ValidatorProxy;
 
 use crate::error::Error;
@@ -29,16 +30,17 @@ impl ValidatorInterface for ValidatorDispatcher {
 
     /// Returns our validator signing key.
     async fn get_signing_key(&mut self) -> RPCResult<String, (), Self::Error> {
-        Ok(
-            hex::encode(postcard::to_allocvec(&self.validator.signing_key.read().private).unwrap())
-                .into(),
-        )
+        Ok(hex::encode(self.validator.signing_key.read().private.serialize_to_vec()).into())
     }
 
     /// Returns our validator voting key.
     async fn get_voting_key(&mut self) -> RPCResult<String, (), Self::Error> {
         Ok(hex::encode(
-            postcard::to_allocvec(&self.validator.voting_key.read().secret_key).unwrap(),
+            self.validator
+                .voting_key
+                .read()
+                .secret_key
+                .serialize_to_vec(),
         )
         .into())
     }

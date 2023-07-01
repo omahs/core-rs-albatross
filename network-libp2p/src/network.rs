@@ -55,10 +55,10 @@ use nimiq_network_interface::{
     },
 };
 use nimiq_primitives::task_executor::TaskExecutor;
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_utils::time::OffsetTime;
 use nimiq_validator_network::validator_record::SignedValidatorRecord;
 use parking_lot::{Mutex, RwLock};
-use serde::{de::DeserializeOwned, Serialize};
 use tokio::sync::{broadcast, mpsc, oneshot};
 #[cfg(feature = "tokio-time")]
 use tokio::time::{Instant, Interval};
@@ -769,7 +769,7 @@ impl Network {
                                     // TODO: Move uncompress to caller side
                                     {
                                         if let Ok(signed_record) =
-                                            postcard::from_bytes::<SignedValidatorRecord<PeerId>>(
+                                            SignedValidatorRecord::<PeerId>::deserialize_from_vec(
                                                 &record.value,
                                             )
                                         {
@@ -978,10 +978,7 @@ impl Network {
                                             if swarm
                                                 .behaviour_mut()
                                                 .request_response
-                                                .send_response(
-                                                    channel,
-                                                    postcard::to_allocvec(&response).unwrap(),
-                                                )
+                                                .send_response(channel, response.serialize_to_vec())
                                                 .is_err()
                                             {
                                                 error!(
@@ -1015,10 +1012,7 @@ impl Network {
                                         if swarm
                                             .behaviour_mut()
                                             .request_response
-                                            .send_response(
-                                                channel,
-                                                postcard::to_allocvec(&err).unwrap(),
-                                            )
+                                            .send_response(channel, err.serialize_to_vec())
                                             .is_err()
                                         {
                                             error!(
@@ -1482,9 +1476,7 @@ impl Network {
         let (output_tx, output_rx) = oneshot::channel();
         let (response_tx, response_rx) = oneshot::channel();
 
-        let buf = request
-            .serialize_request()
-            .map_err(|_| RequestError::OutboundRequest(OutboundRequestError::SerializationError))?;
+        let buf = request.serialize_request();
 
         if self
             .action_tx
@@ -1512,21 +1504,17 @@ impl Network {
                 )),
                 Ok(result) => {
                     let data = result?;
-                    if let Ok((message, left_over)) = postcard::take_from_bytes::<
-                        Result<Req::Response, InboundRequestError>,
-                    >(&data)
+                    if let Ok((message, left_over)) =
+                        <Result<Req::Response, InboundRequestError>>::deserialize_take(&data)
                     {
                         if !left_over.is_empty() {
-                            error!(
+                            warn!(
                             %request_id,
                             %peer_id,
                             type_id = std::any::type_name::<Req::Response>(),
                             unread_data_len = left_over.len(),
-                            "Unexpected serialize content size",
+                            "Unexpected content size deserializing",
                             );
-                            return Err(RequestError::InboundRequest(
-                                InboundRequestError::DeSerializationError,
-                            ));
                         }
                         // Check if there was an actual response from the application or a default response from
                         // the network. If the network replied with the default response, it was because there wasn't a
@@ -1809,7 +1797,7 @@ impl Network {
         // Encapsulate it in a `Result` to signal the network that this
         // was a unsuccessful response from the application.
         let response: Result<Req::Response, InboundRequestError> = Err(response);
-        let buf = postcard::to_allocvec(&response)?;
+        let buf = response.serialize_to_vec();
 
         action_tx
             .clone()
@@ -1846,7 +1834,7 @@ impl Network {
         let subscribe_rx = ReceiverStream::new(rx.await??);
 
         Ok(Box::pin(subscribe_rx.map(|(msg, msg_id, source)| {
-            let item: <T as Topic>::Item = postcard::from_bytes(&msg.data).unwrap();
+            let item: <T as Topic>::Item = Deserialize::deserialize_from_vec(&msg.data).unwrap();
             let id = GossipsubId {
                 message_id: msg_id,
                 propagation_source: source,
@@ -1883,7 +1871,7 @@ impl Network {
             .clone()
             .send(NetworkAction::Publish {
                 topic_name,
-                data: postcard::to_allocvec(&item)?,
+                data: item.serialize_to_vec(),
                 output: output_tx,
             })
             .await?;
@@ -2068,7 +2056,7 @@ impl NetworkInterface for Network {
     async fn dht_get<K, V>(&self, k: &K) -> Result<Option<V>, Self::Error>
     where
         K: AsRef<[u8]> + Send + Sync,
-        V: DeserializeOwned + Send + Sync,
+        V: Deserialize + Send + Sync,
     {
         let (output_tx, output_rx) = oneshot::channel();
         self.action_tx
@@ -2080,7 +2068,7 @@ impl NetworkInterface for Network {
             .await?;
 
         let data = output_rx.await??;
-        Ok(Some(postcard::from_bytes(&data)?))
+        Ok(Some(Deserialize::deserialize_from_vec(&data)?))
     }
 
     async fn dht_put<K, V>(&self, k: &K, v: &V) -> Result<(), Self::Error>
@@ -2094,7 +2082,7 @@ impl NetworkInterface for Network {
             .clone()
             .send(NetworkAction::DhtPut {
                 key: k.as_ref().to_owned(),
-                value: postcard::to_allocvec(&v)?,
+                value: v.serialize_to_vec(),
                 output: output_tx,
             })
             .await?;
@@ -2161,7 +2149,7 @@ impl NetworkInterface for Network {
         // Encapsulate it in a `Result` to signal the network that this
         // was a successful response from the application.
         let response: Result<Req::Response, InboundRequestError> = Ok(response);
-        let ser_response = postcard::to_allocvec(&response)?;
+        let ser_response = response.serialize_to_vec();
 
         self.action_tx
             .clone()

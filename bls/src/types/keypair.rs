@@ -60,6 +60,7 @@ mod serde_derive {
     // TODO: Replace this with a generic serialization using `ToHex` and `FromHex`.
     use std::fmt;
 
+    use nimiq_serde::Serialize as NimiqSerialize;
     use serde::{
         de::{Deserialize, Deserializer},
         ser::{Serialize, Serializer},
@@ -69,9 +70,7 @@ mod serde_derive {
 
     impl fmt::Debug for KeyPair {
         fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-            f.write_str(&::hex::encode(
-                postcard::to_allocvec(self).map_err(|_| fmt::Error)?,
-            ))
+            f.write_str(&::hex::encode(self.serialize_to_vec()))
         }
     }
 

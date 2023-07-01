@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use nimiq_serde::fixint;
 use serde::{Deserialize, Serialize};
 
 use crate::contribution::AggregatableContribution;
@@ -21,7 +22,7 @@ pub struct LevelUpdate<C: AggregatableContribution> {
     ///
     /// NOTE: It's safe to just send your own validator ID, since everything critical is authenticated
     /// by signatures anyway.
-    #[serde(with = "postcard::fixint::be")]
+    #[serde(with = "fixint::be")]
     pub(crate) origin: u16,
 }
 

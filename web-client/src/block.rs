@@ -1,5 +1,6 @@
 use nimiq_block::Block;
 use nimiq_primitives::policy::Policy;
+use nimiq_serde::Serialize;
 use serde::ser::SerializeStruct;
 use tsify::Tsify;
 use wasm_bindgen::prelude::*;
@@ -139,7 +140,7 @@ impl PlainBlock {
 
         let common_fields = PlainBlockCommonFields {
             hash: block.hash().to_hex(),
-            size: postcard::to_allocvec(&block).unwrap().len() as u32,
+            size: block.serialized_size() as u32,
             height: block_number,
             batch: Policy::batch_at(block_number),
             epoch: Policy::epoch_at(block_number),

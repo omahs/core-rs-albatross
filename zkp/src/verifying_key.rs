@@ -5,6 +5,7 @@ use ark_groth16::VerifyingKey;
 use ark_mnt6_753::Config;
 use ark_serialize::CanonicalDeserialize;
 use nimiq_primitives::networks::NetworkId;
+use nimiq_serde::Deserialize;
 use nimiq_zkp_circuits::metadata::VerifyingKeyMetadata;
 use once_cell::sync::OnceCell;
 
@@ -62,7 +63,7 @@ impl ZKPVerifyingKey {
             _ => panic!("Network id {:?} does not have a verifying key!", network_id),
         };
 
-        let metadata = postcard::from_bytes::<VerifyingKeyMetadata>(metadata_bytes)
+        let metadata = VerifyingKeyMetadata::deserialize_from_vec(metadata_bytes)
             .expect("Invalid metadata. Please rebuild the ZKP keys.");
 
         assert!(

@@ -17,9 +17,7 @@ fn impl_serialize_content(ast: &syn::DeriveInput) -> TokenStream {
         impl SerializeContent for #name where #name: Serialize {
             #[allow(unused_mut,unused_variables)]
             fn serialize_content<W: ::std::io::Write, H>(&self, writer: &mut W) -> ::std::io::Result<usize> {
-                let ser_value = postcard::to_allocvec(self).map_err(|e|std::io::Error::new(std::io::ErrorKind::Other, e))?;
-                writer.write_all(&ser_value)?;
-                Ok(ser_value.len())
+                self.serialize_to_writer(writer)
             }
         }
     };

@@ -1,6 +1,7 @@
 use nimiq_genesis_builder::GenesisBuilder;
 use nimiq_keys::{Address, KeyPair as SchnorrKeyPair, SecureGenerate};
 use nimiq_primitives::{coin::Coin, networks::NetworkId};
+use nimiq_serde::Serialize;
 use nimiq_transaction::{SignatureProof, Transaction};
 use rand::{CryptoRng, Rng};
 
@@ -71,11 +72,11 @@ pub fn generate_transactions(
                     .sign(&txn.serialize_content()),
             );
 
-            txn.proof = postcard::to_allocvec(&signature_proof).unwrap();
+            txn.proof = signature_proof.serialize_to_vec();
         }
         txns.push(txn.clone());
         //Adjust for executed txns len
-        txns_len += 1 + postcard::to_allocvec(&txn).unwrap().len();
+        txns_len += 1 + txn.serialized_size();
     }
     (txns, txns_len)
 }

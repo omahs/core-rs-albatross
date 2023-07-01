@@ -14,6 +14,7 @@ use nimiq_keys::{
     Address, KeyPair as SchnorrKeyPair, KeyPair, PrivateKey as SchnorrPrivateKey, PrivateKey,
 };
 use nimiq_primitives::{coin::Coin, policy::Policy};
+use nimiq_serde::Deserialize;
 use nimiq_transaction::Transaction;
 use nimiq_transaction_builder::TransactionBuilder;
 use parking_lot::RwLock;
@@ -244,13 +245,11 @@ pub fn sign_skip_block_info(
 }
 
 pub fn voting_key() -> BlsKeyPair {
-    BlsKeyPair::from(
-        postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
-    )
+    BlsKeyPair::from(BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap())
 }
 
 pub fn signing_key() -> SchnorrKeyPair {
     SchnorrKeyPair::from(
-        postcard::from_bytes::<SchnorrPrivateKey>(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
+        SchnorrPrivateKey::deserialize_from_vec(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
     )
 }

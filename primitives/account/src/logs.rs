@@ -4,11 +4,11 @@ use nimiq_primitives::{
     account::{AccountType, FailReason},
     coin::Coin,
 };
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_transaction::{
     account::htlc_contract::{AnyHash, HashAlgorithm},
     Transaction,
 };
-use serde::{Deserialize, Serialize};
 
 use crate::TransactionOperationReceipt;
 
@@ -594,9 +594,7 @@ impl AccountInfo {
 impl<T: Serialize> From<OperationInfo<T>> for AccountInfo {
     fn from(op_info: OperationInfo<T>) -> Self {
         AccountInfo::new(
-            op_info
-                .receipt
-                .map(|receipt| postcard::to_allocvec(&receipt).unwrap()),
+            op_info.receipt.map(|receipt| receipt.serialize_to_vec()),
             op_info.logs,
             op_info.missing_account,
         )

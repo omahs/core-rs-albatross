@@ -5,9 +5,9 @@ use nimiq_hash::{Blake2bHash, Blake2sHash, Hash, SerializeContent};
 use nimiq_hash_derive::SerializeContent;
 use nimiq_keys::{PublicKey, Signature};
 use nimiq_primitives::{policy::Policy, slots::Validators};
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_transaction::{ExecutedTransaction, Transaction};
 use nimiq_vrf::VrfSeed;
-use serde::{Deserialize, Serialize};
 
 use crate::{fork_proof::ForkProof, skip_block::SkipBlockProof, BlockError, SkipBlockInfo};
 
@@ -110,11 +110,11 @@ impl MicroBlock {
 
 impl IntoDatabaseValue for MicroBlock {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        Serialize::serialize_to_writer(&self, &mut bytes).unwrap();
     }
 }
 
@@ -123,7 +123,8 @@ impl FromDatabaseValue for MicroBlock {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }
 
@@ -220,7 +221,7 @@ impl MicroBody {
 
     pub(crate) fn verify(&self, is_skip: bool, block_number: u32) -> Result<(), BlockError> {
         // Check that the maximum body size is not exceeded.
-        let body_size = postcard::to_allocvec(self).unwrap().len();
+        let body_size = self.serialized_size();
         if body_size > Policy::MAX_SIZE_MICRO_BODY {
             debug!(
                 body_size = body_size,

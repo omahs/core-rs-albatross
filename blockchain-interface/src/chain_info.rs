@@ -5,7 +5,7 @@ use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::Blake2bHash;
 use nimiq_primitives::{coin::Coin, key_nibbles::KeyNibbles, policy::Policy};
 use nimiq_serde::SerRangeFrom;
-use serde::{Deserialize, Serialize, Serializer};
+use nimiq_serde::{Deserialize, Serialize};
 
 /// Struct that, for each block, keeps information relative to the chain the block is on.
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -101,7 +101,7 @@ impl ChainInfo {
 
     fn serialize_head<S>(block: &Block, serializer: S) -> Result<S::Ok, S::Error>
     where
-        S: Serializer,
+        S: serde::Serializer,
     {
         // Empty body if there is some
         if block.body().is_some() {
@@ -110,9 +110,9 @@ impl ChainInfo {
                 Block::Macro(ref mut block) => block.body = None,
                 Block::Micro(ref mut block) => block.body = None,
             }
-            Serialize::serialize(&block_to_ser, serializer)
+            serde::Serialize::serialize(&block_to_ser, serializer)
         } else {
-            Serialize::serialize(&block, serializer)
+            serde::Serialize::serialize(&block, serializer)
         }
     }
 }
@@ -129,11 +129,11 @@ impl Eq for ChainInfo {}
 
 impl IntoDatabaseValue for ChainInfo {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        Serialize::serialize_to_writer(self, &mut bytes).unwrap();
     }
 }
 
@@ -142,6 +142,7 @@ impl FromDatabaseValue for ChainInfo {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }

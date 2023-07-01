@@ -10,6 +10,7 @@ use nimiq_primitives::{
     networks::NetworkId,
     transaction::TransactionError,
 };
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_test_log::test;
 use nimiq_test_utils::{
     accounts_revert::TestCommitRevert, test_rng::test_rng, transactions::TransactionsGenerator,
@@ -70,14 +71,15 @@ fn create_serialized_contract() {
         step_amount: Coin::from_u64_unchecked(2625000000000),
         total_amount: Coin::from_u64_unchecked(52500000000000),
     };
-    let bytes: Vec<u8> = postcard::to_allocvec(&contract).unwrap();
+    let mut bytes: Vec<u8> = Vec::with_capacity(contract.serialized_size());
+    contract.serialize_to_writer(&mut bytes).unwrap();
     assert_eq!(CONTRACT, hex::encode(bytes));
 }
 
 #[test]
 fn it_can_deserialize_a_vesting_contract() {
     let bytes: Vec<u8> = hex::decode(CONTRACT).unwrap();
-    let contract: VestingContract = postcard::from_bytes(&mut &bytes[..]).unwrap();
+    let contract: VestingContract = Deserialize::deserialize_from_vec(&mut &bytes[..]).unwrap();
     assert_eq!(contract.balance, 52500000000000.try_into().unwrap());
     assert_eq!(
         contract.owner,
@@ -92,8 +94,10 @@ fn it_can_deserialize_a_vesting_contract() {
 #[test]
 fn it_can_serialize_a_vesting_contract() {
     let bytes: Vec<u8> = hex::decode(CONTRACT).unwrap();
-    let contract: VestingContract = postcard::from_bytes(&mut &bytes[..]).unwrap();
-    let bytes2: Vec<u8> = postcard::to_allocvec(&contract).unwrap();
+    let contract: VestingContract = Deserialize::deserialize_from_vec(&mut &bytes[..]).unwrap();
+    let mut bytes2: Vec<u8> = Vec::with_capacity(contract.serialized_size());
+    let size = contract.serialize_to_writer(&mut bytes2).unwrap();
+    assert_eq!(size, contract.serialized_size());
     assert_eq!(hex::encode(bytes2), CONTRACT);
 }
 
@@ -105,13 +109,13 @@ fn it_can_create_contract_from_transaction() {
     let block_state = BlockState::new(1, 1);
 
     // Transaction 1
-    let mut data = [0u8; Address::SIZE + 8];
+    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 8);
     let owner = Address::from(&key_1);
-    postcard::to_slice(&owner, &mut data).unwrap();
-    postcard::to_slice(&1000u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
+    Serialize::serialize_to_writer(&owner, &mut data);
+    Serialize::serialize_to_writer(&1000u64.to_be_bytes(), &mut data);
 
     let mut tx = Transaction::new_contract_creation(
-        data.to_vec(),
+        data,
         owner.clone(),
         AccountType::Basic,
         AccountType::Vesting,
@@ -158,17 +162,13 @@ fn it_can_create_contract_from_transaction() {
     assert_eq!(contract.total_amount, 100.try_into().unwrap());
 
     // Transaction 2
-    let mut data = [0u8; Address::SIZE + 24];
+    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 24);
     let owner = Address::from([0u8; 20]);
-    postcard::to_slice(&owner, &mut data).unwrap();
-    postcard::to_slice(&0u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
-    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE + 8..]).unwrap();
-    postcard::to_slice(
-        &Coin::try_from(50).unwrap(),
-        &mut data[Address::SIZE + 16..],
-    )
-    .unwrap();
-    tx.data = data.to_vec();
+    Serialize::serialize_to_writer(&owner, &mut data);
+    Serialize::serialize_to_writer(&0u64.to_be_bytes(), &mut data);
+    Serialize::serialize_to_writer(&100u64.to_be_bytes(), &mut data);
+    Serialize::serialize_to_writer(&Coin::try_from(50).unwrap(), &mut data);
+    tx.data = data;
     tx.recipient = tx.contract_creation_address();
 
     let mut tx_logger = TransactionLog::empty();
@@ -196,22 +196,14 @@ fn it_can_create_contract_from_transaction() {
     assert_eq!(contract.total_amount, 100.try_into().unwrap());
 
     // Transaction 3
-    let mut data = [0u8; Address::SIZE + 32];
+    let mut data: Vec<u8> = Vec::with_capacity(Address::SIZE + 32);
     let owner = Address::from([0u8; 20]);
-    postcard::to_slice(&owner, &mut data).unwrap();
-    postcard::to_slice(&0u64.to_be_bytes(), &mut data[Address::SIZE..]).unwrap();
-    postcard::to_slice(&100u64.to_be_bytes(), &mut data[Address::SIZE + 8..]).unwrap();
-    postcard::to_slice(
-        &Coin::try_from(50).unwrap(),
-        &mut data[Address::SIZE + 16..],
-    )
-    .unwrap();
-    postcard::to_slice(
-        &Coin::try_from(150).unwrap(),
-        &mut data[Address::SIZE + 24..],
-    )
-    .unwrap();
-    tx.data = data.to_vec();
+    Serialize::serialize_to_writer(&owner, &mut data);
+    Serialize::serialize_to_writer(&0u64.to_be_bytes(), &mut data);
+    Serialize::serialize_to_writer(&100u64.to_be_bytes(), &mut data);
+    Serialize::serialize_to_writer(&Coin::try_from(50).unwrap(), &mut data);
+    Serialize::serialize_to_writer(&Coin::try_from(150).unwrap(), &mut data);
+    tx.data = data;
     tx.recipient = tx.contract_creation_address();
 
     let mut tx_logger = TransactionLog::empty();
@@ -238,9 +230,9 @@ fn it_can_create_contract_from_transaction() {
     assert_eq!(contract.total_amount, 150.try_into().unwrap());
 
     // Transaction 4: invalid data
-    tx.data = vec![0u8; Address::SIZE + 2];
-    postcard::to_slice(&owner, &mut tx.data).unwrap();
-    postcard::to_slice(&0u16.to_be_bytes(), &mut tx.data[Address::SIZE..]).unwrap();
+    tx.data = Vec::with_capacity(Address::SIZE + 2);
+    Serialize::serialize_to_writer(&owner, &mut tx.data);
+    Serialize::serialize_to_writer(&0u16.to_be_bytes(), &mut tx.data);
     tx.recipient = tx.contract_creation_address();
 
     let mut tx_logger = TransactionLog::empty();
@@ -312,7 +304,7 @@ fn it_can_apply_and_revert_valid_transaction() {
 
     let signature = key_pair.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair.public, signature);
-    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
+    tx.proof = signature_proof.serialize_to_vec();
 
     let mut tx_logger = TransactionLog::empty();
     let _ = accounts
@@ -365,7 +357,7 @@ fn it_refuses_invalid_transactions() {
     // Invalid signature
     let signature = key_pair_alt.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair_alt.public, signature);
-    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
+    tx.proof = signature_proof.serialize_to_vec();
 
     let block_state = BlockState::new(1, 200);
 
@@ -384,7 +376,7 @@ fn it_refuses_invalid_transactions() {
     // Funds still vested
     let signature = key_pair.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair.public, signature);
-    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
+    tx.proof = signature_proof.serialize_to_vec();
 
     let block_state = BlockState::new(1, 100);
 

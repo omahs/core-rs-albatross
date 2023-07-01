@@ -16,6 +16,7 @@ use nimiq_collections::BitSet;
 use nimiq_hash::{Blake2bHash, Blake2sHash, Hash};
 use nimiq_keys::{Address, PublicKey};
 use nimiq_primitives::{coin::Coin, policy::Policy, slots::Validators};
+use nimiq_serde::Serialize as NimiqSerialize;
 use nimiq_transaction::{
     account::htlc_contract::{AnyHash, HashAlgorithm as HTLCContractHashAlgorithm},
     inherent::Inherent as BaseInherent,
@@ -174,7 +175,7 @@ impl Block {
     ) -> Result<Self, BlockchainError> {
         let block_number = macro_block.block_number();
         let timestamp = macro_block.timestamp();
-        let size = postcard::to_allocvec(&macro_block).unwrap().len() as u32;
+        let size = macro_block.serialized_size() as u32;
         let batch = Policy::batch_at(block_number);
         let epoch = Policy::epoch_at(block_number);
 
@@ -233,7 +234,7 @@ impl Block {
     ) -> Result<Self, BlockchainError> {
         let block_number = block.block_number();
         let timestamp = block.timestamp();
-        let size = postcard::to_allocvec(&block).unwrap().len() as u32;
+        let size = block.serialized_size() as u32;
         let batch = Policy::batch_at(block_number);
         let epoch = Policy::epoch_at(block_number);
 

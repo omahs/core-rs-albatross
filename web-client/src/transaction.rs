@@ -4,6 +4,7 @@ use nimiq_hash::{Blake2bHash, Hash};
 #[cfg(feature = "client")]
 use nimiq_primitives::policy::Policy;
 use nimiq_primitives::{account::AccountType, coin::Coin, networks::NetworkId};
+use nimiq_serde::{Deserialize, Serialize};
 #[cfg(feature = "client")]
 use nimiq_transaction::extended_transaction::ExtendedTransaction;
 use nimiq_transaction::{
@@ -242,7 +243,7 @@ impl Transaction {
 
     /// Serializes the transaction to a byte array.
     pub fn serialize(&self) -> Vec<u8> {
-        postcard::to_allocvec(&self.inner).unwrap()
+        self.inner.serialize_to_vec()
     }
 
     /// The transaction's {@link TransactionFormat}.
@@ -332,7 +333,7 @@ impl Transaction {
     /// The transaction's byte size.
     #[wasm_bindgen(getter)]
     pub fn serialized_size(&self) -> usize {
-        postcard::to_allocvec(&self.inner).unwrap().len()
+        self.inner.serialized_size()
     }
 
     /// Serializes the transaction into a HEX string.
@@ -364,11 +365,9 @@ impl Transaction {
         if let Ok(plain) = serde_wasm_bindgen::from_value::<PlainTransaction>(js_value.clone()) {
             Ok(Transaction::from_plain_transaction(&plain)?)
         } else if let Ok(string) = serde_wasm_bindgen::from_value::<String>(js_value.to_owned()) {
-            Ok(Transaction::from_native(postcard::from_bytes::<
-                nimiq_transaction::Transaction,
-            >(&hex::decode(
-                string,
-            )?)?))
+            Ok(Transaction::from_native(
+                nimiq_transaction::Transaction::deserialize_from_vec(&hex::decode(string)?)?,
+            ))
         } else {
             Err(JsError::new("Failed to parse transaction."))
         }

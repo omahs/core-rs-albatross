@@ -1,4 +1,5 @@
 use nimiq_hash::{Blake2bHash, Blake2bHasher, Hasher};
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_test_log::test;
 use nimiq_utils::merkle::{
     compute_root_from_content, compute_root_from_content_slice, MerklePath, MerkleProof,
@@ -173,8 +174,11 @@ fn it_correctly_serializes_and_deserializes_path() {
     let values = vec!["1", "2", "3", "4", "5", "6", "7"];
 
     let proof = MerklePath::new::<Blake2bHasher, &str>(&values, &values[6]);
-    let serialization = postcard::to_allocvec(&proof).unwrap();
-    let proof2: MerklePath<Blake2bHash> = postcard::from_bytes(&mut &serialization[..]).unwrap();
+    let mut serialization: Vec<u8> = Vec::with_capacity(proof.serialized_size());
+    let size = proof.serialize_to_writer(&mut serialization).unwrap();
+    assert_eq!(size, proof.serialized_size());
+    let proof2: MerklePath<Blake2bHash> =
+        Deserialize::deserialize_from_vec(&mut &serialization[..]).unwrap();
     assert_eq!(proof, proof2);
 }
 
@@ -491,8 +495,10 @@ fn it_correctly_serializes_and_deserializes_proof() {
 
     let proof: MerkleProof<Blake2bHash> =
         MerkleProof::from_values::<&str>(&values, &[values[2], values[6]]);
-    let serialization = postcard::to_allocvec(&proof).unwrap();
-    let proof2 = postcard::from_bytes::<MerkleProof<Blake2bHash>>(&serialization);
+    let mut serialization: Vec<u8> = Vec::with_capacity(proof.serialized_size());
+    let size = proof.serialize_to_writer(&mut serialization).unwrap();
+    assert_eq!(size, proof.serialized_size());
+    let proof2 = MerkleProof::<Blake2bHash>::deserialize_from_vec(&serialization);
     assert_eq!(proof2, Ok(proof));
 
     /*
@@ -506,7 +512,9 @@ fn it_correctly_serializes_and_deserializes_proof() {
      */
     let proof: MerkleProof<Blake2bHash> =
         MerkleProof::with_absence::<&str>(&values[..3], &[values[4]]);
-    let serialization = postcard::to_allocvec(&proof).unwrap();
-    let proof2 = postcard::from_bytes::<MerkleProof<Blake2bHash>>(&serialization);
+    let mut serialization: Vec<u8> = Vec::with_capacity(proof.serialized_size());
+    let size = proof.serialize_to_writer(&mut serialization).unwrap();
+    assert_eq!(size, proof.serialized_size());
+    let proof2 = MerkleProof::<Blake2bHash>::deserialize_from_vec(&serialization);
     assert_eq!(proof2, Ok(proof));
 }

@@ -3,6 +3,7 @@ use std::convert::TryInto;
 use nimiq_hash::{Blake2bHash, Blake2bHasher, HashOutput, Hasher};
 use nimiq_keys::{Address, KeyPair, PrivateKey};
 use nimiq_primitives::{account::AccountType, networks::NetworkId};
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_test_log::test;
 use nimiq_transaction::{
     account::htlc_contract::{
@@ -27,7 +28,7 @@ fn it_can_create_creation_transaction() {
     };
 
     let transaction = Transaction::new_contract_creation(
-        postcard::to_allocvec(&data).unwrap(),
+        data.serialize_to_vec(),
         sender.clone(),
         AccountType::Basic,
         AccountType::HTLC,
@@ -68,11 +69,11 @@ fn prepare_outgoing_transaction() -> (
     KeyPair,
     SignatureProof,
 ) {
-    let sender_priv_key: PrivateKey = postcard::from_bytes(
+    let sender_priv_key: PrivateKey = Deserialize::deserialize_from_vec(
         &hex::decode("9d5bd02379e7e45cf515c788048f5cf3c454ffabd3e83bd1d7667716c325c3c0").unwrap(),
     )
     .unwrap();
-    let recipient_priv_key: PrivateKey = postcard::from_bytes(
+    let recipient_priv_key: PrivateKey = Deserialize::deserialize_from_vec(
         &hex::decode("bd1cfcd49a81048c8c8d22a25766bd01bfa0f6b2eb0030f65241189393af96a2").unwrap(),
     )
     .unwrap();
@@ -130,7 +131,7 @@ fn it_can_create_regular_transfer() {
         pre_image: pre_image.clone(),
         signature_proof: recipient_signature_proof,
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
 
     let mut builder = TransactionBuilder::new();
     builder
@@ -171,7 +172,7 @@ fn it_can_create_early_resolve() {
         signature_proof_recipient: recipient_signature_proof,
         signature_proof_sender: sender_signature_proof,
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
 
     let mut builder = TransactionBuilder::new();
     builder
@@ -205,7 +206,7 @@ fn it_can_create_timeout_resolve() {
     let proof = OutgoingHTLCTransactionProof::TimeoutResolve {
         signature_proof_sender: sender_signature_proof,
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
 
     let mut builder = TransactionBuilder::new();
     builder

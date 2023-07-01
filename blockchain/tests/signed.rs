@@ -15,6 +15,7 @@ use nimiq_primitives::{
     policy::Policy,
     slots::{Validator, Validators},
 };
+use nimiq_serde::Deserialize;
 use nimiq_test_log::test;
 use nimiq_utils::time::OffsetTime;
 use nimiq_vrf::VrfEntropy;
@@ -25,7 +26,7 @@ const SECRET_KEY: &str = "99237809f3b37bd0878854d2b5b66e4cc00ba1a1d64377c374f2b6
 #[test]
 fn test_skip_block_single_signature() {
     // parse key pair
-    let key_pair: KeyPair = postcard::from_bytes(&hex::decode(SECRET_KEY).unwrap()).unwrap();
+    let key_pair = KeyPair::deserialize_from_vec(&hex::decode(SECRET_KEY).unwrap()).unwrap();
 
     // create skip block data
     let skip_block_info = SkipBlockInfo {
@@ -80,7 +81,7 @@ fn test_replay() {
     );
 
     // load key pair
-    let key_pair: KeyPair = postcard::from_bytes(&hex::decode(SECRET_KEY).unwrap()).unwrap();
+    let key_pair = KeyPair::deserialize_from_vec(&hex::decode(SECRET_KEY).unwrap()).unwrap();
 
     // create dummy block
     let mut block = MacroBlock::default();

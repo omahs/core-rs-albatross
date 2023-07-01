@@ -4,7 +4,7 @@ use nimiq_bls::CompressedPublicKey as BlsPublicKey;
 use nimiq_hash::Blake2bHash;
 use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
 use nimiq_primitives::account::AccountError;
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 use crate::{convert_receipt, AccountReceipt};
 

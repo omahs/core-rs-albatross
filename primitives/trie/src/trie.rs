@@ -23,8 +23,7 @@ use nimiq_primitives::{
         trie_proof_node::TrieProofNode,
     },
 };
-use nimiq_serde::SerRangeFrom;
-use serde::{de::DeserializeOwned, Serialize};
+use nimiq_serde::{Deserialize, SerRangeFrom, Serialize};
 
 /// A Merkle Radix Trie is a hybrid between a Merkle tree and a Radix trie. Like a Merkle tree each
 /// node contains the hashes of all its children. That creates a tree that is resistant to
@@ -267,7 +266,7 @@ impl MerkleRadixTrie {
 
     /// Get the value at the given key. If there's no leaf or hybrid node at the given key then it
     /// returns None.
-    pub fn get<T: DeserializeOwned>(
+    pub fn get<T: Deserialize>(
         &self,
         txn: &TransactionProxy,
         key: &KeyNibbles,
@@ -278,7 +277,7 @@ impl MerkleRadixTrie {
         }
         Ok(self
             .get_raw(txn, key)
-            .map(|v| postcard::from_bytes(&v).unwrap()))
+            .map(|v| T::deserialize_from_vec(&v).unwrap()))
     }
 
     fn get_raw(&self, txn: &TransactionProxy, key: &KeyNibbles) -> Option<Vec<u8>> {
@@ -289,7 +288,7 @@ impl MerkleRadixTrie {
     /// be a part of the trie, if it is then it will be part of the chunk) and contains at most
     /// `size` leaf nodes.
     // FIXME This panics if a node in range can't be deserialized to T
-    pub fn get_chunk<T: DeserializeOwned>(
+    pub fn get_chunk<T: Deserialize>(
         &self,
         txn: &TransactionProxy,
         start: &KeyNibbles,
@@ -299,7 +298,7 @@ impl MerkleRadixTrie {
 
         chunk
             .into_iter()
-            .map(|node| postcard::from_bytes(&node.value.unwrap()).unwrap())
+            .map(|node| T::deserialize_from_vec(&node.value.unwrap()).unwrap())
             .collect()
     }
 
@@ -314,7 +313,7 @@ impl MerkleRadixTrie {
         // PITODO: Return value needs to change, we don't need the error anymore
         let missing_range = self.get_missing_range(txn);
         if self.is_within_complete_part(key, &missing_range) {
-            self.put_raw(txn, key, postcard::to_allocvec(&value)?, &missing_range);
+            self.put_raw(txn, key, value.serialize_to_vec(), &missing_range);
         } else {
             self.update_within_missing_part_raw(txn, key, &missing_range)?;
         }
@@ -1462,7 +1461,7 @@ impl MerkleRadixTrie {
         chunk
     }
 
-    pub fn iter_nodes<'txn, T: DeserializeOwned>(
+    pub fn iter_nodes<'txn, T: Deserialize>(
         &self,
         txn: &'txn TransactionProxy,
         start_key: &KeyNibbles,
@@ -1502,14 +1501,14 @@ impl<'txn, T> TrieNodeIter<'txn, T> {
     }
 }
 
-impl<'txn, T: DeserializeOwned> Iterator for TrieNodeIter<'txn, T> {
+impl<'txn, T: Deserialize> Iterator for TrieNodeIter<'txn, T> {
     type Item = T;
 
     fn next(&mut self) -> Option<Self::Item> {
         let (k, v) = self.iter.next()?;
 
         if k <= self.end_key {
-            return postcard::from_bytes(&v.value?).ok();
+            return T::deserialize_from_vec(&v.value?).ok();
         }
         None
     }

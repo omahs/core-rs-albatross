@@ -7,6 +7,7 @@ use nimiq_account::{
 use nimiq_database::traits::Database;
 use nimiq_keys::{Address, KeyPair, PrivateKey, SecureGenerate};
 use nimiq_primitives::{account::AccountError, coin::Coin, networks::NetworkId};
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_test_log::test;
 use nimiq_test_utils::{
     accounts_revert::TestCommitRevert, test_rng::test_rng, transactions::TransactionsGenerator,
@@ -189,14 +190,11 @@ fn make_signed_transaction(value: u64, sender: Address, recipient: Address) -> T
     );
 
     let key_pair = KeyPair::from(
-        postcard::from_bytes::<PrivateKey>(&hex::decode(SECRET_KEY_1).unwrap()).unwrap(),
+        PrivateKey::deserialize_from_vec(&hex::decode(SECRET_KEY_1).unwrap()).unwrap(),
     );
 
-    let proof = postcard::to_allocvec(&SignatureProof::from(
-        key_pair.public,
-        key_pair.sign(&tx.serialize_content()),
-    ))
-    .unwrap();
+    let proof = SignatureProof::from(key_pair.public, key_pair.sign(&tx.serialize_content()))
+        .serialize_to_vec();
 
     tx.proof = proof;
 

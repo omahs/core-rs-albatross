@@ -1,7 +1,7 @@
 use std::{
     fs,
     fs::{DirBuilder, File},
-    io::{Read, Write},
+    io::Read,
     path::Path,
 };
 
@@ -16,6 +16,7 @@ use ark_std::UniformRand;
 use nimiq_block::MacroBlock;
 use nimiq_hash::{Blake2sHash, Hash};
 use nimiq_primitives::{policy::Policy, slots::PK_TREE_DEPTH};
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_zkp_circuits::{
     bits::BitVec,
     circuits::{
@@ -48,7 +49,7 @@ pub fn update_proof_cache(
         let mut buf = vec![];
         let mut reader = std::io::BufReader::new(file);
         reader.read_to_end(&mut buf)?;
-        let meta_data_hash: [u8; 32] = postcard::from_bytes(&buf)?;
+        let meta_data_hash: [u8; 32] = Deserialize::deserialize_from_vec(&buf)?;
 
         // If the hash in the meta data matches, return.
         if &meta_data_hash == current_header_hash {
@@ -64,7 +65,7 @@ pub fn update_proof_cache(
     // Create a new meta data file.
     DirBuilder::new().recursive(true).create(&proofs)?;
     let mut file = File::create(&metadata_file)?;
-    file.write_all(&postcard::to_allocvec(&current_header_hash)?)?;
+    current_header_hash.serialize_to_writer(&mut file)?;
 
     Ok(())
 }

@@ -17,6 +17,7 @@ use libp2p::{
 };
 use nimiq_hash::Blake2bHash;
 use nimiq_network_interface::peer_info::Services;
+use nimiq_serde::DeserializeError;
 use nimiq_utils::tagged_signing::TaggedKeypair;
 use parking_lot::RwLock;
 use rand::{seq::IteratorRandom, thread_rng};
@@ -58,7 +59,7 @@ pub enum DiscoveryHandlerError {
     Io(#[from] std::io::Error),
 
     #[error("Serialization error: {0}")]
-    Serialization(#[from] postcard::Error),
+    Serialization(#[from] DeserializeError),
 
     #[error("Unexpected message for state {state:?}: {message:?}")]
     UnexpectedMessage {
@@ -184,14 +185,14 @@ impl DiscoveryHandler {
         }
     }
 
-    fn send(&mut self, message: &DiscoveryMessage) -> Result<(), postcard::Error> {
+    fn send(&mut self, message: &DiscoveryMessage) -> Result<(), std::io::Error> {
         Pin::new(self.outbound.as_mut().expect("Expected outbound substream")).start_send(message)
     }
 
     fn receive(
         &mut self,
         cx: &mut Context,
-    ) -> Poll<Option<Result<DiscoveryMessage, postcard::Error>>> {
+    ) -> Poll<Option<Result<DiscoveryMessage, DeserializeError>>> {
         self.inbound
             .as_mut()
             .expect("Expected inbound substream")
@@ -294,7 +295,7 @@ impl ConnectionHandler for DiscoveryHandler {
     fn inject_dial_upgrade_error(
         &mut self,
         _info: Self::OutboundOpenInfo,
-        error: ConnectionHandlerUpgrErr<postcard::Error>,
+        error: ConnectionHandlerUpgrErr<DeserializeError>,
     ) {
         error!(%error, "inject_dial_upgrade_error");
     }

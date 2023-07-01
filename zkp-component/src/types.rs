@@ -11,9 +11,9 @@ use nimiq_network_interface::{
     network::{Network, Topic},
     request::{Handle, RequestCommon, RequestError, RequestMarker},
 };
+use nimiq_serde::{Deserialize, DeserializeError, Serialize};
 use nimiq_zkp_primitives::NanoZKPError;
 use parking_lot::RwLock;
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use crate::ZKPComponent;
@@ -126,7 +126,7 @@ impl From<ZKPState> for ZKProof {
 
 impl AsDatabaseBytes for ZKProof {
     fn as_database_bytes(&self) -> Cow<[u8]> {
-        let v = postcard::to_allocvec(self).unwrap();
+        let v = Serialize::serialize_to_vec(&self);
         Cow::Owned(v)
     }
 }
@@ -136,7 +136,8 @@ impl FromDatabaseValue for ZKProof {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }
 
@@ -199,8 +200,8 @@ pub enum ZKProofGenerationError {
     ProcessError(String),
 }
 
-impl From<postcard::Error> for ZKProofGenerationError {
-    fn from(e: postcard::Error) -> Self {
+impl From<DeserializeError> for ZKProofGenerationError {
+    fn from(e: DeserializeError) -> Self {
         ZKProofGenerationError::SerializingError(e.to_string())
     }
 }

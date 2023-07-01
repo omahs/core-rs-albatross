@@ -1,5 +1,6 @@
 use std::str::FromStr;
 
+use nimiq_serde::Serialize;
 use wasm_bindgen::prelude::*;
 #[cfg(feature = "primitives")]
 use wasm_bindgen_derive::TryFromJsValue;
@@ -75,7 +76,7 @@ impl Address {
 
     #[cfg(feature = "primitives")]
     pub fn serialize(&self) -> Vec<u8> {
-        postcard::to_allocvec(&self.inner).unwrap()
+        self.inner.serialize_to_vec()
     }
 }
 

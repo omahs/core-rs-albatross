@@ -7,8 +7,8 @@ use nimiq_network_interface::{
     network::{MsgAcceptance, Network, NetworkEvent, Topic},
     request::{Message, Request, RequestCommon},
 };
+use nimiq_serde::{Deserialize, Serialize};
 use parking_lot::RwLock;
-use serde::{de::DeserializeOwned, Serialize};
 
 use super::{MessageStream, NetworkError, ValidatorNetwork};
 use crate::validator_record::{SignedValidatorRecord, ValidatorRecord};
@@ -27,7 +27,7 @@ pub struct State<TPeerId> {
 pub struct ValidatorNetworkImpl<N>
 where
     N: Network,
-    N::PeerId: Serialize + DeserializeOwned,
+    N::PeerId: Serialize + Deserialize,
 {
     /// A reference to the network containing all peers
     network: Arc<N>,
@@ -38,7 +38,7 @@ where
 impl<N> ValidatorNetworkImpl<N>
 where
     N: Network,
-    N::PeerId: Serialize + DeserializeOwned,
+    N::PeerId: Serialize + Deserialize,
 {
     pub fn new(network: Arc<N>) -> Self {
         Self {
@@ -142,7 +142,7 @@ where
 impl<N> ValidatorNetwork for ValidatorNetworkImpl<N>
 where
     N: Network,
-    N::PeerId: Serialize + DeserializeOwned,
+    N::PeerId: Serialize + Deserialize,
     N::Error: Send,
 {
     type Error = NetworkError<N::Error>;

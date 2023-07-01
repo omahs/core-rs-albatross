@@ -5,6 +5,8 @@ use std::{
 
 use lazy_static::lazy_static;
 use nimiq_primitives::coin::Coin;
+#[cfg(feature = "serde-derive")]
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_test_log::test;
 
 struct NonFailingTest {
@@ -38,7 +40,7 @@ lazy_static! {
 fn test_non_failing() {
     for test_case in NON_FAILING_TESTS.iter() {
         let vec = hex::decode(test_case.data).unwrap();
-        let coin: Coin = postcard::from_bytes(&mut &vec[..]).unwrap();
+        let coin: Coin = Deserialize::deserialize_from_vec(&mut &vec[..]).unwrap();
         assert_eq!(test_case.coin, coin);
     }
 }
@@ -46,14 +48,13 @@ fn test_non_failing() {
 #[test]
 #[cfg(feature = "serde-derive")]
 fn test_deserialize_out_of_bounds() {
+    use nimiq_serde::DeserializeError;
+
     let vec = hex::decode("0020000000000000").unwrap();
-    let res: Result<Coin, postcard::Error> = postcard::from_bytes(&vec[..]);
+    let res: Result<Coin, DeserializeError> = Deserialize::deserialize_from_vec(&vec[..]);
     match res {
         Ok(coin) => assert!(false, "Instead of failing, got {}", coin),
-        Err(err) => match err {
-            postcard::Error::SerdeDeCustom => (),
-            _ => assert!(false, "Expected to fail with IoError, but got {}", err),
-        },
+        Err(err) => assert_eq!(err, DeserializeError::serde_custom()),
     }
 }
 
@@ -61,13 +62,10 @@ fn test_deserialize_out_of_bounds() {
 #[cfg(feature = "serde-derive")]
 fn test_serialize_out_of_bounds() {
     let mut vec = Vec::with_capacity(8);
-    let res = postcard::to_slice(&Coin::from_u64_unchecked(9007199254740992), &mut vec);
+    let res = Serialize::serialize_to_writer(&Coin::from_u64_unchecked(9007199254740992), &mut vec);
     match res {
         Ok(_) => assert!(false, "Didn't fail"),
-        Err(err) => match err {
-            postcard::Error::SerializeBufferFull => (),
-            _ => assert!(false, "Expected to fail with Overflow, but got {}", err),
-        },
+        Err(err) => assert_eq!(err.kind(), std::io::ErrorKind::Other),
     }
 }
 

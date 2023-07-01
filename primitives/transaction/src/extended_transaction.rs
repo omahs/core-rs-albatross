@@ -4,7 +4,7 @@ use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_mmr::hash::Hash as MMRHash;
 use nimiq_primitives::{coin::Coin, networks::NetworkId, policy::Policy};
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 use crate::{inherent::Inherent, ExecutedTransaction, Transaction as BlockchainTransaction};
 
@@ -164,18 +164,18 @@ impl MMRHash<Blake2bHash> for ExtendedTransaction {
     /// to include it into the History Tree.
     fn hash(&self, prefix: u64) -> Blake2bHash {
         let mut message = prefix.to_be_bytes().to_vec();
-        message.append(&mut postcard::to_allocvec(self).unwrap());
+        message.append(&mut self.serialize_to_vec());
         message.hash()
     }
 }
 
 impl IntoDatabaseValue for ExtendedTransaction {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        Serialize::serialize_to_writer(&self, &mut bytes).unwrap();
     }
 }
 
@@ -184,7 +184,8 @@ impl FromDatabaseValue for ExtendedTransaction {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }
 

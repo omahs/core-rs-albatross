@@ -7,6 +7,7 @@ use nimiq_blockchain_interface::{
 };
 use nimiq_database::{traits::WriteTransaction, WriteTransactionProxy};
 use nimiq_primitives::{coin::Coin, policy::Policy};
+use nimiq_serde::Serialize;
 use nimiq_transaction::{
     extended_transaction::{ExtTxData, ExtendedTransaction},
     inherent::Inherent,
@@ -112,7 +113,7 @@ impl Blockchain {
             if let ExtTxData::Basic(tx) = &history[i].data {
                 cum_tx_fees += tx.get_raw_transaction().fee;
             }
-            cum_ext_tx_size += postcard::to_allocvec(&history[i].data).unwrap().len() as u64;
+            cum_ext_tx_size += history[i].data.serialized_size() as u64;
         }
 
         // Create the chain info for the given block and store it.

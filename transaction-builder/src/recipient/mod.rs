@@ -1,5 +1,6 @@
 use nimiq_keys::Address;
 use nimiq_primitives::{account::AccountType, policy::Policy};
+use nimiq_serde::Serialize;
 use nimiq_transaction::account::{
     htlc_contract::CreationTransactionData as HtlcCreationData,
     staking_contract::IncomingStakingTransactionData,
@@ -217,9 +218,9 @@ impl Recipient {
     pub fn data(&self) -> Vec<u8> {
         match self {
             Recipient::Basic { data, .. } => data.clone(),
-            Recipient::HtlcCreation { data } => postcard::to_allocvec(&data).unwrap(),
-            Recipient::VestingCreation { data } => data.to_tx_data().unwrap(),
-            Recipient::Staking { data } => postcard::to_allocvec(&data).unwrap(),
+            Recipient::HtlcCreation { data } => data.serialize_to_vec(),
+            Recipient::VestingCreation { data } => data.to_tx_data(),
+            Recipient::Staking { data } => data.serialize_to_vec(),
         }
     }
 }

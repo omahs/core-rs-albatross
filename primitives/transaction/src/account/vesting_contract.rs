@@ -1,7 +1,7 @@
 use log::error;
 use nimiq_keys::Address;
 use nimiq_primitives::{account::AccountType, coin::Coin};
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 use crate::{
     account::AccountTransactionVerification, SignatureProof, Transaction, TransactionError,
@@ -57,7 +57,8 @@ impl AccountTransactionVerification for VestingContractVerifier {
         assert_eq!(transaction.sender_type, AccountType::Vesting);
 
         // Verify signature.
-        let signature_proof: SignatureProof = postcard::from_bytes(&transaction.proof[..])?;
+        let signature_proof: SignatureProof =
+            Deserialize::deserialize_from_vec(&transaction.proof[..])?;
 
         if !signature_proof.verify(transaction.serialize_content().as_slice()) {
             warn!("Invalid signature for this transaction:\n{:?}", transaction);
@@ -71,9 +72,9 @@ impl AccountTransactionVerification for VestingContractVerifier {
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
 pub struct CreationTransactionData {
     pub owner: Address,
-    #[serde(with = "postcard::fixint::be")]
+    #[serde(with = "nimiq_serde::fixint::be")]
     pub start_time: u64,
-    #[serde(with = "postcard::fixint::be")]
+    #[serde(with = "nimiq_serde::fixint::be")]
     pub time_step: u64,
     pub step_amount: Coin,
     pub total_amount: Coin,
@@ -82,11 +83,11 @@ pub struct CreationTransactionData {
 impl CreationTransactionData {
     pub fn parse(transaction: &Transaction) -> Result<Self, TransactionError> {
         let reader = &mut &transaction.data[..];
-        let (owner, left_over) = postcard::take_from_bytes(reader)?;
+        let (owner, left_over) = Deserialize::deserialize_take(reader)?;
 
         if transaction.data.len() == Address::SIZE + 8 {
             // Only timestamp: vest full amount at that time
-            let (time_step, _) = postcard::take_from_bytes::<[u8; 8]>(left_over)?;
+            let (time_step, _) = <[u8; 8]>::deserialize_take(left_over)?;
             Ok(CreationTransactionData {
                 owner,
                 start_time: 0,
@@ -95,9 +96,9 @@ impl CreationTransactionData {
                 total_amount: transaction.value,
             })
         } else if transaction.data.len() == Address::SIZE + 24 {
-            let (start_time, left_over) = postcard::take_from_bytes::<[u8; 8]>(left_over)?;
-            let (time_step, left_over) = postcard::take_from_bytes::<[u8; 8]>(left_over)?;
-            let (step_amount, _) = postcard::take_from_bytes(left_over)?;
+            let (start_time, left_over) = <[u8; 8]>::deserialize_take(left_over)?;
+            let (time_step, left_over) = <[u8; 8]>::deserialize_take(left_over)?;
+            let (step_amount, _) = Deserialize::deserialize_take(left_over)?;
             Ok(CreationTransactionData {
                 owner,
                 start_time: u64::from_be_bytes(start_time),
@@ -107,10 +108,10 @@ impl CreationTransactionData {
             })
         } else if transaction.data.len() == Address::SIZE + 32 {
             // Create a vesting account with some instantly vested funds or additional funds considered.
-            let (start_time, left_over) = postcard::take_from_bytes::<[u8; 8]>(left_over)?;
-            let (time_step, left_over) = postcard::take_from_bytes::<[u8; 8]>(left_over)?;
-            let (step_amount, left_over) = postcard::take_from_bytes(left_over)?;
-            let (total_amount, _) = postcard::take_from_bytes(left_over)?;
+            let (start_time, left_over) = <[u8; 8]>::deserialize_take(left_over)?;
+            let (time_step, left_over) = <[u8; 8]>::deserialize_take(left_over)?;
+            let (step_amount, left_over) = Deserialize::deserialize_take(left_over)?;
+            let (total_amount, _) = Deserialize::deserialize_take(left_over)?;
             Ok(CreationTransactionData {
                 owner,
                 start_time: u64::from_be_bytes(start_time),
@@ -123,23 +124,24 @@ impl CreationTransactionData {
         }
     }
 
-    pub fn to_tx_data(&self) -> Result<Vec<u8>, TransactionError> {
-        let mut data = postcard::to_allocvec(&self.owner)?;
+    pub fn to_tx_data(&self) -> Vec<u8> {
+        let mut data = self.owner.serialize_to_vec();
 
         if self.step_amount == self.total_amount {
             if self.start_time == 0 {
-                data.append(&mut postcard::to_allocvec(&self.time_step.to_be_bytes())?);
+                data.append(&mut self.time_step.to_be_bytes().serialize_to_vec());
             } else {
-                data.append(&mut postcard::to_allocvec(&self.start_time.to_be_bytes())?);
-                data.append(&mut postcard::to_allocvec(&self.time_step.to_be_bytes())?);
-                data.append(&mut postcard::to_allocvec(&self.step_amount)?);
+                data.append(&mut self.start_time.to_be_bytes().serialize_to_vec());
+                data.append(&mut self.time_step.to_be_bytes().serialize_to_vec());
+                data.append(&mut self.step_amount.serialize_to_vec());
             }
         } else {
-            data.append(&mut postcard::to_allocvec(&self.start_time.to_be_bytes())?);
-            data.append(&mut postcard::to_allocvec(&self.time_step.to_be_bytes())?);
-            data.append(&mut postcard::to_allocvec(&self.step_amount)?);
-            data.append(&mut postcard::to_allocvec(&self.total_amount)?);
+            data.append(&mut self.start_time.to_be_bytes().serialize_to_vec());
+            data.append(&mut self.time_step.to_be_bytes().serialize_to_vec());
+            data.append(&mut self.step_amount.serialize_to_vec());
+            data.append(&mut self.total_amount.serialize_to_vec());
         }
-        Ok(data)
+
+        data
     }
 }

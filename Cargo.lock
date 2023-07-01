@@ -3553,6 +3553,7 @@ dependencies = [
  "nimiq-hash",
  "nimiq-keys",
  "nimiq-primitives",
+ "nimiq-serde",
  "nimiq-tendermint",
  "nimiq-test-log",
  "nimiq-test-utils",

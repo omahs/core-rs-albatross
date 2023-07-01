@@ -5,6 +5,7 @@ use std::{
 
 use keyed_priority_queue::KeyedPriorityQueue;
 use nimiq_hash::{Blake2bHash, Hash};
+use nimiq_serde::Serialize;
 use nimiq_transaction::Transaction;
 
 /// TxPriority that is used when adding transactions into the mempool
@@ -200,7 +201,7 @@ impl MempoolTransactions {
             .push(tx_hash, Reverse(tx.validity_start_height));
 
         // Update total tx size
-        self.total_size += postcard::to_allocvec(&tx).unwrap().len();
+        self.total_size += tx.serialized_size();
 
         true
     }
@@ -212,7 +213,7 @@ impl MempoolTransactions {
         self.worst_transactions.remove(tx_hash);
         self.oldest_transactions.remove(tx_hash);
 
-        self.total_size -= postcard::to_allocvec(&tx).unwrap().len();
+        self.total_size -= tx.serialized_size();
 
         Some(tx)
     }

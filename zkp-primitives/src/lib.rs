@@ -24,7 +24,7 @@ pub enum NanoZKPError {
     #[error("serialization error: {0}")]
     Serialization(#[from] SerializationError),
     #[error("serialization error: {0}")]
-    Serializing(#[from] postcard::Error),
+    Serializing(#[from] nimiq_serde::DeserializeError),
     #[error("circuit error: {0}")]
     Circuit(#[from] SynthesisError),
     #[error("empty proof")]

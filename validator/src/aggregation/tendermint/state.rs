@@ -4,9 +4,9 @@ use nimiq_block::{MacroBody, MacroHeader};
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::Blake2sHash;
 use nimiq_keys::Signature as SchnorrSignature;
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_tendermint::{State as TendermintState, Step};
 use nimiq_validator_network::ValidatorNetwork;
-use serde::{Deserialize, Serialize};
 
 use super::{
     contribution::TendermintContribution,
@@ -160,11 +160,11 @@ where
 
 impl IntoDatabaseValue for MacroState {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        Serialize::serialize_to_writer(&self, &mut bytes).unwrap();
     }
 }
 
@@ -173,6 +173,7 @@ impl FromDatabaseValue for MacroState {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }

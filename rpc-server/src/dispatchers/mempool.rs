@@ -7,6 +7,7 @@ use nimiq_rpc_interface::{
     mempool::MempoolInterface,
     types::{HashOrTx, MempoolInfo, RPCResult},
 };
+use nimiq_serde::Deserialize;
 use nimiq_transaction::Transaction;
 
 use crate::error::Error;
@@ -32,7 +33,8 @@ impl MempoolInterface for MempoolDispatcher {
         &mut self,
         raw_tx: String,
     ) -> RPCResult<Blake2bHash, (), Self::Error> {
-        let tx: nimiq_transaction::Transaction = postcard::from_bytes(&hex::decode(&raw_tx)?)?;
+        let tx: nimiq_transaction::Transaction =
+            Deserialize::deserialize_from_vec(&hex::decode(&raw_tx)?)?;
         let txid = tx.hash::<Blake2bHash>();
 
         match self.mempool.add_transaction(tx, None).await {
@@ -46,7 +48,8 @@ impl MempoolInterface for MempoolDispatcher {
         &mut self,
         raw_tx: String,
     ) -> RPCResult<Blake2bHash, (), Self::Error> {
-        let tx: nimiq_transaction::Transaction = postcard::from_bytes(&hex::decode(&raw_tx)?)?;
+        let tx: nimiq_transaction::Transaction =
+            Deserialize::deserialize_from_vec(&hex::decode(&raw_tx)?)?;
         let txid = tx.hash::<Blake2bHash>();
 
         match self

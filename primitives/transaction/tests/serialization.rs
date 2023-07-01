@@ -2,6 +2,7 @@ use std::convert::{TryFrom, TryInto};
 
 use nimiq_keys::Address;
 use nimiq_primitives::{account::AccountType, coin::Coin, networks::NetworkId};
+use nimiq_serde::{Deserialize, DeserializeError, Serialize};
 use nimiq_test_log::test;
 use nimiq_transaction::*;
 
@@ -12,7 +13,7 @@ const INVALID_EXTENDED_TRANSACTION: &str = "0100004a88aaad038f9b8248865c4b9249ef
 #[test]
 fn it_can_deserialize_extended_transaction() {
     let v: Vec<u8> = hex::decode(EXTENDED_TRANSACTION).unwrap();
-    let t: Transaction = postcard::from_bytes(&mut &v[..]).unwrap();
+    let t: Transaction = Deserialize::deserialize_from_vec(&mut &v[..]).unwrap();
     assert_eq!(t.data, Vec::<u8>::new());
     assert_eq!(
         t.sender,
@@ -35,22 +36,24 @@ fn it_can_deserialize_extended_transaction() {
 #[test]
 fn deserialize_fails_on_invalid_transaction_flags() {
     let v: Vec<u8> = hex::decode(INVALID_EXTENDED_TRANSACTION).unwrap();
-    let t: Result<Transaction, postcard::Error> = postcard::from_bytes(&mut &v[..]);
-    assert_eq!(t, Err(postcard::Error::SerdeDeCustom));
+    let t: Result<Transaction, DeserializeError> = Deserialize::deserialize_from_vec(&mut &v[..]);
+    assert_eq!(t, Err(DeserializeError::serde_custom()));
 }
 
 #[test]
 fn it_can_serialize_extended_transaction() {
     let v: Vec<u8> = hex::decode(EXTENDED_TRANSACTION).unwrap();
-    let t: Transaction = postcard::from_bytes(&mut &v[..]).unwrap();
-    let v2: Vec<u8> = postcard::to_allocvec(&t).unwrap();
+    let t: Transaction = Deserialize::deserialize_from_vec(&mut &v[..]).unwrap();
+    let mut v2: Vec<u8> = Vec::with_capacity(t.serialized_size());
+    let size = t.serialize_to_writer(&mut v2).unwrap();
+    assert_eq!(size, t.serialized_size());
     assert_eq!(hex::encode(v2), EXTENDED_TRANSACTION);
 }
 
 #[test]
 fn it_can_deserialize_basic_transaction() {
     let v: Vec<u8> = hex::decode(BASIC_TRANSACTION).unwrap();
-    let t: Transaction = postcard::from_bytes(&mut &v[..]).unwrap();
+    let t: Transaction = Deserialize::deserialize_from_vec(&mut &v[..]).unwrap();
     assert_eq!(t.data, Vec::<u8>::new());
     assert_eq!(
         t.sender,
@@ -73,7 +76,9 @@ fn it_can_deserialize_basic_transaction() {
 #[test]
 fn it_can_serialize_basic_transaction() {
     let v: Vec<u8> = hex::decode(BASIC_TRANSACTION).unwrap();
-    let t: Transaction = postcard::from_bytes(&mut &v[..]).unwrap();
-    let v2: Vec<u8> = postcard::to_allocvec(&t).unwrap();
+    let t: Transaction = Deserialize::deserialize_from_vec(&mut &v[..]).unwrap();
+    let mut v2: Vec<u8> = Vec::with_capacity(t.serialized_size());
+    let size = t.serialize_to_writer(&mut v2).unwrap();
+    assert_eq!(size, t.serialized_size());
     assert_eq!(hex::encode(v2), BASIC_TRANSACTION);
 }

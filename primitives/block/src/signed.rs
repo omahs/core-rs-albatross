@@ -3,7 +3,7 @@ use std::fmt::Debug;
 use byteorder::WriteBytesExt;
 use nimiq_bls::{PublicKey, SecretKey, SigHash, Signature};
 use nimiq_hash::{Blake2sHash, Blake2sHasher, Hasher, SerializeContent};
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(bound = "M: Message")]
@@ -59,7 +59,7 @@ pub trait Message:
     Clone
     + Debug
     + Serialize
-    + DeserializeOwned
+    + Deserialize
     + SerializeContent
     + Send
     + Sync

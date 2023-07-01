@@ -4,8 +4,8 @@ use nimiq_hash::{Blake2bHash, Hash, HashOutput, SerializeContent};
 use nimiq_hash_derive::SerializeContent;
 use nimiq_keys::{PublicKey as SchnorrPublicKey, Signature as SchnorrSignature};
 use nimiq_primitives::policy::Policy;
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_vrf::VrfSeed;
-use serde::{Deserialize, Serialize};
 
 use crate::MicroHeader;
 

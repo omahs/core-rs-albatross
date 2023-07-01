@@ -421,6 +421,7 @@ impl<'de> Visitor<'de> for BitSetVisitor {
 
 #[cfg(test)]
 mod tests {
+    use nimiq_serde::{Deserialize, Serialize};
     use nimiq_test_log::test;
 
     use super::BitSet;
@@ -440,14 +441,14 @@ mod tests {
     #[test]
     fn it_can_correctly_serialize() {
         let set = sample_bitset();
-        let bin = postcard::to_allocvec(&set).unwrap();
+        let bin = set.serialize_to_vec();
         assert_eq!(hex::decode("02FEFF1F40").unwrap(), bin);
     }
 
     #[test]
     fn it_can_correctly_deserialize() {
         let bin = hex::decode("02FEFF1F40").unwrap();
-        let set: BitSet = postcard::from_bytes(&bin).unwrap();
+        let set = BitSet::deserialize_from_vec(&bin).unwrap();
         assert_eq!(19, set.len());
         assert_eq!(sample_bitset(), set);
     }

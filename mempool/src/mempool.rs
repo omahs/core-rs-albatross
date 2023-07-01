@@ -15,6 +15,7 @@ use nimiq_blockchain_interface::AbstractBlockchain;
 use nimiq_hash::{Blake2bHash, Hash};
 use nimiq_keys::Address;
 use nimiq_network_interface::network::{Network, Topic};
+use nimiq_serde::Serialize;
 use nimiq_transaction::{ControlTransactionTopic, Transaction, TransactionTopic};
 use parking_lot::RwLock;
 use tokio_metrics::TaskMonitor;
@@ -595,7 +596,7 @@ impl Mempool {
             // Calculate size. If we can't fit the transaction in the block, then we stop here.
             // TODO: We can optimize this. There might be a smaller transaction that still fits.
             // We need to account for one extra byte per transaction to encode its final execution status
-            let next_size = size + 1 + postcard::to_allocvec(&tx).unwrap().len();
+            let next_size = size + 1 + tx.serialized_size();
             if next_size > max_bytes {
                 break;
             }

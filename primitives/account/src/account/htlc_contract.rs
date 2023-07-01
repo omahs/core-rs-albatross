@@ -2,6 +2,7 @@ use nimiq_keys::Address;
 #[cfg(feature = "interaction-traits")]
 use nimiq_primitives::account::AccountType;
 use nimiq_primitives::{account::AccountError, coin::Coin};
+use nimiq_serde::{Deserialize, Serialize};
 #[cfg(feature = "interaction-traits")]
 use nimiq_transaction::account::htlc_contract::CreationTransactionData;
 use nimiq_transaction::account::htlc_contract::{
@@ -9,7 +10,6 @@ use nimiq_transaction::account::htlc_contract::{
 };
 #[cfg(feature = "interaction-traits")]
 use nimiq_transaction::{inherent::Inherent, Transaction};
-use serde::{Deserialize, Serialize};
 
 use crate::{convert_receipt, AccountReceipt};
 #[cfg(feature = "interaction-traits")]
@@ -33,7 +33,7 @@ pub struct HashedTimeLockedContract {
     pub hash_algorithm: HashAlgorithm,
     pub hash_root: AnyHash,
     pub hash_count: u8,
-    #[serde(with = "postcard::fixint::be")]
+    #[serde(with = "nimiq_serde::fixint::be")]
     pub timeout: u64,
     pub total_amount: Coin,
 }
@@ -48,7 +48,7 @@ impl HashedTimeLockedContract {
         tx_logger: &mut TransactionLog,
     ) -> Result<(), AccountError> {
         let proof_buf = &mut &transaction.proof[..];
-        let proof: OutgoingHTLCTransactionProof = postcard::from_bytes(proof_buf)?;
+        let proof: OutgoingHTLCTransactionProof = Deserialize::deserialize_from_vec(proof_buf)?;
 
         match proof {
             OutgoingHTLCTransactionProof::RegularTransfer {
@@ -245,7 +245,7 @@ impl AccountTransactionInteraction for HashedTimeLockedContract {
         self.balance += transaction.total_value();
 
         let proof_buf = &mut &transaction.proof[..];
-        let proof: OutgoingHTLCTransactionProof = postcard::from_bytes(proof_buf)?;
+        let proof: OutgoingHTLCTransactionProof = Deserialize::deserialize_from_vec(proof_buf)?;
 
         match proof {
             OutgoingHTLCTransactionProof::RegularTransfer {

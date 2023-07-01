@@ -15,7 +15,7 @@ use nimiq_network_interface::{
     request::{OutboundRequestError, RequestError},
 };
 use nimiq_primitives::{key_nibbles::KeyNibbles, policy::Policy};
-use serde::de::DeserializeOwned;
+use nimiq_serde::Deserialize;
 
 use crate::messages::RequestTrieProof;
 
@@ -49,7 +49,7 @@ enum RemoteDataStoreOps {
 impl<N: Network> RemoteDataStore<N> {
     /// Gets a proof for an deserializable item in a remote accounts trie and returns
     /// the item if a valid proof was obtained or `None` if not.
-    pub(crate) async fn get_trie<T: DeserializeOwned>(
+    pub(crate) async fn get_trie<T: Deserialize>(
         network: Arc<N>,
         blockchain: BlockchainProxy,
         keys: &[KeyNibbles],
@@ -100,7 +100,10 @@ impl<N: Network> RemoteDataStore<N> {
                                     return Ok(values
                                         .into_iter()
                                         .map(|(key, value)| {
-                                            (key, value.map(|v| postcard::from_bytes(&v).unwrap()))
+                                            (
+                                                key,
+                                                value.map(|v| T::deserialize_from_vec(&v).unwrap()),
+                                            )
                                         })
                                         .collect());
                                 } else {
@@ -252,7 +255,7 @@ impl<N: Network> RemoteDataStore<N> {
         }
     }
 
-    async fn wasm_exec<T: DeserializeOwned + Clone>(
+    async fn wasm_exec<T: Deserialize + Clone>(
         &self,
         op: RemoteDataStoreOps,
     ) -> Result<BTreeMap<Address, Option<T>>, RequestError> {
@@ -309,7 +312,7 @@ impl<N: Network> RemoteDataStore<N> {
 }
 
 impl<N: Network> DataStoreReadOps for RemoteDataStore<N> {
-    fn get<T: DeserializeOwned>(&self, key: &KeyNibbles) -> Option<T> {
+    fn get<T: Deserialize>(&self, key: &KeyNibbles) -> Option<T> {
         let proof = futures_executor::block_on(Self::get_trie(
             Arc::clone(&self.network),
             self.blockchain.clone(),

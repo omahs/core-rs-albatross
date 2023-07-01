@@ -1,5 +1,4 @@
 use std::{
-    io::Write,
     marker::PhantomData,
     pin::Pin,
     task::{Context, Poll},
@@ -7,8 +6,8 @@ use std::{
 
 use bytes::{Buf, BufMut, BytesMut};
 use futures::{ready, AsyncWrite, Sink};
+use nimiq_serde::Serialize;
 use pin_project::pin_project;
-use serde::Serialize;
 
 use super::header::Header;
 
@@ -16,7 +15,7 @@ fn write_from_buf<W>(
     inner: &mut W,
     buffer: &mut BytesMut,
     cx: &mut Context,
-) -> Poll<Result<(), postcard::Error>>
+) -> Poll<Result<(), std::io::Error>>
 where
     W: AsyncWrite + Unpin,
 {
@@ -24,7 +23,7 @@ where
         match Pin::new(inner).poll_write(cx, buffer.chunk()) {
             Poll::Ready(Ok(0)) => {
                 warn!("MessageWriter: write_from_buf: Unexpected EOF.");
-                Poll::Ready(Err(postcard::Error::SerdeSerCustom))
+                Poll::Ready(Err(std::io::Error::from(std::io::ErrorKind::UnexpectedEof)))
             }
 
             Poll::Ready(Ok(n)) => {
@@ -37,7 +36,7 @@ where
                 }
             }
 
-            Poll::Ready(Err(_)) => Poll::Ready(Err(postcard::Error::SerdeSerCustom)),
+            Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
 
             Poll::Pending => Poll::Pending,
         }
@@ -72,7 +71,7 @@ where
     W: AsyncWrite + Unpin,
     M: Serialize + std::fmt::Debug,
 {
-    type Error = postcard::Error;
+    type Error = std::io::Error;
 
     fn poll_ready(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<(), Self::Error>> {
         let self_projected = self.project();
@@ -90,26 +89,22 @@ where
 
         if !self_projected.buffer.is_empty() {
             warn!("MessageWriter: Trying to send while buffer is not empty");
-            return Err(postcard::Error::SerdeSerCustom);
+            return Err(std::io::Error::from(std::io::ErrorKind::WouldBlock));
         }
 
         // Reserve space for the header and message.
-        let ser_item = postcard::to_allocvec(&item)?;
-        self_projected.buffer.reserve(ser_item.len() + Header::SIZE);
+        let n = Serialize::serialized_size(item);
+        self_projected.buffer.reserve(n + Header::SIZE);
 
-        let header = Header::new(ser_item.len() as u32);
-        let mut ser_header = [0u8; Header::SIZE];
-        postcard::to_slice(&header, &mut ser_header)?;
+        let header = Header::new(n as u32);
 
         let mut w = self_projected.buffer.writer();
 
         // Write header
-        w.write_all(&ser_header)
-            .map_err(|_| postcard::Error::SerdeSerCustom)?;
+        Serialize::serialize_to_writer(&header, &mut w)?;
 
         // Serialize the message into the buffer.
-        w.write_all(&ser_item)
-            .map_err(|_| postcard::Error::SerdeSerCustom)?;
+        Serialize::serialize_to_writer(item, &mut w)?;
 
         Ok(())
     }
@@ -123,10 +118,7 @@ where
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
             Poll::Ready(Ok(())) => {
                 // Finished writing the message. Flush the underlying `AsyncWrite`.
-                Poll::Ready(
-                    ready!(Pin::new(self_projected.inner).poll_flush(cx))
-                        .map_err(|_| postcard::Error::SerdeSerCustom),
-                )
+                Poll::Ready(ready!(Pin::new(self_projected.inner).poll_flush(cx)))
             }
         }
     }
@@ -140,10 +132,7 @@ where
             Poll::Ready(Err(e)) => Poll::Ready(Err(e)),
             Poll::Ready(Ok(())) => {
                 // Finished writing the message. Close the underlying `AsyncWrite`.
-                Poll::Ready(
-                    ready!(Pin::new(self_projected.inner).poll_close(cx))
-                        .map_err(|_| postcard::Error::SerdeSerCustom),
-                )
+                Poll::Ready(ready!(Pin::new(self_projected.inner).poll_close(cx)))
             }
         }
     }
@@ -152,8 +141,8 @@ where
 #[cfg(test)]
 mod tests {
     use futures::SinkExt;
+    use nimiq_serde::{Deserialize, Serialize};
     use nimiq_test_log::test;
-    use serde::{Deserialize, Serialize};
 
     use super::{Header, MessageWriter};
 
@@ -176,9 +165,6 @@ mod tests {
 
         let data = message_writer.into_inner();
 
-        assert_eq!(
-            postcard::to_allocvec(&test_message).unwrap(),
-            &data[Header::SIZE..]
-        )
+        assert_eq!(&test_message.serialize_to_vec(), &data[Header::SIZE..])
     }
 }

@@ -138,6 +138,7 @@ mod serde_derive {
     use std::io;
 
     use nimiq_hash::SerializeContent;
+    use nimiq_serde::Serialize as NimiqSerialize;
     use serde::{
         de::{Deserialize, Deserializer, Error},
         ser::{Serialize, Serializer},
@@ -166,10 +167,7 @@ mod serde_derive {
 
     impl SerializeContent for Signature {
         fn serialize_content<W: io::Write, H>(&self, writer: &mut W) -> io::Result<usize> {
-            let s =
-                postcard::to_allocvec(self).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-            writer.write_all(&s)?;
-            Ok(s.len())
+            self.serialize_to_writer(writer)
         }
     }
 }

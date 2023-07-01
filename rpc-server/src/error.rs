@@ -67,7 +67,7 @@ pub enum Error {
     HexError(#[from] hex::FromHexError),
 
     #[error("Serialization error: {0}")]
-    Serialization(#[from] postcard::Error),
+    Serialization(#[from] nimiq_serde::DeserializeError),
 
     #[error("{0}")]
     Argon2(#[from] nimiq_hash::argon2kdf::Argon2Error),

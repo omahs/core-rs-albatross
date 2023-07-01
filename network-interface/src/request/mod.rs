@@ -1,7 +1,7 @@
 use std::{fmt, sync::Arc, time::Duration};
 
-use nimiq_serde::{Deserialize, Serialize, DeserializeError};
 use futures::{stream::BoxStream, Future, StreamExt};
+use nimiq_serde::{Deserialize, DeserializeError, Serialize};
 use thiserror::Error;
 
 // The max number of request to be processed per peerID and per request type.
@@ -144,10 +144,23 @@ pub trait RequestCommon:
     /// - A varint for the Type ID of the request
     /// - Serialized content of the inner type.
     fn serialize_request(&self) -> Vec<u8> {
-        let mut result = Vec::new();
-        RequestType::from_request::<Self>().serialize(&mut result).unwrap();
-        Serialize::serialize(self, &mut result).unwrap();
-        result
+        let mut data = Vec::with_capacity(self.serialized_request_size());
+        RequestType::from_request::<Self>()
+            .serialize_to_writer(&mut data)
+            .unwrap();
+        Serialize::serialize_to_writer(self, &mut data).unwrap();
+        data
+    }
+
+    /// Computes the size in bytes of a serialized request.
+    /// A serialized request is composed of:
+    /// - A 2 bytes (u16) for the Type ID of the request
+    /// - Serialized content of the inner type.
+    fn serialized_request_size(&self) -> usize {
+        let mut size = 0;
+        size += RequestType::from_request::<Self>().0.serialized_size();
+        size += self.serialized_size();
+        size
     }
 
     /// Deserializes a request

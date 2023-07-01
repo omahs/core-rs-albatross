@@ -7,6 +7,7 @@ use nimiq_rpc_interface::{
     types::RPCResult,
     wallet::{ReturnAccount, ReturnSignature, WalletInterface},
 };
+use nimiq_serde::Deserialize;
 use nimiq_utils::otp::Locked;
 use nimiq_wallet::{WalletAccount, WalletStore};
 use parking_lot::RwLock;
@@ -47,7 +48,7 @@ impl WalletInterface for WalletDispatcher {
     ) -> RPCResult<Address, (), Self::Error> {
         let passphrase = passphrase.unwrap_or_default();
 
-        let private_key: PrivateKey = postcard::from_bytes(&hex::decode(key_data)?)?;
+        let private_key: PrivateKey = Deserialize::deserialize_from_vec(&hex::decode(key_data)?)?;
 
         let wallet_account = WalletAccount::from(KeyPair::from(private_key));
 

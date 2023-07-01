@@ -246,7 +246,8 @@ impl FromStr for Coin {
 #[cfg(feature = "serde-derive")]
 mod serialization {
     use serde::{
-        de::{Error, Unexpected},
+        de::{Error as DeError, Unexpected},
+        ser::Error as SerError,
         Deserialize, Deserializer, Serialize, Serializer,
     };
 
@@ -257,7 +258,11 @@ mod serialization {
         where
             S: Serializer,
         {
-            nimiq_serde::fixint::be::serialize(&self.0, serializer)
+            if self.0 <= Coin::MAX_SAFE_VALUE {
+                nimiq_serde::fixint::be::serialize(&self.0, serializer)
+            } else {
+                Err(S::Error::custom("Overflow detected for a Coin value"))
+            }
         }
     }
 

@@ -1,6 +1,7 @@
 use nimiq_hash::{Blake2bHasher, Hasher, Sha256Hasher};
 use nimiq_keys::{Address, KeyPair, PrivateKey};
 use nimiq_primitives::{account::AccountType, networks::NetworkId, transaction::TransactionError};
+use nimiq_serde::{Deserialize, DeserializeError, Serialize};
 use nimiq_transaction::{
     account::{
         htlc_contract::{
@@ -12,11 +13,11 @@ use nimiq_transaction::{
 };
 
 fn prepare_outgoing_transaction() -> (Transaction, AnyHash, SignatureProof, SignatureProof) {
-    let sender_priv_key: PrivateKey = postcard::from_bytes(
+    let sender_priv_key: PrivateKey = Deserialize::deserialize_from_vec(
         &hex::decode("9d5bd02379e7e45cf515c788048f5cf3c454ffabd3e83bd1d7667716c325c3c0").unwrap(),
     )
     .unwrap();
-    let recipient_priv_key: PrivateKey = postcard::from_bytes(
+    let recipient_priv_key: PrivateKey = Deserialize::deserialize_from_vec(
         &hex::decode("bd1cfcd49a81048c8c8d22a25766bd01bfa0f6b2eb0030f65241189393af96a2").unwrap(),
     )
     .unwrap();
@@ -77,7 +78,7 @@ fn it_can_verify_creation_transaction() {
         AccountType::verify_incoming_transaction(&transaction),
         Err(TransactionError::InvalidData)
     );
-    transaction.data = postcard::to_allocvec(&data).unwrap();
+    transaction.data = data.serialize_to_vec();
 
     // Invalid recipient
     assert_eq!(
@@ -107,7 +108,7 @@ fn it_can_verify_creation_transaction() {
     assert_eq!(
         AccountType::verify_incoming_transaction(&transaction),
         Err(TransactionError::InvalidSerialization(
-            postcard::Error::SerdeDeCustom
+            DeserializeError::serde_custom()
         ))
     );
     transaction.data[40] = 1;
@@ -135,7 +136,7 @@ fn it_can_verify_regular_transfer() {
         pre_image: AnyHash::from([0u8; 32]),
         signature_proof: recipient_signature_proof.clone(),
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
     assert_eq!(AccountType::verify_outgoing_transaction(&tx), Ok(()));
 
     // regular: valid SHA-256
@@ -146,7 +147,7 @@ fn it_can_verify_regular_transfer() {
         pre_image: AnyHash::from([0u8; 32]),
         signature_proof: recipient_signature_proof.clone(),
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
     assert_eq!(AccountType::verify_outgoing_transaction(&tx), Ok(()));
 
     // regular: invalid hash
@@ -163,7 +164,7 @@ fn it_can_verify_regular_transfer() {
     assert_eq!(
         AccountType::verify_outgoing_transaction(&tx),
         Err(TransactionError::InvalidSerialization(
-            postcard::Error::SerdeDeCustom
+            DeserializeError::serde_custom()
         ))
     );
     tx.proof[1] = HashAlgorithm::Sha256 as u8;
@@ -193,7 +194,7 @@ fn it_can_verify_regular_transfer() {
         pre_image: AnyHash::from([0u8; 32]),
         signature_proof: recipient_signature_proof,
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
     tx.proof.push(0);
 
     assert_eq!(
@@ -212,7 +213,7 @@ fn it_can_verify_early_resolve() {
         signature_proof_recipient: recipient_signature_proof.clone(),
         signature_proof_sender: sender_signature_proof.clone(),
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
 
     assert_eq!(AccountType::verify_outgoing_transaction(&tx), Ok(()));
 
@@ -239,7 +240,7 @@ fn it_can_verify_early_resolve() {
         signature_proof_recipient: recipient_signature_proof.clone(),
         signature_proof_sender: sender_signature_proof,
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
     tx.proof.push(0);
 
     assert_eq!(
@@ -256,7 +257,7 @@ fn it_can_verify_timeout_resolve() {
     let proof = OutgoingHTLCTransactionProof::TimeoutResolve {
         signature_proof_sender: sender_signature_proof.clone(),
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
 
     assert_eq!(AccountType::verify_outgoing_transaction(&tx), Ok(()));
 
@@ -271,7 +272,7 @@ fn it_can_verify_timeout_resolve() {
     let proof = OutgoingHTLCTransactionProof::TimeoutResolve {
         signature_proof_sender: sender_signature_proof.clone(),
     };
-    tx.proof = postcard::to_allocvec(&proof).unwrap();
+    tx.proof = proof.serialize_to_vec();
     tx.proof.push(0);
 
     assert_eq!(

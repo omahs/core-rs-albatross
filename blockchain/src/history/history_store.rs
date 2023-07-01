@@ -21,6 +21,7 @@ use nimiq_mmr::{
     store::memory::MemoryStore,
 };
 use nimiq_primitives::policy::Policy;
+use nimiq_serde::Serialize;
 use nimiq_transaction::{
     extended_transaction::{ExtTxData, ExtendedTransaction},
     history_proof::HistoryTreeProof,
@@ -231,7 +232,7 @@ impl HistoryStore {
                 },
             );
 
-            txns_size += postcard::to_allocvec(&ext_tx).unwrap().len() as u64;
+            txns_size += ext_tx.serialized_size() as u64;
 
             // Remove it from the leaf index database.
             // Check if you are removing the last extended transaction for this block. If yes,
@@ -963,7 +964,7 @@ impl HistoryStore {
                 }
             }
         }
-        postcard::to_allocvec(&ext_tx).unwrap().len()
+        ext_tx.serialized_size()
     }
 
     /// Returns a vector containing all leaf hashes and indexes corresponding to the given

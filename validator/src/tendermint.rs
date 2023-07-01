@@ -1,4 +1,4 @@
-use std::{io::Write, sync::Arc};
+use std::sync::Arc;
 
 use byteorder::WriteBytesExt;
 use futures::{
@@ -17,6 +17,7 @@ use nimiq_handel::{aggregation::Aggregation, identity::IdentityRegistry};
 use nimiq_hash::{Blake2sHash, Blake2sHasher, Hash, Hasher, SerializeContent};
 use nimiq_keys::Signature as SchnorrSignature;
 use nimiq_primitives::{policy::Policy, slots::Validators};
+use nimiq_serde::Serialize;
 use nimiq_tendermint::{
     Proposal, ProposalError, ProposalMessage, Protocol, SignedProposalMessage, Step,
     TaggedAggregationMessage,
@@ -163,18 +164,21 @@ where
             .0
             .serialize_content::<_, Blake2sHash>(&mut h)
             .expect("Must be able to serialize content of the proposal to hasher");
-        h.write_all(
-            &postcard::to_allocvec(&proposal_msg.round)
-                .expect("Must be able to serialize content of the round to hasher "),
-        )
-        .expect("Must be able to write round to hasher");
-        h.write_all(
-            &postcard::to_allocvec(&proposal_msg.valid_round)
-                .expect("Must be able to serialize content of the valid_round to hasher "),
-        )
-        .expect("Must be able to write valid_round to hasher");
+        proposal_msg
+            .round
+            .serialize_to_writer(&mut h)
+            .expect("Must be able to serialize content of the round to hasher ");
+        proposal_msg
+            .valid_round
+            .serialize_to_writer(&mut h)
+            .expect("Must be able to serialize content of the valid_round to hasher ");
 
-        postcard::to_allocvec(&h.finish()).expect("Must be able to serialize the hash.")
+        let mut v = vec![];
+        h.finish()
+            .serialize_to_writer(&mut v)
+            .expect("Must be able to serialize the hash.");
+
+        v
     }
 }
 

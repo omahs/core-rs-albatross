@@ -4,9 +4,9 @@ use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_hash::{Hash, HashOutput, Sha256Hash};
 use nimiq_keys::{Address, KeyPair, PublicKey, SecureGenerate, Signature};
 use nimiq_primitives::{coin::Coin, networks::NetworkId};
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_transaction::{SignatureProof, Transaction};
 use nimiq_utils::otp::Verify;
-use serde::{Deserialize, Deserializer, Serialize};
 
 pub const NIMIQ_SIGN_MESSAGE_PREFIX: &[u8] = b"\x16Nimiq Signed Message:\n";
 
@@ -51,7 +51,7 @@ impl WalletAccount {
 
     pub fn sign_transaction(&self, transaction: &mut Transaction) {
         let proof = self.create_signature_proof(transaction);
-        transaction.proof = postcard::to_allocvec(&proof).unwrap();
+        transaction.proof = proof.serialize_to_vec();
     }
 
     pub fn create_signature_proof(&self, transaction: &Transaction) -> SignatureProof {
@@ -93,12 +93,12 @@ impl WalletAccount {
     }
 }
 
-impl<'de> Deserialize<'de> for WalletAccount {
+impl<'de> serde::Deserialize<'de> for WalletAccount {
     fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
     where
-        D: Deserializer<'de>,
+        D: serde::Deserializer<'de>,
     {
-        let key_pair: KeyPair = Deserialize::deserialize(deserializer)?;
+        let key_pair: KeyPair = serde::Deserialize::deserialize(deserializer)?;
         Ok(WalletAccount::from(key_pair))
     }
 }
@@ -112,11 +112,11 @@ impl From<KeyPair> for WalletAccount {
 
 impl IntoDatabaseValue for WalletAccount {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        Serialize::serialize_to_writer(&self, &mut bytes).unwrap();
     }
 }
 
@@ -125,6 +125,7 @@ impl FromDatabaseValue for WalletAccount {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }

@@ -119,6 +119,7 @@ mod serde_derive {
     use std::{borrow::Cow, io};
 
     use nimiq_hash::SerializeContent;
+    use nimiq_serde::Serialize as NimiqSerialize;
     use serde::{
         de::{Deserialize, Deserializer, Error},
         ser::{Serialize, Serializer},
@@ -156,10 +157,7 @@ mod serde_derive {
 
     impl SerializeContent for PrivateKey {
         fn serialize_content<W: io::Write, H>(&self, writer: &mut W) -> io::Result<usize> {
-            let ser =
-                postcard::to_allocvec(self).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-            writer.write_all(&ser)?;
-            Ok(ser.len())
+            self.serialize_to_writer(writer)
         }
     }
 }

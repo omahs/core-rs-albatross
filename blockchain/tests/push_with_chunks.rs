@@ -10,6 +10,7 @@ use nimiq_primitives::{
         trie_chunk::{TrieChunkWithStart, TrieItem},
     },
 };
+use nimiq_serde::Deserialize;
 use nimiq_test_utils::{block_production::TemporaryBlockProducer, test_rng::test_rng};
 use nimiq_transaction_builder::TransactionBuilder;
 
@@ -26,7 +27,7 @@ macro_rules! check_invalid_chunk {
 }
 
 fn key_pair_with_funds() -> KeyPair {
-    let priv_key: PrivateKey = postcard::from_bytes(
+    let priv_key: PrivateKey = Deserialize::deserialize_from_vec(
         &mut &hex::decode("6c9320ac201caf1f8eaa5b05f5d67a9e77826f3f6be266a0ecccc20416dc6587")
             .unwrap()[..],
     )

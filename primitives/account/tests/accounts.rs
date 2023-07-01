@@ -20,6 +20,7 @@ use nimiq_primitives::{
     policy::Policy,
     slots::SlashedSlot,
 };
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_test_log::test;
 use nimiq_test_utils::{
     accounts_revert::TestCommitRevert,
@@ -751,7 +752,7 @@ fn accounts_performance_history_sync_batches_many_to_many() {
 
 #[test]
 fn it_commits_valid_and_failing_txns() {
-    let priv_key: PrivateKey = postcard::from_bytes(
+    let priv_key: PrivateKey = Deserialize::deserialize_from_vec(
         &hex::decode("9d5bd02379e7e45cf515c788048f5cf3c454ffabd3e83bd1d7667716c325c3c0").unwrap(),
     )
     .unwrap();
@@ -792,7 +793,7 @@ fn it_commits_valid_and_failing_txns() {
 
     let signature = key_pair.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair.public, signature);
-    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
+    tx.proof = signature_proof.serialize_to_vec();
 
     let block_state = BlockState::new(1, 200);
     let receipts = accounts
@@ -841,7 +842,7 @@ fn it_commits_valid_and_failing_txns() {
 
     let signature = key_pair.sign(&tx.serialize_content()[..]);
     let signature_proof = SignatureProof::from(key_pair.public, signature);
-    tx.proof = postcard::to_allocvec(&signature_proof).unwrap();
+    tx.proof = signature_proof.serialize_to_vec();
 
     let mut block_logger = BlockLogger::empty();
     let receipts = accounts

@@ -1,6 +1,7 @@
-use std::io::{self, BufReader, BufWriter, Error, ErrorKind};
+use std::io::{self, BufReader, BufWriter, Error};
 
 use ark_serialize::{Read, Write};
+use nimiq_serde::{Deserialize, Serialize};
 
 use crate::{
     proof_gen_utils::generate_new_proof,
@@ -13,7 +14,7 @@ pub async fn prover_main() -> Result<(), Error> {
     let mut stdin = BufReader::new(io::stdin());
     stdin.read_to_end(&mut stdin_buf)?;
 
-    let proof_input: Result<ProofInput, _> = postcard::from_bytes(&stdin_buf);
+    let proof_input: Result<ProofInput, _> = Deserialize::deserialize_from_vec(&stdin_buf);
 
     log::info!(
         "Starting proof generation for block {:?}",
@@ -36,8 +37,7 @@ pub async fn prover_main() -> Result<(), Error> {
     // Then print delimiter followed by the serialized result.
     let mut stdout = BufWriter::new(io::stdout());
     stdout.write_all(&PROOF_GENERATION_OUTPUT_DELIMITER)?;
-    stdout
-        .write_all(&postcard::to_allocvec(&result).map_err(|e| Error::new(ErrorKind::Other, e))?)?;
+    Serialize::serialize_to_writer(&result, &mut stdout)?;
 
     stdout.flush()?;
 

@@ -3,6 +3,7 @@ use std::io;
 use nimiq_hash::{HashOutput, SerializeContent};
 use nimiq_keys::KeyPair;
 use nimiq_primitives::account::AccountType;
+use nimiq_serde::Serialize;
 use nimiq_transaction::{SignatureProof, Transaction};
 
 use crate::proof::{
@@ -367,7 +368,7 @@ impl BasicProofBuilder {
     /// Otherwise, it returns `None`.
     pub fn generate(self) -> Option<Transaction> {
         let mut tx = self.transaction;
-        tx.proof = postcard::to_allocvec(&self.signature?).ok()?;
+        tx.proof = self.signature?.serialize_to_vec();
         Some(tx)
     }
 }

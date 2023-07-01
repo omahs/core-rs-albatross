@@ -4,7 +4,7 @@ use log::error;
 use nimiq_bls::AggregatePublicKey;
 use nimiq_hash::{Blake2sHash, SerializeContent};
 use nimiq_primitives::{policy::Policy, slots::Validators};
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 use crate::{
@@ -133,28 +133,24 @@ pub struct TendermintVote {
 impl SerializeContent for TendermintVote {
     fn serialize_content<W: io::Write, H>(&self, writer: &mut W) -> io::Result<usize> {
         // First of all serialize step as this also serves as the unique prefix for this message type.
-        let ser_step = postcard::to_allocvec(&self.id.step)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        writer.write_all(&ser_step)?;
-        let mut size = ser_step.len();
+        let mut size = self.id.step.serialize_to_writer(writer)?;
 
         // serialize the round number
-        let ser_round_number = postcard::to_allocvec(&self.id.round_number.to_be_bytes())
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        writer.write_all(&ser_round_number)?;
-        size += ser_round_number.len();
+        size += self
+            .id
+            .round_number
+            .to_be_bytes()
+            .serialize_to_writer(writer)?;
 
         // serialize the block number
-        let ser_block_number = postcard::to_allocvec(&self.id.block_number.to_be_bytes())
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        writer.write_all(&ser_block_number)?;
-        size += ser_block_number.len();
+        size += self
+            .id
+            .block_number
+            .to_be_bytes()
+            .serialize_to_writer(writer)?;
 
         // serialize the proposal hash
-        let ser_proposal_hash = postcard::to_allocvec(&self.proposal_hash)
-            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))?;
-        writer.write_all(&ser_proposal_hash)?;
-        size += ser_proposal_hash.len();
+        size += self.proposal_hash.serialize_to_writer(writer)?;
 
         // And return the size
         Ok(size)

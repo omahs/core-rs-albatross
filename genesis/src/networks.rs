@@ -11,6 +11,7 @@ use nimiq_genesis_builder::{GenesisBuilder, GenesisBuilderError, GenesisInfo};
 use nimiq_hash::Blake2bHash;
 pub use nimiq_primitives::networks::NetworkId;
 use nimiq_primitives::trie::TrieItem;
+use nimiq_serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug)]
 struct GenesisData {
@@ -39,7 +40,8 @@ impl NetworkInfo {
 
     #[inline]
     pub fn genesis_block(&self) -> Block {
-        postcard::from_bytes(self.genesis.block).expect("Failed to deserialize genesis block.")
+        Deserialize::deserialize_from_vec(self.genesis.block)
+            .expect("Failed to deserialize genesis block.")
     }
 
     #[inline]
@@ -49,7 +51,7 @@ impl NetworkInfo {
 
     #[inline]
     pub fn genesis_accounts(&self) -> Vec<TrieItem> {
-        postcard::from_bytes(self.genesis.accounts)
+        Deserialize::deserialize_from_vec(self.genesis.accounts)
             .expect("Failed to deserialize genesis accounts.")
     }
 
@@ -70,8 +72,8 @@ fn read_genesis_config(config: &Path) -> Result<GenesisData, GenesisBuilderError
         accounts,
     } = GenesisBuilder::from_config_file(config)?.generate(env)?;
 
-    let block = postcard::to_allocvec(&block)?;
-    let accounts = postcard::to_allocvec(&accounts)?;
+    let block = block.serialize_to_vec();
+    let accounts = accounts.serialize_to_vec();
 
     Ok(GenesisData {
         block: Box::leak(block.into_boxed_slice()),

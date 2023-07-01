@@ -116,6 +116,7 @@ mod serde_derive {
     use std::{io, str::FromStr};
 
     use nimiq_hash::SerializeContent;
+    use nimiq_serde::{Deserialize, Serialize};
 
     use super::CompressedSignature;
     use crate::ParseError;
@@ -128,16 +129,14 @@ mod serde_derive {
             if raw.len() != CompressedSignature::SIZE {
                 return Err(ParseError::IncorrectLength(raw.len()));
             }
-            postcard::from_bytes(&raw).map_err(|_| ParseError::SerializationError)
+            CompressedSignature::deserialize_from_vec(&raw)
+                .map_err(|_| ParseError::SerializationError)
         }
     }
 
     impl SerializeContent for CompressedSignature {
         fn serialize_content<W: io::Write, H>(&self, writer: &mut W) -> io::Result<usize> {
-            let s =
-                postcard::to_allocvec(self).map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-            writer.write_all(&s)?;
-            Ok(s.len())
+            self.serialize_to_writer(writer)
         }
     }
 }

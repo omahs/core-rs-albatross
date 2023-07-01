@@ -1,11 +1,13 @@
+use std::borrow::Cow;
+
 use futures::{future, AsyncRead, AsyncWrite};
 use libp2p::{core::UpgradeInfo, identity::Keypair, InboundUpgrade, Multiaddr, OutboundUpgrade};
 use nimiq_hash::Blake2bHash;
-use nimiq_macros::{add_hex_io_fns_typed_arr, create_typed_array};
+use nimiq_macros::{add_hex_io_fns_typed_arr, add_serialization_fns_typed_arr, create_typed_array};
 use nimiq_network_interface::peer_info::Services;
+use nimiq_serde::{Deserialize, DeserializeError, Serialize};
 use nimiq_utils::tagged_signing::{TaggedSignable, TaggedSignature};
 use rand::{thread_rng, RngCore};
-use serde::{Deserialize, Serialize};
 
 use super::{
     message_codec::{MessageReader, MessageWriter},
@@ -13,8 +15,9 @@ use super::{
 };
 use crate::DISCOVERY_PROTOCOL;
 
-create_typed_array!(ChallengeNonce, u8, 32, Serialize, Deserialize);
+create_typed_array!(ChallengeNonce, u8, 32);
 add_hex_io_fns_typed_arr!(ChallengeNonce, ChallengeNonce::SIZE);
+add_serialization_fns_typed_arr!(ChallengeNonce, ChallengeNonce::SIZE);
 
 impl ChallengeNonce {
     pub fn generate() -> Self {
@@ -96,7 +99,7 @@ where
     C: AsyncRead + AsyncWrite + Send + Unpin + 'static,
 {
     type Output = MessageReader<C, DiscoveryMessage>;
-    type Error = postcard::Error;
+    type Error = DeserializeError;
     type Future = future::Ready<Result<Self::Output, Self::Error>>;
 
     fn upgrade_inbound(self, socket: C, _info: Self::Info) -> Self::Future {
@@ -109,7 +112,7 @@ where
     C: AsyncRead + AsyncWrite + Send + Unpin + 'static,
 {
     type Output = MessageWriter<C, DiscoveryMessage>;
-    type Error = postcard::Error;
+    type Error = DeserializeError;
     type Future = future::Ready<Result<Self::Output, Self::Error>>;
 
     fn upgrade_outbound(self, socket: C, _info: Self::Info) -> Self::Future {

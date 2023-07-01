@@ -3,7 +3,7 @@ use nimiq_bls::{CompressedPublicKey as BlsPublicKey, CompressedSignature as BlsS
 use nimiq_hash::Blake2bHash;
 use nimiq_keys::{Address, PublicKey as SchnorrPublicKey};
 use nimiq_primitives::{coin::Coin, policy::Policy};
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, DeserializeError, Serialize};
 
 use crate::{SignatureProof, Transaction, TransactionError};
 
@@ -206,10 +206,10 @@ impl IncomingStakingTransactionData {
     pub fn set_signature_on_data(
         data: &[u8],
         signature_proof: SignatureProof,
-    ) -> Result<Vec<u8>, postcard::Error> {
-        let mut data: IncomingStakingTransactionData = postcard::from_bytes(data)?;
+    ) -> Result<Vec<u8>, DeserializeError> {
+        let mut data: IncomingStakingTransactionData = Deserialize::deserialize_from_vec(data)?;
         data.set_signature(signature_proof);
-        postcard::to_allocvec(&data)
+        Ok(data.serialize_to_vec())
     }
 }
 
@@ -246,8 +246,8 @@ impl OutgoingStakingTransactionProof {
     }
 }
 
-pub fn full_parse<T: serde::de::DeserializeOwned>(data: &[u8]) -> Result<T, TransactionError> {
-    let (data, left_over) = postcard::take_from_bytes(data)?;
+pub fn full_parse<T: Deserialize>(data: &[u8]) -> Result<T, TransactionError> {
+    let (data, left_over) = T::deserialize_take(data)?;
 
     // Ensure that transaction data has been fully read.
     if !left_over.is_empty() {

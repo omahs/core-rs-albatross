@@ -20,6 +20,7 @@ use nimiq_keys::{KeyPair as SchnorrKeyPair, PrivateKey as SchnorrPrivateKey};
 use nimiq_primitives::{
     key_nibbles::KeyNibbles, policy::Policy, trie::trie_chunk::TrieChunkWithStart,
 };
+use nimiq_serde::Deserialize;
 use nimiq_tendermint::ProposalMessage;
 use nimiq_transaction::Transaction;
 use nimiq_utils::time::OffsetTime;
@@ -72,10 +73,10 @@ impl TemporaryBlockProducer {
         ));
 
         let signing_key = SchnorrKeyPair::from(
-            postcard::from_bytes::<SchnorrPrivateKey>(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
+            SchnorrPrivateKey::deserialize_from_vec(&hex::decode(SIGNING_KEY).unwrap()).unwrap(),
         );
         let voting_key = BlsKeyPair::from(
-            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
         let producer: BlockProducer = BlockProducer::new(signing_key, voting_key);
         TemporaryBlockProducer {
@@ -198,7 +199,7 @@ impl TemporaryBlockProducer {
         block_hash: Blake2sHash,
     ) -> (MacroBlock, AggregatePublicKey) {
         let keypair = BlsKeyPair::from(
-            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
 
         // Create a TendermintVote instance out of known properties.
@@ -248,7 +249,7 @@ impl TemporaryBlockProducer {
 
     pub fn create_skip_block_proof(&self) -> SkipBlockProof {
         let keypair = BlsKeyPair::from(
-            postcard::from_bytes::<BlsSecretKey>(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
+            BlsSecretKey::deserialize_from_vec(&hex::decode(VOTING_KEY).unwrap()).unwrap(),
         );
 
         let skip_block_info = {

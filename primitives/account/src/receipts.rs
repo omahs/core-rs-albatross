@@ -2,7 +2,7 @@ use std::{fmt::Debug, io};
 
 use nimiq_database_value::{FromDatabaseValue, IntoDatabaseValue};
 use nimiq_primitives::account::FailReason;
-use serde::{de::DeserializeOwned, Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct AccountReceipt(pub Vec<u8>);
@@ -28,14 +28,14 @@ macro_rules! convert_receipt {
             type Error = AccountError;
 
             fn try_from(value: &AccountReceipt) -> Result<Self, Self::Error> {
-                postcard::from_bytes(&value.0[..])
+                Self::deserialize_from_vec(&value.0[..])
                     .map_err(|e| AccountError::InvalidSerialization(e))
             }
         }
 
         impl From<$t> for AccountReceipt {
             fn from(value: $t) -> Self {
-                AccountReceipt::from(postcard::to_allocvec(&value).unwrap())
+                AccountReceipt::from(value.serialize_to_vec())
             }
         }
     };
@@ -51,9 +51,9 @@ pub struct TransactionReceipt {
 pub type InherentReceipt = Option<AccountReceipt>;
 
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
-#[serde(bound = "T: Clone + Debug + Serialize + DeserializeOwned")]
+#[serde(bound = "T: Clone + Debug + Serialize + Deserialize")]
 #[repr(u8)]
-pub enum OperationReceipt<T: Clone + Debug + Serialize + DeserializeOwned> {
+pub enum OperationReceipt<T: Clone + Debug + Serialize + Deserialize> {
     Ok(T),
     Err(T, FailReason),
 }
@@ -71,11 +71,11 @@ pub struct Receipts {
 
 impl IntoDatabaseValue for Receipts {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        self.serialize_to_writer(&mut bytes).unwrap();
     }
 }
 
@@ -84,6 +84,7 @@ impl FromDatabaseValue for Receipts {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }

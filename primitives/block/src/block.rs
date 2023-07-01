@@ -8,9 +8,9 @@ use nimiq_hash_derive::SerializeContent;
 use nimiq_keys::PublicKey;
 use nimiq_network_interface::network::Topic;
 use nimiq_primitives::{coin::Coin, policy::Policy, slots::Validators};
+use nimiq_serde::{Deserialize, Serialize};
 use nimiq_transaction::ExecutedTransaction;
 use nimiq_vrf::VrfSeed;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     macro_block::{MacroBlock, MacroHeader},
@@ -547,11 +547,11 @@ impl fmt::Display for Block {
 
 impl IntoDatabaseValue for Block {
     fn database_byte_size(&self) -> usize {
-        postcard::to_allocvec(self).unwrap().len()
+        self.serialized_size()
     }
 
-    fn copy_into_database(&self, bytes: &mut [u8]) {
-        postcard::to_slice(self, bytes).unwrap();
+    fn copy_into_database(&self, mut bytes: &mut [u8]) {
+        Serialize::serialize_to_writer(&self, &mut bytes).unwrap();
     }
 }
 
@@ -560,7 +560,8 @@ impl FromDatabaseValue for Block {
     where
         Self: Sized,
     {
-        postcard::from_bytes(bytes).map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
+        Deserialize::deserialize_from_vec(bytes)
+            .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e))
     }
 }
 

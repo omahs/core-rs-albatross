@@ -1,5 +1,6 @@
 use nimiq_hash::{Blake2bHash, Sha256Hash};
 use nimiq_keys::KeyPair;
+use nimiq_serde::Serialize;
 use nimiq_transaction::{
     account::htlc_contract::{AnyHash, HashAlgorithm, OutgoingHTLCTransactionProof},
     SignatureProof, Transaction,
@@ -369,7 +370,7 @@ impl HtlcProofBuilder {
     /// Otherwise, it returns `None`.
     pub fn generate(self) -> Option<Transaction> {
         let mut tx = self.transaction;
-        tx.proof = postcard::to_allocvec(&self.proof?).ok()?;
+        tx.proof = self.proof?.serialize_to_vec();
         Some(tx)
     }
 }

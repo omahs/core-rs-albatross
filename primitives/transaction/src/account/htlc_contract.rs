@@ -1,9 +1,11 @@
+use std::borrow::Cow;
+
 use log::error;
 use nimiq_hash::{Blake2bHasher, Hasher, Sha256Hasher};
 use nimiq_keys::Address;
-use nimiq_macros::{add_hex_io_fns_typed_arr, create_typed_array};
+use nimiq_macros::{add_hex_io_fns_typed_arr, add_serialization_fns_typed_arr, create_typed_array};
 use nimiq_primitives::account::AccountType;
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use strum_macros::Display;
 
@@ -86,8 +88,9 @@ pub enum HashAlgorithm {
     Sha256 = 3,
 }
 
-create_typed_array!(AnyHash, u8, 32, Serialize, Deserialize);
+create_typed_array!(AnyHash, u8, 32);
 add_hex_io_fns_typed_arr!(AnyHash, AnyHash::SIZE);
+add_serialization_fns_typed_arr!(AnyHash, AnyHash::SIZE);
 
 impl AnyHash {
     pub fn as_bytes(&self) -> &[u8] {
@@ -102,13 +105,13 @@ pub struct CreationTransactionData {
     pub hash_algorithm: HashAlgorithm,
     pub hash_root: AnyHash,
     pub hash_count: u8,
-    #[serde(with = "postcard::fixint::be")]
+    #[serde(with = "nimiq_serde::fixint::be")]
     pub timeout: u64,
 }
 
 impl CreationTransactionData {
     pub fn parse(transaction: &Transaction) -> Result<Self, TransactionError> {
-        Ok(postcard::from_bytes(&transaction.data[..])?)
+        Ok(Deserialize::deserialize_from_vec(&transaction.data[..])?)
     }
 
     pub fn verify(&self) -> Result<(), TransactionError> {
@@ -156,7 +159,7 @@ pub enum OutgoingHTLCTransactionProof {
 impl OutgoingHTLCTransactionProof {
     pub fn parse(transaction: &Transaction) -> Result<Self, TransactionError> {
         let reader = &mut &transaction.proof[..];
-        let (data, left_over) = postcard::take_from_bytes(reader)?;
+        let (data, left_over) = Self::deserialize_take(reader)?;
 
         // Ensure that transaction data has been fully read.
         if !left_over.is_empty() {

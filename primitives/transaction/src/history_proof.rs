@@ -1,6 +1,6 @@
 use nimiq_hash::Blake2bHash;
 use nimiq_mmr::mmr::proof::Proof;
-use serde::{Deserialize, Serialize};
+use nimiq_serde::{Deserialize, Serialize};
 
 use crate::extended_transaction::ExtendedTransaction;
 

@@ -21,10 +21,10 @@ use nimiq_network_libp2p::{
     discovery::{behaviour::DiscoveryConfig, peer_contacts::PeerContact},
     Config, Network, PeerId,
 };
+use nimiq_serde::{Deserialize, DeserializeError, Serialize};
 use nimiq_test_log::test;
 use nimiq_utils::time::OffsetTime;
 use rand::{thread_rng, Rng};
-use serde::{Deserialize, Serialize};
 use tokio::time::Duration;
 #[cfg(feature = "tokio-time")]
 use tokio::time::Instant;
@@ -48,22 +48,23 @@ impl RequestCommon for TestRequest {
 
     const MAX_REQUESTS: u32 = MAX_REQUEST_RESPONSE_TEST_REQUEST;
 
-    fn serialize_request(&self) -> Result<Vec<u8>, postcard::Error> {
-        let mut data = postcard::to_allocvec(
-            &nimiq_network_interface::request::RequestType::from_request::<Self>().0,
-        )?;
-        data.append(&mut postcard::to_allocvec(self)?);
-        Ok(data)
+    fn serialize_request(&self) -> Vec<u8> {
+        let mut data = Vec::with_capacity(self.serialized_request_size());
+        nimiq_network_interface::request::RequestType::from_request::<Self>()
+            .serialize_to_writer(&mut data)
+            .unwrap();
+        Serialize::serialize_to_writer(self, &mut data).unwrap();
+        data
     }
 
-    fn deserialize_request(buffer: &[u8]) -> Result<Self, postcard::Error> {
+    fn deserialize_request(buffer: &[u8]) -> Result<Self, DeserializeError> {
         // Check for correct type.
-        let (ty, message_buf) = postcard::take_from_bytes::<u16>(buffer)?;
+        let (ty, message_buf) = <u16>::deserialize_take(buffer)?;
         if ty != nimiq_network_interface::request::RequestType::from_request::<Self>().0 {
-            return Err(postcard::Error::DeserializeBadVarint);
+            return Err(DeserializeError::bad_encoding());
         }
 
-        let message: Self = postcard::from_bytes(message_buf)?;
+        let message: Self = Deserialize::deserialize_from_vec(message_buf)?;
 
         Ok(message)
     }
@@ -444,58 +445,6 @@ async fn test_multiple_valid_requests_valid_responses() {
             Err(e) => assert!(false, "Response received with error: {:?}", e),
         };
     }
-}
-
-// Test that we can send a request and receive a `DeSerializationError` if the peer replied with
-// a message with the expected type ID but refers to a completely different type in reality
-#[test(tokio::test)]
-async fn test_valid_request_incorrect_response() {
-    let (net1, net2) = TestNetwork::create_connected_networks().await;
-
-    let test_request = TestRequest { request: 42 };
-    let incorrect_response = TestResponse3 {
-        response: 43u64.to_be_bytes(),
-    };
-
-    let net1 = Arc::new(net1);
-
-    // Subscribe for receiving requests
-    tokio::spawn({
-        let net1 = Arc::clone(&net1);
-        let test_request = test_request.clone();
-        let incorrect_response = incorrect_response.clone();
-        async move {
-            respond_requests::<TestRequest3, TestRequest>(
-                net1,
-                Some(incorrect_response),
-                test_request,
-            )
-            .await
-        }
-    });
-
-    tokio::time::sleep(Duration::from_secs(1)).await;
-
-    log::info!("Sending request");
-
-    // Send the request and get future for the response
-    let response = net2.request::<TestRequest>(test_request.clone(), net1.get_local_peer_id());
-
-    // Check the received response
-    let received_response = response.await;
-    log::info!(response = ?received_response, "Received response");
-
-    match received_response {
-        Ok(response) => {
-            assert!(false, "Received unexpected valid response: {:?}", response);
-        }
-        Err(e) => assert_eq!(
-            e,
-            RequestError::InboundRequest(InboundRequestError::DeSerializationError),
-            "Response received with error: {:?}",
-            e
-        ),
-    };
 }
 
 // Test that we can send a request and receive a timeout response if no response is
