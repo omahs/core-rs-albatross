@@ -63,7 +63,7 @@ required network NIMIQ_NETWORK string
 optional sync_mode NIMIQ_SYNC_MODE string
 
 echo '[database]'
-entry path "/home/nimiq/database" string
+entry path "/data/nimiq/database" string
 optional size NIMIQ_DATABASE_SIZE number
 optional max_dbs NIMIQ_MAX_DBS number
 

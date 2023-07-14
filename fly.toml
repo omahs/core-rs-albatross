@@ -1,0 +1,82 @@
+app = "albatross-aurora-1" # When changed, also change ADVERTISED_ADDRESSES
+
+primary_region = "ams"
+
+kill_signal = "SIGINT"
+kill_timeout = 5
+
+[build]
+  # You need to build the Docker container locally with the "core" tag, e.g.:
+  # ```sh
+  # docker buildx build -f build_ubuntu.Dockerfile . -t core
+  # ```
+  #
+  # Then deploy with `flyctl deploy --local-only`
+  image = "core:latest"
+
+[env]
+  LISTEN_ADDRESSES = "/ip4/0.0.0.0/tcp/8443/ws"
+  ADVERTISED_ADDRESSES = "/dns4/albatross-aurora-1.fly.dev/tcp/8443/wss /dns6/albatross-aurora-1.fly.dev/tcp/8443/wss"
+  NIMIQ_NETWORK = "test-albatross"
+  NIMIQ_SEED_NODES = "/dns4/seed1.pos.nimiq-testnet.com/tcp/8443/wss"
+  NIMIQ_SYNC_MODE = "full"
+  NIMIQ_LOG_LEVEL = "info"
+  NIMIQ_LOG_TIMESTAMPS = "false" # fly.io logs have timestamps themselves
+  NIMIQ_PEER_KEY_FILE = "/data/nimiq/peer_key"
+  RPC_ENABLED = "true"
+  RUST_BACKTRACE = "1"
+  AUTOMATIC_REACTIVATE = "true"
+
+  # The following environment variables should be set with fly.io's secret functionality, e.g.:
+  #
+  # fly secrets set RPC_USERNAME="<username>"
+  # fly secrets set RPC_PASSWORD="<password>"
+  #
+  # Validator Identity, can NOT be rotated, related "offline" private key required for (un)registering validator.
+  # fly secrets set VALIDATOR_ADDRESS="<address>"
+  #
+  # Can be any BLS secret key, can be rotated, "online"
+  # fly secrets set VOTING_KEY="<voting-key>"
+  #
+  # Can be any private key, can be rotated, "online"
+  # fly secrets set SIGNING_KEY="<signing-key>"
+
+[mounts]
+  destination = "/data"
+  source = "albatross_data"
+
+[[services]]
+  internal_port = 8443
+  protocol = "tcp"
+
+  [services.concurrency]
+    hard_limit = 10000
+    soft_limit = 10000
+
+  [[services.ports]]
+    handlers = ["tls"]
+    port = 8443
+
+  [[services.tcp_checks]]
+    grace_period = "10s"
+    interval = "30s"
+    restart_limit = 5
+    timeout = "2s"
+
+[[services]]
+  internal_port = 8648
+  protocol = "tcp"
+
+  [services.concurrency]
+    hard_limit = 10000
+    soft_limit = 10000
+
+  [[services.ports]]
+    handlers = ["tls"]
+    port = 443
+
+  [[services.tcp_checks]]
+    grace_period = "10s"
+    interval = "30s"
+    restart_limit = 5
+    timeout = "2s"
