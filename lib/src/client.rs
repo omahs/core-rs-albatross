@@ -181,6 +181,7 @@ impl ClientInner {
                 ChaCha20Rng::from_seed(DEVELOPMENT_SEED),
                 &config.zkp.prover_keys_path,
                 config.network_id,
+                None,
                 config.zkp.prover_active,
             )?;
             log::info!("Setting the verification key.");

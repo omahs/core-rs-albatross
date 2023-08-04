@@ -1,4 +1,4 @@
-use std::{fs::File, io, path::Path};
+use std::{fs::File, io, path::Path, time::SystemTime};
 
 use nimiq_hash::Blake2bHash;
 use nimiq_primitives::{networks::NetworkId, policy::Policy};
@@ -11,19 +11,23 @@ pub struct VerifyingKeyMetadata {
     genesis_hash: Blake2bHash,
     #[serde(with = "nimiq_serde::fixint::be")]
     blocks_per_epoch: u32,
+    timestamp: SystemTime,
+    git_rev: Option<String>,
 }
 
 impl VerifyingKeyMetadata {
-    pub fn new(genesis_hash: Blake2bHash) -> Self {
+    pub fn new(genesis_hash: Blake2bHash, git_rev: Option<String>) -> Self {
         Self {
             genesis_hash,
             blocks_per_epoch: Policy::blocks_per_epoch(),
+            timestamp: SystemTime::now(),
+            git_rev,
         }
     }
 
     pub fn matches(&self, _network_id: NetworkId) -> bool {
-        // We store the genesis block hash for future reference.
-        // However, our circuits currently are generic over the genesis block,
+        // We store the genesis block hash and the remaining data for future reference.
+        // Our circuits currently are generic over the genesis block,
         // which is why we exclude it from the check.
         self.blocks_per_epoch == Policy::blocks_per_epoch()
     }

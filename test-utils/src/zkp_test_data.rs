@@ -23,7 +23,7 @@ pub fn get_base_seed() -> ChaCha20Rng {
     ChaCha20Rng::from_seed(seed)
 }
 
-pub const ZKP_TEST_BIN_NAME: &str = "nimiq-test-prove";
+pub const ZKP_TEST_BIN_NAME: &str = "nimiq-test-prover";
 /// The path to the zkp directory for tests relative to the test binaries.
 /// This should be used while running unit tests.
 pub const ZKP_TEST_KEYS_PATH: &str = "../.zkp_tests";
@@ -31,29 +31,6 @@ pub const ZKP_TEST_KEYS_PATH: &str = "../.zkp_tests";
 /// This should be used while running test related binaries.
 /// We have copies of this constant in several places that need to be updated when updating this.
 pub const DEFAULT_TEST_KEYS_PATH: &str = ".zkp_tests";
-
-pub fn zkp_test_exe() -> std::path::PathBuf {
-    // Cargo puts the integration test binary in target/debug/deps
-    let current_exe =
-        std::env::current_exe().expect("Failed to get the path of the integration test binary");
-    let current_dir = current_exe
-        .parent()
-        .expect("Failed to get the directory of the integration test binary");
-
-    let test_bin_dir = current_dir
-        .parent()
-        .expect("Failed to get the binary folder");
-    let mut path = test_bin_dir.to_owned();
-
-    path.push(ZKP_TEST_BIN_NAME);
-    path.set_extension(std::env::consts::EXE_EXTENSION);
-
-    assert!(
-        path.exists(),
-        "Run `cargo build --bin=nimiq-test-prove --all-features` to build the test prover binary at {path:?}"
-    );
-    path
-}
 
 pub fn load_merger_wrapper_simulator(path: &Path) -> Option<ToxicWaste<MNT6_753>> {
     let file = File::open(path.join("toxic_waste.bin")).ok()?;

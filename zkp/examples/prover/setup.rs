@@ -12,7 +12,14 @@ fn main() {
     let start = Instant::now();
 
     // use the current directory
-    setup(thread_rng(), &PathBuf::new(), NetworkId::DevAlbatross, true).unwrap();
+    setup(
+        thread_rng(),
+        &PathBuf::new(),
+        NetworkId::DevAlbatross,
+        None,
+        true,
+    )
+    .unwrap();
 
     println!("====== Parameter generation for ZKP Circuit finished ======");
     println!("Total time elapsed: {:?} seconds", start.elapsed());

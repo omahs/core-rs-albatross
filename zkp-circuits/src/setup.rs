@@ -38,6 +38,7 @@ pub fn setup<R: Rng + CryptoRng>(
     mut rng: R,
     path: &Path,
     network_id: NetworkId,
+    git_rev: Option<String>,
     prover_active: bool,
 ) -> Result<(), NanoZKPError> {
     if all_files_created(path, prover_active) {
@@ -66,7 +67,7 @@ pub fn setup<R: Rng + CryptoRng>(
 
     let network_info = NetworkInfo::from_network_id(network_id);
     let genesis_block = network_info.genesis_block().unwrap_macro();
-    let meta_data = VerifyingKeyMetadata::new(genesis_block.hash());
+    let meta_data = VerifyingKeyMetadata::new(genesis_block.hash(), git_rev);
 
     meta_data.save_to_file(path)?;
 

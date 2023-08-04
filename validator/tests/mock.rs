@@ -66,7 +66,6 @@ async fn one_validator_can_create_micro_blocks() {
         fee_key,
         genesis.clone(),
         &mut Some(hub),
-        false,
     )
     .await;
 
@@ -90,13 +89,9 @@ async fn four_validators_can_create_micro_blocks() {
     let hub = MockHub::default();
     let env = VolatileDatabase::new(20).expect("Could not open a volatile database");
 
-    let validators = build_validators::<MockNetwork>(
-        env,
-        &(1u64..=4u64).collect::<Vec<_>>(),
-        &mut Some(hub),
-        false,
-    )
-    .await;
+    let validators =
+        build_validators::<MockNetwork>(env, &(1u64..=4u64).collect::<Vec<_>>(), &mut Some(hub))
+            .await;
 
     let blockchain = Arc::clone(&validators.first().unwrap().blockchain);
 
@@ -131,13 +126,8 @@ async fn four_validators_can_do_skip_block() {
     let hub = MockHub::default();
     let env = VolatileDatabase::new(20).expect("Could not open a volatile database");
 
-    let mut validators = build_validators::<Network>(
-        env,
-        &(5u64..=8u64).collect::<Vec<_>>(),
-        &mut Some(hub),
-        false,
-    )
-    .await;
+    let mut validators =
+        build_validators::<Network>(env, &(5u64..=8u64).collect::<Vec<_>>(), &mut Some(hub)).await;
 
     // Disconnect the next block producer.
     let validator = pop_validator_for_slot(&mut validators, 1 + Policy::genesis_block_number(), 1);
@@ -210,13 +200,8 @@ async fn validator_can_catch_up() {
     let env = VolatileDatabase::new(20).expect("Could not open a volatile database");
 
     // In total 8 validator are registered. after 3 validators are taken offline the remaining 5 should not be able to progress on their own
-    let mut validators = build_validators::<Network>(
-        env,
-        &(9u64..=16u64).collect::<Vec<_>>(),
-        &mut Some(hub),
-        false,
-    )
-    .await;
+    let mut validators =
+        build_validators::<Network>(env, &(9u64..=16u64).collect::<Vec<_>>(), &mut Some(hub)).await;
     // Maintain a collection of the corresponding networks.
 
     let networks: Vec<Arc<Network>> = validators

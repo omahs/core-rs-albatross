@@ -17,10 +17,7 @@ use nimiq_zkp_component::{
 };
 use parking_lot::{Mutex, RwLock};
 
-use crate::{
-    test_network::TestNetwork,
-    zkp_test_data::{zkp_test_exe, ZKP_TEST_KEYS_PATH},
-};
+use crate::{test_network::TestNetwork, zkp_test_data::ZKP_TEST_KEYS_PATH};
 
 pub const TESTING_BLS_CACHE_MAX_CAPACITY: usize = 100;
 
@@ -36,16 +33,8 @@ impl<N: NetworkInterface + TestNetwork> Node<N> {
         peer_id: u64,
         genesis_info: GenesisInfo,
         hub: &mut Option<MockHub>,
-        is_prover_active: bool,
     ) -> Self {
-        Self::new_history(
-            peer_id,
-            genesis_info.block,
-            genesis_info.accounts,
-            hub,
-            is_prover_active,
-        )
-        .await
+        Self::new_history(peer_id, genesis_info.block, genesis_info.accounts, hub).await
     }
 
     pub async fn new_history(
@@ -53,7 +42,6 @@ impl<N: NetworkInterface + TestNetwork> Node<N> {
         block: Block,
         accounts: Vec<TrieItem>,
         hub: &mut Option<MockHub>,
-        is_prover_active: bool,
     ) -> Self {
         let block_hash = block.hash();
         let env = VolatileDatabase::new(20).unwrap();
@@ -74,19 +62,14 @@ impl<N: NetworkInterface + TestNetwork> Node<N> {
         let zkp_storage: Option<Box<dyn ProofStore>> =
             Some(Box::new(DBProofStore::new(env.clone())));
 
-        let prover_path = if is_prover_active {
-            Some(zkp_test_exe())
-        } else {
-            None
-        };
         let zkp_proxy = ZKPComponent::with_prover(
             BlockchainProxy::from(&blockchain),
             Arc::clone(&network),
             Box::new(|fut| {
                 tokio::spawn(fut);
             }),
-            is_prover_active,
-            prover_path,
+            false,
+            None,
             PathBuf::from(ZKP_TEST_KEYS_PATH),
             zkp_storage,
         )
