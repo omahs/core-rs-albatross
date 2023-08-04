@@ -11,8 +11,8 @@ categories.workspace = true
 keywords.workspace = true
 
 [[bin]]
-name = "nimiq-test-prove"
-required-features = ["test-prover", "tokio/rt-multi-thread"]
+name = "nimiq-test-prover"
+required-features = ["test-prover"]
 
 [badges]
 travis-ci = { repository = "nimiq/core-rs", branch = "master" }
@@ -52,11 +52,7 @@ nimiq-network-interface = { workspace = true }
 nimiq-primitives = { workspace = true, features = ["policy"] }
 nimiq-serde = { workspace = true }
 nimiq-transaction = { workspace = true }
-nimiq-utils = { workspace = true, features = [
-    "math",
-    "merkle",
-    "time",
-] }
+nimiq-utils = { workspace = true, features = ["math", "merkle", "time"] }
 nimiq-validator-network = { workspace = true }
 nimiq-zkp = { workspace = true }
 nimiq-zkp-circuits = { workspace = true }
@@ -78,6 +74,24 @@ nimiq-test-utils = { workspace = true }
 
 [features]
 database-storage = ["nimiq-database"]
-parallel = ["nimiq-zkp/parallel", "nimiq-zkp-circuits/parallel",  "nimiq-zkp-primitives/parallel", "ark-groth16/parallel"]
-test-prover = ["nimiq-log", "zkp-prover", "tracing-subscriber"]
-zkp-prover = ["nimiq-blockchain", "nimiq-blockchain-proxy/full", "nimiq-zkp/zkp-prover", "nimiq-zkp-circuits/zkp-prover", "nimiq-zkp-primitives/zkp-prover", "tokio/io-util", "tokio/process"]
+parallel = [
+    "nimiq-zkp/parallel",
+    "nimiq-zkp-circuits/parallel",
+    "nimiq-zkp-primitives/parallel",
+    "ark-groth16/parallel",
+]
+test-prover = [
+    "nimiq-log",
+    "zkp-prover",
+    "tracing-subscriber",
+    "tokio/rt-multi-thread",
+]
+zkp-prover = [
+    "nimiq-blockchain",
+    "nimiq-blockchain-proxy/full",
+    "nimiq-zkp/zkp-prover",
+    "nimiq-zkp-circuits/zkp-prover",
+    "nimiq-zkp-primitives/zkp-prover",
+    "tokio/io-util",
+    "tokio/process",
+]

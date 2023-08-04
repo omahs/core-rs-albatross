@@ -77,6 +77,7 @@ async fn produce_two_consecutive_valid_zk_proofs() {
         get_base_seed(),
         Path::new(DEFAULT_TEST_KEYS_PATH),
         NetworkId::UnitAlbatross,
+        None,
         true,
     )
     .unwrap();

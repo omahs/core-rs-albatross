@@ -1,5 +1,5 @@
 [package]
-name = "nimiq-zkp-test-gen"
+name = "nimiq-zkp-test-prove"
 version.workspace = true
 authors.workspace = true
 license.workspace = true
@@ -29,9 +29,7 @@ nimiq-log = { workspace = true }
 nimiq-primitives = { workspace = true, features = ["policy"] }
 nimiq-serde = { workspace = true }
 nimiq-test-utils = { workspace = true }
-nimiq-utils = { workspace = true, features = [
-    "time",
-] }
+nimiq-utils = { workspace = true, features = ["time"] }
 nimiq-zkp = { workspace = true, features = ["zkp-prover"] }
 nimiq-zkp-circuits = { workspace = true, features = ["zkp-prover"] }
 nimiq-zkp-component = { workspace = true, features = ["zkp-prover"] }

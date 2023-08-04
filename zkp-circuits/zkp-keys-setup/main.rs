@@ -25,6 +25,9 @@ struct Setup {
     /// Currently supported are: UnitAlbatross and DevAlbatross
     #[clap(short = 'n', long, value_enum)]
     network_id: Option<NetworkId>,
+    /// The commit to generate ZKP keys for.
+    #[clap(short = 'c', long)]
+    commit: String,
 }
 
 fn main() -> Result<(), NanoZKPError> {
@@ -40,6 +43,7 @@ fn main() -> Result<(), NanoZKPError> {
         }
         _ => panic!("Invalid network ID"),
     });
+    assert_eq!(args.commit.len(), 40, "Invalid commit id.");
 
     // Generates the verifying keys if they don't exist yet.
     println!("====== Devnet Parameter generation for ZKP initiated ======");
@@ -50,6 +54,7 @@ fn main() -> Result<(), NanoZKPError> {
         ChaCha20Rng::from_seed(DEVELOPMENT_SEED),
         keys_path,
         network_id,
+        Some(args.commit),
         true,
     )
     .unwrap();

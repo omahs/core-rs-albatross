@@ -57,7 +57,7 @@ members = [
   "zkp",
   "zkp-circuits",
   "zkp-component",
-  "zkp-component/zkp-test-gen",
+  "zkp-component/zkp-test-prove",
   "zkp-primitives",
   "zkp-primitives/pedersen-generators",
 ]
