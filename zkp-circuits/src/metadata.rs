@@ -7,6 +7,7 @@ use nimiq_serde::{Deserialize, Serialize};
 /// This data structure holds metadata about the verifying keys.
 /// It can be used to check whether verifying keys are still up to date.
 #[derive(Serialize, Deserialize, PartialEq, Eq, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct VerifyingKeyMetadata {
     genesis_hash: Blake2bHash,
     #[serde(with = "nimiq_serde::fixint::be")]
@@ -35,6 +36,12 @@ impl VerifyingKeyMetadata {
     pub fn save_to_file(self, path: &Path) -> Result<(), io::Error> {
         let mut file = File::create(path.join("meta_data.bin"))?;
         self.serialize_to_writer(&mut file)?;
+
+        let mut file = File::create(path.join("meta_data.json"))?;
+        serde_json::to_string_pretty(&self)
+            .unwrap()
+            .serialize_to_writer(&mut file)?;
+
         file.sync_all()?;
 
         Ok(())

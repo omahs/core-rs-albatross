@@ -1,0 +1,14 @@
+¨{
+  "genesis_hash": "abb9d2891b2c0a279040931647c3e152d11a7dfc33f3c30bc2f23c6add1c5d85",
+  "blocks_per_epoch": [
+    0,
+    0,
+    0,
+    128
+  ],
+  "timestamp": {
+    "secs_since_epoch": 1691158936,
+    "nanos_since_epoch": 230905000
+  },
+  "git_rev": "b18ae8b1fe394c3c583adea893e8e5f63127283d"
+}
