@@ -10,7 +10,7 @@ use instant::Instant;
 use libp2p::{
     identity::Keypair,
     swarm::{
-        ConnectionHandler, ConnectionHandlerEvent, ConnectionHandlerUpgrErr, KeepAlive,
+        ConnectionHandler, ConnectionHandlerEvent, StreamUpgradeError, KeepAlive,
         NegotiatedSubstream, SubstreamProtocol,
     },
     Multiaddr,
@@ -80,7 +80,7 @@ pub enum DiscoveryHandlerError {
     ChallengeResponseFailed,
 
     #[error("Signing error: {0}")]
-    Signing(#[from] libp2p::identity::error::SigningError),
+    Signing(#[from] libp2p::identity::SigningError),
 
     #[error("Received too frequent updates: {}", .interval.as_secs())]
     TooFrequentUpdates { interval: Duration },
@@ -295,7 +295,7 @@ impl ConnectionHandler for DiscoveryHandler {
     fn inject_dial_upgrade_error(
         &mut self,
         _info: Self::OutboundOpenInfo,
-        error: ConnectionHandlerUpgrErr<DeserializeError>,
+        error: StreamUpgradeError<DeserializeError>,
     ) {
         error!(%error, "inject_dial_upgrade_error");
     }

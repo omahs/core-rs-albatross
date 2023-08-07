@@ -1,22 +1,16 @@
 use std::{iter, sync::Arc};
 
+use either::Either;
 use libp2p::{
-    core::either::EitherError,
-    gossipsub::{
-        error::GossipsubHandlerError, Gossipsub, GossipsubEvent, MessageAuthenticity,
-        PeerScoreParams, PeerScoreThresholds,
-    },
-    identify::{Behaviour as IdentifyBehaviour, Config as IdentifyConfig, Event as IdentifyEvent},
+    gossipsub,
+    identify,
     kad::{store::MemoryStore, Kademlia, KademliaEvent},
     ping::{
         Behaviour as PingBehaviour, Config as PingConfig, Event as PingEvent,
         Failure as PingFailure,
     },
-    request_response::{
-        ProtocolSupport, RequestResponse, RequestResponseConfig,
-        RequestResponseEvent as ReqResEvent,
-    },
-    swarm::{ConnectionHandlerUpgrErr, NetworkBehaviour},
+    request_response,
+    swarm::{StreamUpgradeError, NetworkBehaviour},
     Multiaddr, PeerId,
 };
 use nimiq_utils::time::OffsetTime;
@@ -36,13 +30,13 @@ use crate::{
     Config,
 };
 
-pub type NimiqNetworkBehaviourError = EitherError<
-    EitherError<
-        EitherError<
-            EitherError<
-                EitherError<
-                    EitherError<std::io::Error, DiscoveryHandlerError>,
-                    GossipsubHandlerError,
+pub type NimiqNetworkBehaviourError = Either<
+    Either<
+        Either<
+            Either<
+                Either<
+                    Either<std::io::Error, DiscoveryHandlerError>,
+                    gossipsub::HandlerError,
                 >,
                 std::io::Error,
             >,
@@ -50,17 +44,17 @@ pub type NimiqNetworkBehaviourError = EitherError<
         >,
         ConnectionPoolHandlerError,
     >,
-    ConnectionHandlerUpgrErr<std::io::Error>,
+    StreamUpgradeError<std::io::Error>,
 >;
 
-pub type RequestResponseEvent = ReqResEvent<IncomingRequest, OutgoingResponse>;
+pub type RequestResponseEvent = request_response::Event<IncomingRequest, OutgoingResponse>;
 
 #[derive(Debug)]
 pub enum NimiqEvent {
     Dht(KademliaEvent),
     Discovery(DiscoveryEvent),
-    Gossip(GossipsubEvent),
-    Identify(IdentifyEvent),
+    Gossip(gossipsub::Event),
+    Identify(identify::Event),
     Ping(PingEvent),
     Pool(ConnectionPoolEvent),
     RequestResponse(RequestResponseEvent),
@@ -78,14 +72,14 @@ impl From<DiscoveryEvent> for NimiqEvent {
     }
 }
 
-impl From<GossipsubEvent> for NimiqEvent {
-    fn from(event: GossipsubEvent) -> Self {
+impl From<gossipsub::Event> for NimiqEvent {
+    fn from(event: gossipsub::Event) -> Self {
         Self::Gossip(event)
     }
 }
 
-impl From<IdentifyEvent> for NimiqEvent {
-    fn from(event: IdentifyEvent) -> Self {
+impl From<identify::Event> for NimiqEvent {
+    fn from(event: identify::Event) -> Self {
         Self::Identify(event)
     }
 }
@@ -113,11 +107,11 @@ impl From<RequestResponseEvent> for NimiqEvent {
 pub struct NimiqBehaviour {
     pub dht: Kademlia<MemoryStore>,
     pub discovery: DiscoveryBehaviour,
-    pub gossipsub: Gossipsub,
-    pub identify: IdentifyBehaviour,
+    pub gossipsub: gossipsub::Behaviour,
+    pub identify: identify::Behaviour,
     pub ping: PingBehaviour,
     pub pool: ConnectionPoolBehaviour,
-    pub request_response: RequestResponse<MessageCodec>,
+    pub request_response: request_response::Behaviour<MessageCodec>,
 }
 
 impl NimiqBehaviour {
@@ -125,7 +119,7 @@ impl NimiqBehaviour {
         config: Config,
         clock: Arc<OffsetTime>,
         contacts: Arc<RwLock<PeerContactBook>>,
-        peer_score_params: PeerScoreParams,
+        peer_score_params: gossipsub::PeerScoreParams,
     ) -> Self {
         let public_key = config.keypair.public();
         let peer_id = public_key.to_peer_id();
@@ -143,16 +137,16 @@ impl NimiqBehaviour {
         );
 
         // Gossipsub behaviour
-        let thresholds = PeerScoreThresholds::default();
-        let mut gossipsub = Gossipsub::new(MessageAuthenticity::Author(peer_id), config.gossipsub)
+        let thresholds = gossipsub::PeerScoreThresholds::default();
+        let mut gossipsub = gossipsub::Behaviour::new(gossipsub::MessageAuthenticity::Author(peer_id), config.gossipsub)
             .expect("Wrong configuration");
         gossipsub
             .with_peer_score(peer_score_params, thresholds)
             .expect("Valid score params and thresholds");
 
         // Identify behaviour
-        let identify_config = IdentifyConfig::new("/albatross/2.0".to_string(), public_key);
-        let identify = IdentifyBehaviour::new(identify_config);
+        let identify_config = identify::Config::new("/albatross/2.0".to_string(), public_key);
+        let identify = identify::Behaviour::new(identify_config);
 
         // Ping behaviour:
         // - Send a ping every 15 seconds and timeout at 20 seconds.
@@ -170,9 +164,9 @@ impl NimiqBehaviour {
         // Request Response behaviour
         let codec = MessageCodec::default();
         let protocol = ReqResProtocol::Version1;
-        let config = RequestResponseConfig::default();
+        let config = request_response::Config::default();
         let request_response =
-            RequestResponse::new(codec, iter::once((protocol, ProtocolSupport::Full)), config);
+            request_response::Behaviour::new(codec, iter::once((protocol, request_response::ProtocolSupport::Full)), config);
 
         Self {
             dht,

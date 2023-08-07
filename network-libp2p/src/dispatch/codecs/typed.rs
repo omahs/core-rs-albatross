@@ -10,8 +10,8 @@ use std::{fmt::Debug, io};
 
 use futures::{AsyncRead, AsyncWrite, AsyncWriteExt};
 use libp2p::{
-    core::{upgrade, ProtocolName},
-    request_response::RequestResponseCodec,
+    core::{upgrade},
+    request_response,
 };
 
 use crate::REQRES_PROTOCOL;
@@ -32,16 +32,8 @@ pub enum ReqResProtocol {
     Version1,
 }
 
-impl ProtocolName for ReqResProtocol {
-    fn protocol_name(&self) -> &[u8] {
-        match *self {
-            ReqResProtocol::Version1 => REQRES_PROTOCOL,
-        }
-    }
-}
-
 #[async_trait::async_trait]
-impl RequestResponseCodec for MessageCodec {
+impl request_response::Codec for MessageCodec {
     type Protocol = ReqResProtocol;
     type Request = IncomingRequest;
     type Response = OutgoingResponse;

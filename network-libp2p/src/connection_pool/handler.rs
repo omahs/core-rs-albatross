@@ -3,7 +3,7 @@ use std::task::{Context, Poll};
 use libp2p::{
     core::upgrade::{DeniedUpgrade, InboundUpgrade, OutboundUpgrade},
     swarm::{
-        ConnectionHandler, ConnectionHandlerEvent, ConnectionHandlerUpgrErr, KeepAlive,
+        ConnectionHandler, ConnectionHandlerEvent, StreamUpgradeError, KeepAlive,
         NegotiatedSubstream, SubstreamProtocol,
     },
 };
@@ -54,21 +54,7 @@ pub enum ConnectionPoolHandlerError {
     Other(CloseReason),
 }
 
-// Implement ConnectionHandler without an actual protocol, which
-// implies a DeniedUpgrade protocol
-impl ConnectionHandler for ConnectionPoolHandler {
-    type InEvent = ConnectionPoolHandlerError; // Only receive errors as events for this handler
-    type OutEvent = ();
-    type Error = ConnectionPoolHandlerError;
-    type InboundProtocol = DeniedUpgrade;
-    type OutboundProtocol = DeniedUpgrade;
-    type InboundOpenInfo = ();
-    type OutboundOpenInfo = ();
-
-    fn listen_protocol(&self) -> SubstreamProtocol<DeniedUpgrade, ()> {
-        SubstreamProtocol::new(DeniedUpgrade, ())
-    }
-
+impl ConnectionPoolHandler {
     fn inject_fully_negotiated_inbound(
         &mut self,
         _: <DeniedUpgrade as InboundUpgrade<NegotiatedSubstream>>::Output,
@@ -94,10 +80,26 @@ impl ConnectionHandler for ConnectionPoolHandler {
     fn inject_dial_upgrade_error(
         &mut self,
         _info: Self::OutboundOpenInfo,
-        _error: ConnectionHandlerUpgrErr<
+        _error: StreamUpgradeError<
             <DeniedUpgrade as OutboundUpgrade<NegotiatedSubstream>>::Error,
         >,
     ) {
+    }
+}
+
+// Implement ConnectionHandler without an actual protocol, which
+// implies a DeniedUpgrade protocol
+impl ConnectionHandler for ConnectionPoolHandler {
+    type FromBehaviour = ConnectionPoolHandlerError; // Only receive errors as events for this handler
+    type ToBehaviour = ();
+    type Error = ConnectionPoolHandlerError;
+    type InboundProtocol = DeniedUpgrade;
+    type OutboundProtocol = DeniedUpgrade;
+    type InboundOpenInfo = ();
+    type OutboundOpenInfo = ();
+
+    fn listen_protocol(&self) -> SubstreamProtocol<DeniedUpgrade, ()> {
+        SubstreamProtocol::new(DeniedUpgrade, ())
     }
 
     fn connection_keep_alive(&self) -> KeepAlive {

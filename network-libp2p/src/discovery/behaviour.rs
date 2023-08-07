@@ -7,11 +7,11 @@ use std::{
 
 use futures::StreamExt;
 use libp2p::{
-    core::connection::{ConnectedPoint, ConnectionId},
+    core::connection::{ConnectedPoint},
     identity::Keypair,
     swarm::{
-        AddressScore, KeepAlive, NetworkBehaviour, NetworkBehaviourAction, NotifyHandler,
-        PollParameters,
+        KeepAlive, NetworkBehaviour, ToSwarm, NotifyHandler,
+        PollParameters, ConnectionId,
     },
     Multiaddr, PeerId,
 };
@@ -79,7 +79,7 @@ pub enum DiscoveryEvent {
     Update,
 }
 
-type DiscoveryNetworkBehaviourAction = NetworkBehaviourAction<DiscoveryEvent, DiscoveryHandler>;
+type DiscoveryToSwarm = ToSwarm<DiscoveryEvent, DiscoveryHandler>;
 
 /// Network behaviour for peer exchange.
 ///
@@ -107,7 +107,7 @@ pub struct DiscoveryBehaviour {
     clock: Arc<OffsetTime>,
 
     /// Queue with events to emit.
-    pub events: VecDeque<DiscoveryNetworkBehaviourAction>,
+    pub events: VecDeque<DiscoveryToSwarm>,
 
     /// Timer to do house-keeping in the peer address book.
     house_keeping_timer: Interval,
@@ -141,7 +141,7 @@ impl DiscoveryBehaviour {
 
 impl NetworkBehaviour for DiscoveryBehaviour {
     type ConnectionHandler = DiscoveryHandler;
-    type OutEvent = DiscoveryEvent;
+    type ToSwarm = DiscoveryEvent;
 
     fn new_handler(&mut self) -> Self::ConnectionHandler {
         DiscoveryHandler::new(
@@ -190,7 +190,7 @@ impl NetworkBehaviour for DiscoveryBehaviour {
 
         // Signal to the handler the address that got us a connection
         self.events
-            .push_back(NetworkBehaviourAction::NotifyHandler {
+            .push_back(ToSwarm::NotifyHandler {
                 peer_id: *peer_id,
                 handler: NotifyHandler::One(*connection_id),
                 event: HandlerInEvent::ConnectionAddress(peer_address.clone()),
@@ -205,7 +205,7 @@ impl NetworkBehaviour for DiscoveryBehaviour {
             // Report the observed addresses of the endpoint if a peer successfully connected to us
             if endpoint.is_listener() {
                 self.events
-                    .push_back(NetworkBehaviourAction::NotifyHandler {
+                    .push_back(ToSwarm::NotifyHandler {
                         peer_id: *peer_id,
                         handler: NotifyHandler::One(*connection_id),
                         event: HandlerInEvent::ObservedAddress(peer_address),
@@ -237,7 +237,7 @@ impl NetworkBehaviour for DiscoveryBehaviour {
                 peer_contact: signed_peer_contact,
             } => {
                 if let Some(peer_contact) = self.peer_contact_book.read().get(&peer_id) {
-                    self.events.push_back(NetworkBehaviourAction::GenerateEvent(
+                    self.events.push_back(ToSwarm::GenerateEvent(
                         DiscoveryEvent::Established {
                             peer_id: signed_peer_contact.public_key().clone().to_peer_id(),
                             peer_address,
@@ -247,14 +247,13 @@ impl NetworkBehaviour for DiscoveryBehaviour {
                 }
             }
             HandlerOutEvent::ObservedAddresses { observed_addresses } => {
-                let score = AddressScore::Infinite;
                 for address in observed_addresses {
                     self.events
-                        .push_back(NetworkBehaviourAction::ReportObservedAddr { address, score });
+                        .push_back(ToSwarm::ExternalAddrConfirmed(address));
                 }
             }
             HandlerOutEvent::Update => self.events.push_back(
-                NetworkBehaviourAction::GenerateEvent(DiscoveryEvent::Update),
+                ToSwarm::GenerateEvent(DiscoveryEvent::Update),
             ),
         }
     }
@@ -263,7 +262,7 @@ impl NetworkBehaviour for DiscoveryBehaviour {
         &mut self,
         cx: &mut Context,
         _params: &mut impl PollParameters,
-    ) -> Poll<NetworkBehaviourAction<Self::OutEvent, Self::ConnectionHandler>> {
+    ) -> Poll<ToSwarm<Self::OutEvent, Self::ConnectionHandler>> {
         // Emit events
         if let Some(event) = self.events.pop_front() {
             return Poll::Ready(event);

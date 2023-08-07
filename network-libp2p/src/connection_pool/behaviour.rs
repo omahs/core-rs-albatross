@@ -9,11 +9,11 @@ use futures::StreamExt;
 use instant::Instant;
 use ip_network::IpNetwork;
 use libp2p::{
-    core::{connection::ConnectionId, multiaddr::Protocol, ConnectedPoint},
+    core::{multiaddr::Protocol, ConnectedPoint},
     swarm::{
-        dial_opts::{DialOpts, PeerCondition},
-        ConnectionHandler, DialError, IntoConnectionHandler, NetworkBehaviour,
-        NetworkBehaviourAction, NotifyHandler, PollParameters,
+        dial_opts::{DialOpts, PeerCondition}, ConnectionId,
+        ConnectionHandler, DialError, NetworkBehaviour,
+        ToSwarm, NotifyHandler, PollParameters, ConnectionDenied,
     },
     Multiaddr, PeerId,
 };
@@ -217,8 +217,8 @@ pub enum ConnectionPoolEvent {
     PeerJoined { peer_id: PeerId },
 }
 
-type PoolNetworkBehaviourAction =
-    NetworkBehaviourAction<ConnectionPoolEvent, ConnectionPoolHandler>;
+type PoolToSwarm =
+    ToSwarm<ConnectionPoolEvent, ConnectionPoolHandler>;
 
 /// Connection pool behaviour
 ///
@@ -249,7 +249,7 @@ pub struct ConnectionPoolBehaviour {
     addresses: ConnectionState<Multiaddr>,
 
     /// Queue of actions this behaviour will emit for handler execution.
-    actions: VecDeque<PoolNetworkBehaviourAction>,
+    actions: VecDeque<PoolToSwarm>,
 
     /// Tells wether the connection pool behaviour is active or not
     active: bool,
@@ -327,7 +327,7 @@ impl ConnectionPoolBehaviour {
                 debug!(%peer_id, "Dialing peer");
                 self.peer_ids.mark_dialing(peer_id);
                 let handler = self.new_handler();
-                self.actions.push_back(NetworkBehaviourAction::Dial {
+                self.actions.push_back(ToSwarm::Dial {
                     opts: DialOpts::peer_id(peer_id)
                         .condition(PeerCondition::Disconnected)
                         .build(),
@@ -340,7 +340,7 @@ impl ConnectionPoolBehaviour {
                 debug!(%address, "Dialing seed");
                 self.addresses.mark_dialing(address.clone());
                 let handler = self.new_handler();
-                self.actions.push_back(NetworkBehaviourAction::Dial {
+                self.actions.push_back(ToSwarm::Dial {
                     opts: DialOpts::unknown_peer_id().address(address).build(),
                     handler,
                 });
@@ -380,7 +380,7 @@ impl ConnectionPoolBehaviour {
     /// - Going offline will signal the network to stop connecting to peers.
     pub fn close_connection(&mut self, peer_id: PeerId, reason: CloseReason) {
         self.actions
-            .push_back(NetworkBehaviourAction::NotifyHandler {
+            .push_back(ToSwarm::NotifyHandler {
                 peer_id,
                 handler: NotifyHandler::Any,
                 event: ConnectionPoolHandlerError::Other(reason),
@@ -515,25 +515,8 @@ impl ConnectionPoolBehaviour {
             }
         }
     }
-}
 
-impl NetworkBehaviour for ConnectionPoolBehaviour {
-    type ConnectionHandler = ConnectionPoolHandler;
-    type OutEvent = ConnectionPoolEvent;
-
-    fn new_handler(&mut self) -> Self::ConnectionHandler {
-        ConnectionPoolHandler::default()
-    }
-
-    fn addresses_of_peer(&mut self, peer_id: &PeerId) -> Vec<Multiaddr> {
-        self.contacts
-            .read()
-            .get(peer_id)
-            .map(|e| e.contact().addresses.clone())
-            .unwrap_or_default()
-    }
-
-    fn inject_connection_established(
+    fn on_connection_established(
         &mut self,
         peer_id: &PeerId,
         connection_id: &ConnectionId,
@@ -575,7 +558,7 @@ impl NetworkBehaviour for ConnectionPoolBehaviour {
             if *peer_id <= self.own_peer_id {
                 // Notify the handler that the connection must be closed
                 self.actions
-                    .push_back(NetworkBehaviourAction::NotifyHandler {
+                    .push_back(ToSwarm::NotifyHandler {
                         peer_id: *peer_id,
                         handler: NotifyHandler::One(*connection_id),
                         event: ConnectionPoolHandlerError::AlreadyConnected,
@@ -664,7 +647,7 @@ impl NetworkBehaviour for ConnectionPoolBehaviour {
         if let Some(close_reason) = close_reason {
             // Notify the handler that the connection must be closed
             self.actions
-                .push_back(NetworkBehaviourAction::NotifyHandler {
+                .push_back(ToSwarm::NotifyHandler {
                     peer_id: *peer_id,
                     handler: NotifyHandler::One(*connection_id),
                     event: close_reason,
@@ -678,7 +661,7 @@ impl NetworkBehaviour for ConnectionPoolBehaviour {
         self.addresses.mark_connected(address.clone());
 
         self.actions
-            .push_back(NetworkBehaviourAction::GenerateEvent(
+            .push_back(ToSwarm::GenerateEvent(
                 ConnectionPoolEvent::PeerJoined { peer_id: *peer_id },
             ));
         self.wake();
@@ -686,12 +669,12 @@ impl NetworkBehaviour for ConnectionPoolBehaviour {
         self.maintain_peers();
     }
 
-    fn inject_connection_closed(
+    fn on_connection_closed(
         &mut self,
         peer_id: &PeerId,
         _conn: &ConnectionId,
         endpoint: &ConnectedPoint,
-        _handler: <Self::ConnectionHandler as IntoConnectionHandler>::Handler,
+        _handler: ConnectionHandler,
         remaining_established: usize,
     ) {
         // Check there are no more remaining connections to this peer
@@ -739,15 +722,15 @@ impl NetworkBehaviour for ConnectionPoolBehaviour {
         self.maintain_peers();
     }
 
-    fn inject_event(
+    fn on_event(
         &mut self,
         _peer_id: PeerId,
         _connection: ConnectionId,
-        _event: <<Self::ConnectionHandler as IntoConnectionHandler>::Handler as ConnectionHandler>::OutEvent,
+        _event: <Self::ConnectionHandler as ConnectionHandler>::ToSwarm,
     ) {
     }
 
-    fn inject_dial_failure(
+    fn on_dial_failure(
         &mut self,
         peer_id: Option<PeerId>,
         _handler: Self::ConnectionHandler,
@@ -784,12 +767,59 @@ impl NetworkBehaviour for ConnectionPoolBehaviour {
             }
         }
     }
+}
+
+impl NetworkBehaviour for ConnectionPoolBehaviour {
+    type ConnectionHandler = ConnectionPoolHandler;
+    type ToSwarm = ConnectionPoolEvent;
+
+    fn handle_established_inbound_connection(
+        &mut self,
+        _connection_id: ConnectionId,
+        _peer: PeerId,
+        _local_addr: &Multiaddr,
+        _remote_addr: &Multiaddr,
+    ) -> Result<ConnectionPoolHandler, ConnectionDenied> {
+        Ok(ConnectionPoolHandler::default())
+    }
+
+    fn handle_established_outbound_connection(
+        &mut self,
+        _connection_id: ConnectionId,
+        _peer: PeerId,
+        _addr: &Multiaddr,
+        _role_override: &Endpoint,
+    ) -> Result<ConnectionPoolHandler, ConnectionDenied> {
+        Ok(ConnectionPoolHandler::default())
+    }
+
+
+    fn handle_pending_outbound_connection(
+        &mut self,
+        _connection_id: ConnectionId,
+        maybe_peer: Option<PeerId>,
+        _addresses: &[Multiaddr],
+        _effective_role: Endpoint,
+    ) -> Result<Vec<Multiaddr>, ConnectionDenied> {
+        let p = match maybe_peer {
+            None => return Ok(vec![]),
+            Some(peer) => peer,
+        };
+
+        Ok(
+        self.contacts
+            .read()
+            .get(peer_id)
+            .map(|e| e.contact().addresses.clone())
+            .unwrap_or_default()
+        )
+    }
 
     fn poll(
         &mut self,
         cx: &mut Context<'_>,
         _params: &mut impl PollParameters,
-    ) -> Poll<NetworkBehaviourAction<Self::OutEvent, Self::ConnectionHandler>> {
+    ) -> Poll<ToSwarm<Self::ToSwarm, Self::ConnectionHandler>> {
         // Dispatch pending actions.
         if let Some(action) = self.actions.pop_front() {
             return Poll::Ready(action);

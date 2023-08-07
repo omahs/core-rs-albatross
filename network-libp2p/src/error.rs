@@ -32,10 +32,10 @@ pub enum NetworkError {
     DhtPutRecord(libp2p::kad::PutRecordError),
 
     #[error("Gossipsub Publish error: {0:?}")]
-    GossipsubPublish(libp2p::gossipsub::error::PublishError),
+    GossipsubPublish(libp2p::gossipsub::PublishError),
 
     #[error("Gossipsub Subscription error: {0:?}")]
-    GossipsubSubscription(libp2p::gossipsub::error::SubscriptionError),
+    GossipsubSubscription(libp2p::gossipsub::SubscriptionError),
 
     #[error("Already subscribed to topic: {topic_name}")]
     AlreadySubscribed { topic_name: String },
@@ -87,14 +87,14 @@ impl From<libp2p::kad::PutRecordError> for NetworkError {
     }
 }
 
-impl From<libp2p::gossipsub::error::PublishError> for NetworkError {
-    fn from(e: libp2p::gossipsub::error::PublishError) -> Self {
+impl From<libp2p::gossipsub::PublishError> for NetworkError {
+    fn from(e: libp2p::gossipsub::PublishError) -> Self {
         Self::GossipsubPublish(e)
     }
 }
 
-impl From<libp2p::gossipsub::error::SubscriptionError> for NetworkError {
-    fn from(e: libp2p::gossipsub::error::SubscriptionError) -> Self {
+impl From<libp2p::gossipsub::SubscriptionError> for NetworkError {
+    fn from(e: libp2p::gossipsub::SubscriptionError) -> Self {
         Self::GossipsubSubscription(e)
     }
 }

@@ -18,22 +18,20 @@ use libp2p::{
         muxing::StreamMuxerBox,
         transport::{Boxed, MemoryTransport},
     },
-    gossipsub::{
-        error::PublishError, GossipsubEvent, GossipsubMessage, IdentTopic, MessageAcceptance,
-        MessageId, PeerScoreParams, TopicHash, TopicScoreParams,
-    },
-    identify::Event as IdentifyEvent,
+    gossipsub,
+    identify,
     identity::Keypair,
     kad::{
         store::RecordStore, GetRecordOk, InboundRequest, KademliaEvent, QueryId, QueryResult,
         Quorum, Record,
     },
     noise,
-    ping::Success as PingSuccess,
-    request_response::{OutboundFailure, RequestId, RequestResponseMessage, ResponseChannel},
+    ping,
+    request_response,
+    request_response::{OutboundFailure, RequestId, ResponseChannel},
     swarm::{
         dial_opts::{DialOpts, PeerCondition},
-        ConnectionLimits, NetworkInfo, SwarmBuilder, SwarmEvent,
+        NetworkInfo, SwarmBuilder, SwarmEvent,
     },
     yamux, Multiaddr, PeerId, Swarm, Transport,
 };
@@ -106,7 +104,7 @@ pub(crate) enum NetworkAction {
         buffer_size: usize,
         validate: bool,
         output: oneshot::Sender<
-            Result<mpsc::Receiver<(GossipsubMessage, MessageId, PeerId)>, NetworkError>,
+            Result<mpsc::Receiver<(gossipsub::Message, gossipsub::MessageId, PeerId)>, NetworkError>,
         >,
     },
     Unsubscribe {
@@ -158,7 +156,7 @@ pub(crate) enum NetworkAction {
 
 struct ValidateMessage<P: Clone> {
     pubsub_id: GossipsubId<P>,
-    acceptance: MessageAcceptance,
+    acceptance: gossipsub::MessageAcceptance,
     topic: &'static str,
 }
 
@@ -170,9 +168,9 @@ impl<P: Clone> ValidateMessage<P> {
         Self {
             pubsub_id,
             acceptance: match acceptance {
-                MsgAcceptance::Accept => MessageAcceptance::Accept,
-                MsgAcceptance::Ignore => MessageAcceptance::Ignore,
-                MsgAcceptance::Reject => MessageAcceptance::Reject,
+                MsgAcceptance::Accept => gossipsub::MessageAcceptance::Accept,
+                MsgAcceptance::Ignore => gossipsub::MessageAcceptance::Ignore,
+                MsgAcceptance::Reject => gossipsub::MessageAcceptance::Reject,
             },
             topic: <T as Topic>::NAME,
         }
@@ -183,7 +181,7 @@ impl<P: Clone> ValidateMessage<P> {
 struct TaskState {
     dht_puts: HashMap<QueryId, oneshot::Sender<Result<(), NetworkError>>>,
     dht_gets: HashMap<QueryId, oneshot::Sender<Result<Vec<u8>, NetworkError>>>,
-    gossip_topics: HashMap<TopicHash, (mpsc::Sender<(GossipsubMessage, MessageId, PeerId)>, bool)>,
+    gossip_topics: HashMap<gossipsub::TopicHash, (mpsc::Sender<(gossipsub::Message, gossipsub::MessageId, PeerId)>, bool)>,
     is_bootstrapped: bool,
     requests: HashMap<RequestId, oneshot::Sender<Result<Bytes, RequestError>>>,
     #[cfg(feature = "metrics")]
@@ -246,7 +244,7 @@ impl Network {
         let contacts = Arc::new(RwLock::new(PeerContactBook::new(
             own_peer_contact.sign(&config.keypair),
         )));
-        let params = PeerScoreParams {
+        let params = gossipsub::PeerScoreParams {
             ip_colocation_factor_threshold: 20.0,
             ..Default::default()
         };
@@ -396,7 +394,7 @@ impl Network {
         clock: Arc<OffsetTime>,
         config: Config,
         contacts: Arc<RwLock<PeerContactBook>>,
-        peer_score_params: PeerScoreParams,
+        peer_score_params: gossipsub::PeerScoreParams,
         executor: impl TaskExecutor + Clone + Send + 'static,
     ) -> Swarm<NimiqBehaviour> {
         let local_peer_id = PeerId::from(config.keypair.public());
@@ -406,12 +404,15 @@ impl Network {
 
         let behaviour = NimiqBehaviour::new(config, clock, contacts, peer_score_params);
 
+        if true { todo!() }
+        /*
         let limits = ConnectionLimits::default()
             .with_max_pending_incoming(Some(16))
             .with_max_pending_outgoing(Some(16))
             .with_max_established_incoming(Some(4800))
             .with_max_established_outgoing(Some(4800))
             .with_max_established_per_peer(Some(MAX_CONNECTIONS_PER_PEER));
+        */
 
         // TODO add proper config
         SwarmBuilder::with_executor(
@@ -422,7 +423,7 @@ impl Network {
                 executor.exec(fut);
             }),
         )
-        .connection_limits(limits)
+        //.connection_limits(limits)
         .build()
     }
 
@@ -454,7 +455,7 @@ impl Network {
                     validate_msg = validate_rx.recv() => {
                         if let Some(validate_msg) = validate_msg {
                             let topic = validate_msg.topic;
-                            let result: Result<bool, PublishError> = swarm
+                            let result: Result<bool, gossipsub::PublishError> = swarm
                                 .behaviour_mut()
                                 .gossipsub
                                 .report_message_validation_result(
@@ -522,7 +523,7 @@ impl Network {
                     validate_msg = validate_rx.recv() => {
                         if let Some(validate_msg) = validate_msg {
                             let topic = validate_msg.topic;
-                            let result: Result<bool, PublishError> = swarm
+                            let result: Result<bool, gossipsub::PublishError> = swarm
                                 .behaviour_mut()
                                 .gossipsub
                                 .report_message_validation_result(
@@ -828,7 +829,7 @@ impl Network {
                         }
                     }
                     NimiqEvent::Gossip(event) => match event {
-                        GossipsubEvent::Message {
+                        gossibsup::Event::Message {
                             propagation_source,
                             message_id,
                             message,
@@ -843,7 +844,7 @@ impl Network {
                                         .report_message_validation_result(
                                             &message_id,
                                             &propagation_source,
-                                            MessageAcceptance::Accept,
+                                            gossipsub::MessageAcceptance::Accept,
                                         )
                                     {
                                         error!(%message_id, %error, "could not send message validation result to channel");
@@ -865,19 +866,19 @@ impl Network {
                             #[cfg(feature = "metrics")]
                             metrics.note_received_pubsub_message(&topic);
                         }
-                        GossipsubEvent::Subscribed { peer_id, topic } => {
+                        gossibsup::Event::Subscribed { peer_id, topic } => {
                             debug!(%peer_id, %topic, "peer subscribed to topic");
                         }
-                        GossipsubEvent::Unsubscribed { peer_id, topic } => {
+                        gossibsup::Event::Unsubscribed { peer_id, topic } => {
                             debug!(%peer_id, %topic, "peer unsubscribed");
                         }
-                        GossipsubEvent::GossipsubNotSupported { peer_id } => {
+                        gossibsup::Event::GossipsubNotSupported { peer_id } => {
                             debug!(%peer_id, "gossipsub not supported");
                         }
                     },
                     NimiqEvent::Identify(event) => {
                         match event {
-                            IdentifyEvent::Received { peer_id, info } => {
+                            identify::Event::Received { peer_id, info } => {
                                 debug!(
                                     %peer_id,
                                     address = %info.observed_addr,
@@ -899,13 +900,13 @@ impl Network {
                                     }
                                 }
                             }
-                            IdentifyEvent::Pushed { peer_id } => {
+                            identify::Event::Pushed { peer_id } => {
                                 trace!(%peer_id, "Pushed identity to peer");
                             }
-                            IdentifyEvent::Sent { peer_id } => {
+                            identify::Event::Sent { peer_id } => {
                                 trace!(%peer_id, "Sent identity to peer");
                             }
-                            IdentifyEvent::Error { peer_id, error } => {
+                            identify::Event::Error { peer_id, error } => {
                                 error!(
                                     %peer_id,
                                     %error,
@@ -919,10 +920,10 @@ impl Network {
                             Err(error) => {
                                 log::debug!(%error, ?event.peer, "Ping failed with peer");
                             }
-                            Ok(PingSuccess::Pong) => {
+                            Ok(ping::Success::Pong) => {
                                 log::trace!(?event.peer, "Responded Ping from peer");
                             }
-                            Ok(PingSuccess::Ping { rtt }) => {
+                            Ok(ping::Success::Ping { rtt }) => {
                                 log::trace!(
                                     ?event.peer,
                                     ?rtt,
@@ -941,7 +942,7 @@ impl Network {
                             peer: peer_id,
                             message,
                         } => match message {
-                            RequestResponseMessage::Request {
+                            request_response::Message::Request {
                                 request_id,
                                 request,
                                 channel,
@@ -1032,7 +1033,7 @@ impl Network {
                                     );
                                 }
                             }
-                            RequestResponseMessage::Response {
+                            request_response::Message::Response {
                                 request_id,
                                 response,
                             } => {
@@ -1176,7 +1177,7 @@ impl Network {
                 validate,
                 output,
             } => {
-                let topic = IdentTopic::new(topic_name.clone());
+                let topic = gossipsub::IdentTopic::new(topic_name.clone());
 
                 match swarm.behaviour_mut().gossipsub.subscribe(&topic) {
                     // New subscription. Insert the sender into our subscription table.
@@ -1188,7 +1189,7 @@ impl Network {
                         match swarm
                             .behaviour_mut()
                             .gossipsub
-                            .set_topic_params(topic, TopicScoreParams::default())
+                            .set_topic_params(topic, gossipsub::TopicScoreParams::default())
                         {
                             Ok(_) => {
                                 if output.send(Ok(rx)).is_err() {
@@ -1230,7 +1231,7 @@ impl Network {
                 }
             }
             NetworkAction::Unsubscribe { topic_name, output } => {
-                let topic = IdentTopic::new(topic_name.clone());
+                let topic = gossipsub::IdentTopic::new(topic_name.clone());
 
                 if state.gossip_topics.get_mut(&topic.hash()).is_some() {
                     match swarm.behaviour_mut().gossipsub.unsubscribe(&topic) {
@@ -1279,7 +1280,7 @@ impl Network {
                 data,
                 output,
             } => {
-                let topic = IdentTopic::new(topic_name.clone());
+                let topic = gossipsub::IdentTopic::new(topic_name.clone());
 
                 if output
                     .send(
@@ -1289,7 +1290,7 @@ impl Network {
                             .publish(topic, data)
                             .map(|_| ())
                             .or_else(|e| match e {
-                                PublishError::Duplicate => Ok(()),
+                                gossipsub::PublishError::Duplicate => Ok(()),
                                 _ => Err(e),
                             })
                             .map_err(Into::into),

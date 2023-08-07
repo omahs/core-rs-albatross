@@ -6,7 +6,7 @@ use std::{
 
 use instant::SystemTime;
 use libp2p::{
-    gossipsub::Gossipsub,
+    gossipsub,
     identity::{Keypair, PublicKey},
     Multiaddr, PeerId,
 };
@@ -344,7 +344,7 @@ impl PeerContactBook {
 
     /// Updates the score of every peer in the contact book with the gossipsub
     /// peer score.
-    pub fn update_scores(&self, gossipsub: &Gossipsub) {
+    pub fn update_scores(&self, gossipsub: &gossipsub::Behaviour) {
         let contacts = self.peer_contacts.iter();
 
         for contact in contacts {

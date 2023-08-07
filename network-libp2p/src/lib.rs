@@ -12,9 +12,9 @@ mod network;
 mod network_metrics;
 mod rate_limiting;
 
-pub const REQRES_PROTOCOL: &[u8] = b"/nimiq/reqres/0.0.1";
-pub const MESSAGE_PROTOCOL: &[u8] = b"/nimiq/message/0.0.1";
-pub const DISCOVERY_PROTOCOL: &[u8] = b"/nimiq/discovery/0.0.1";
+pub const REQRES_PROTOCOL: &str = b"/nimiq/reqres/0.0.1";
+pub const MESSAGE_PROTOCOL: &str = b"/nimiq/message/0.0.1";
+pub const DISCOVERY_PROTOCOL: &str = b"/nimiq/discovery/0.0.1";
 
 pub use config::{Config, TlsConfig};
 pub use error::NetworkError;

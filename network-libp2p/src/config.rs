@@ -5,7 +5,7 @@ use std::{
 };
 
 use libp2p::{
-    gossipsub::{GossipsubConfig, GossipsubConfigBuilder, MessageId},
+    gossipsub,
     identity::Keypair,
     kad::{KademliaBucketInserts, KademliaConfig, KademliaStoreInserts},
     Multiaddr,
@@ -31,7 +31,7 @@ pub struct Config {
     pub seeds: Vec<Multiaddr>,
     pub discovery: DiscoveryConfig,
     pub kademlia: KademliaConfig,
-    pub gossipsub: GossipsubConfig,
+    pub gossipsub: gossipsub::Config,
     pub memory_transport: bool,
     pub required_services: Services,
     pub tls: Option<TlsConfig>,
@@ -49,7 +49,7 @@ impl Config {
     ) -> Self {
         // Hardcoding the minimum number of peers in mesh network before adding more
         // TODO: Maybe change this to a mesh limits configuration argument of this function
-        let gossipsub = GossipsubConfigBuilder::default()
+        let gossipsub = gossipsub::ConfigBuilder::default()
             .mesh_n_low(3)
             .validate_messages()
             .max_transmit_size(1_000_000) // TODO find a reasonable value for this parameter
@@ -61,7 +61,7 @@ impl Config {
                 let mut s = DefaultHasher::new();
                 message.topic.hash(&mut s);
                 message.data.hash(&mut s);
-                MessageId::from(s.finish().to_string())
+                gossipsub::MessageId::from(s.finish().to_string())
             })
             .build()
             .expect("Invalid Gossipsub config");

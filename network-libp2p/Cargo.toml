@@ -22,11 +22,12 @@ base64 = "0.21"
 bitflags = "1.2"
 bytes = "1.4"
 derive_more = "0.99"
+either = "1.9"
 futures = { package = "futures-util", version = "0.3" }
 hex = "0.4"
 instant = { version = "0.1", features = [ "wasm-bindgen" ] }
 ip_network = "0.4"
-libp2p-websys-transport = { git = "https://github.com/jsdanielh/libp2p-websys-transport.git", optional = true }
+libp2p-websys-transport = { version = "0.1", optional = true }
 log = { package = "tracing", version = "0.1", features = ["log"] }
 parking_lot = "0.12"
 pin-project = "1.0"
@@ -55,7 +56,7 @@ nimiq-utils = { path = "../utils", features = [
 nimiq-validator-network = { path = "../validator-network" }
 
 [target.'cfg(not(target_family = "wasm"))'.dependencies]
-libp2p = { git = "https://github.com/jsdanielh/rust-libp2p.git", default-features = false, features = [
+libp2p = { version = "0.52", default-features = false, features = [
     "gossipsub",
     "identify",
     "kad",
@@ -68,7 +69,7 @@ libp2p = { git = "https://github.com/jsdanielh/rust-libp2p.git", default-feature
 ] }
 
 [target.'cfg(target_family = "wasm")'.dependencies]
-libp2p = { git = "https://github.com/jsdanielh/rust-libp2p.git", default-features = false, features = [
+libp2p = { version = "0.52", default-features = false, features = [
     "gossipsub",
     "identify",
     "kad",
