@@ -17,14 +17,30 @@
     "client-proxy.js",
     "transfer-handlers.js"
   ],
-  "module": "bundler/index.js",
+  "exports": {
+    ".": {
+      "node": {
+        "import": "./node/node/index.mjs",
+        "require": "./node/node/index.js"
+      },
+      "browser": "./browser/bundler/index.js",
+      "types": "./types/index.d.ts"
+    },
+    "./web": {
+      "browser": "./browser/web/index.js",
+      "types": "./types/index.d.ts"
+    }
+  },
   "homepage": "https://nimiq.com",
-  "types": "types/index.d.ts",
   "sideEffects": [
-    "./bundler/main-wasm/index.js",
-    "./bundler/worker-wasm/index.js",
-    "./web/main-wasm/index.js",
-    "./web/worker-wasm/index.js"
+    "./browser/bundler/main-wasm/index.js",
+    "./browser/bundler/worker-wasm/index.js",
+    "./node/node/main-wasm/index.js",
+    "./node/node/worker-wasm/index.js",
+    "./node/node/main-wasm/index.mjs",
+    "./node/node/worker-wasm/index.mjs",
+    "./browser/web/main-wasm/index.js",
+    "./browser/web/worker-wasm/index.js"
   ],
   "keywords": [
     "nimiq",
@@ -33,6 +49,7 @@
     "proof-of-stake"
   ],
   "dependencies": {
-    "comlink": "^4.4.1"
+    "comlink": "^4.4.1",
+    "websocket": "^1.0.34"
   }
 }

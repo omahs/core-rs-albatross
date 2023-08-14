@@ -1,4 +1,4 @@
-import init, * as Nimiq from '../dist/web/index.js';
+import init, * as Nimiq from '../dist/browser/web/index.js';
 
 window.Nimiq = Nimiq;
 
